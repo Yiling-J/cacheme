@@ -1,3 +1,4 @@
+import mock
 import pickle
 import time
 import datetime
@@ -42,11 +43,43 @@ class CacheTestCase(BaseTestCase):
     def basic_cache_func(self, n):
         return n
 
+    def test_disable(self):
+        cacheme.CACHEME.ENABLE_CACHE = False
+        self.assertEqual(self.basic_cache_func(1), 1)
+        self.assertEqual(self.basic_cache_func(2), 2)
+        cacheme.CACHEME.ENABLE_CACHE = True
+
     def test_basic(self):
         self.assertEqual(self.basic_cache_func(1), 1)
         self.assertEqual(self.basic_cache_func(2), 1)
         cacheme.utils.invalid_keys_in_set('test_invalid')
         self.assertEqual(self.basic_cache_func(2), 2)
+
+    @cacheme(
+        key=lambda c: 'test>me',
+        invalid_keys=lambda c: 'test_invalid'
+    )
+    def basic_cache_func2(self, n):
+        return n
+
+    def test_basic2(self):
+        self.assertEqual(self.basic_cache_func2(1), 1)
+        self.assertEqual(self.basic_cache_func2(2), 1)
+        cacheme.utils.invalid_keys_in_set('test_invalid')
+        self.assertEqual(self.basic_cache_func2(2), 2)
+
+    @cacheme(
+        key=lambda c: 'test>me',
+        invalid_keys=lambda c: [['test_invalid']]
+    )
+    def basic_cache_func3(self, n):
+        return n
+
+    def test_basic3(self):
+        self.assertEqual(self.basic_cache_func3(1), 1)
+        self.assertEqual(self.basic_cache_func3(2), 1)
+        cacheme.utils.invalid_keys_in_set('test_invalid')
+        self.assertEqual(self.basic_cache_func3(2), 2)
 
     @cacheme(
         key=lambda c: str(c.self.pp + c.a + c.args[0] + c.kwargs['ff']),
@@ -157,7 +190,7 @@ class CacheTestCase(BaseTestCase):
         return n
 
     @cacheme(
-        key=lambda c: "CACHE:TO3",
+        key=lambda c: "CACHE:TO3>test",
         timeout=3
     )
     def cache_timeout3(self, n):
@@ -198,6 +231,26 @@ class CacheTestCase(BaseTestCase):
         end = datetime.datetime.now()
         self.assertEqual(result, 12)
         self.assertTrue(delta > 50)
+
+    class FakeTime(object):
+        counter = 0
+
+        def __call__(self):
+            return self
+
+        def sleep(self, n):
+            self.counter += 1
+            if self.counter == 5:
+                r.hset('CM:CACHE:TH', 'base', pickle.dumps('100'))
+            return mock.Mock()
+
+    faker = FakeTime()
+
+    @mock.patch('cacheme.cache_model.time', new_callable=faker)
+    def test_thunder_herd_wait_suucess(self, m):
+        r.sadd('CM:progress', 'CM:CACHE:TH')
+        result = self.cache_th(12)
+        self.assertEqual(result, '100')
 
     def test_invalid_pattern(self):
         for i in range(10000):

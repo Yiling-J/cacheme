@@ -206,10 +206,7 @@ class CacheMe(object):
             self.push_key(invalid_key, key)
 
     def link(self):
-        if not self.invalid_signals:
-            return
-        for signal in self.invalid_signals:
-            signal.connect()
+        pass
 
     def remove_from_progress(self, key):
         self.conn.srem(self.progress_key, key)
