@@ -36,7 +36,7 @@ class BaseTestCase(TestCase):
 class CacheTestCase(BaseTestCase):
 
     @cacheme(
-        key=lambda c: 'test',
+        key=lambda c: 'test>me',
         invalid_keys=lambda c: ['test_invalid']
     )
     def basic_cache_func(self, n):
@@ -198,6 +198,13 @@ class CacheTestCase(BaseTestCase):
         end = datetime.datetime.now()
         self.assertEqual(result, 12)
         self.assertTrue(delta > 50)
+
+    def test_invalid_pattern(self):
+        for i in range(10000):
+            r.set('test:%s' % i, i)
+
+        cacheme.utils.invalid_pattern('test*')
+        self.assertFalse(r.get('test:600'))
 
 
 if __name__ == '__main__':
