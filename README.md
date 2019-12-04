@@ -22,7 +22,7 @@ A memoized/cache decorator for Python using redis.
 
 `pip install cacheme`
 
-Find a good place to init cacheme globally, for example a foobar_cache.py file
+Find a good place to init cacheme globally, for example a **foobar_cache.py** file
 ```
 import redis
 from cacheme import cacheme
@@ -49,7 +49,6 @@ from foobar_cache import cacheme
 
 ## Example
 
-```
 
 serializers.py
 
