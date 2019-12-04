@@ -12,13 +12,11 @@ from .utils import CachemeUtils
 logger = logging.getLogger('cacheme')
 
 
-cacheme_tags = dict()
-
-
 class CacheMe(object):
     connection_set = False
     settings_set = False
     utils = None
+    tags = dict()
 
     @classmethod
     def set_connection(cls, connection):
@@ -77,7 +75,7 @@ class CacheMe(object):
         self.function = func
 
         self.tag = self.tag or func.__name__
-        cacheme_tags[self.tag] = self
+        self.tags[self.tag] = self
 
         @wraps(func)
         def wrapper(*args, **kwargs):

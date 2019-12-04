@@ -7,7 +7,7 @@ import redis
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
-from cacheme import cacheme, cacheme_tags
+from cacheme import cacheme
 
 r = redis.Redis()
 
@@ -134,11 +134,11 @@ class CacheTestCase(BaseTestCase):
         self.cache_inst_1()
         self.cache_inst_2()
         self.cache_inst_3()
-        self.assertEqual(cacheme_tags['cache_inst_1'].keys, {b'CM:INST:1'})
-        self.assertEqual(cacheme_tags['test_instance_sec'].keys, {b'CM:INST:2'})
-        self.assertEqual(cacheme_tags['three'].keys, {b'CM:INST:3'})
-        cacheme_tags['three'].invalid_all()
-        self.assertEqual(cacheme_tags['three'].keys, set())
+        self.assertEqual(cacheme.tags['cache_inst_1'].keys, {b'CM:INST:1'})
+        self.assertEqual(cacheme.tags['test_instance_sec'].keys, {b'CM:INST:2'})
+        self.assertEqual(cacheme.tags['three'].keys, {b'CM:INST:3'})
+        cacheme.tags['three'].invalid_all()
+        self.assertEqual(cacheme.tags['three'].keys, set())
 
     @cacheme(
         key=lambda c: "CACHE:SKIP:1",
