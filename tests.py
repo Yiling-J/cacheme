@@ -26,6 +26,7 @@ class NoConnectionTestCase(TestCase):
 
 
 cacheme.set_connection(r)
+cacheme.update_settings({'ENABLE_CACHE': False})
 
 
 class BaseTestCase(TestCase):
@@ -40,14 +41,21 @@ class CacheTestCase(BaseTestCase):
         key=lambda c: 'test>me',
         invalid_keys=lambda c: ['test_invalid']
     )
-    def basic_cache_func(self, n):
+    def basic_cache_func_disable(self, n):
         return n
 
     def test_disable(self):
-        cacheme.CACHEME.ENABLE_CACHE = False
-        self.assertEqual(self.basic_cache_func(1), 1)
-        self.assertEqual(self.basic_cache_func(2), 2)
-        cacheme.CACHEME.ENABLE_CACHE = True
+        self.assertEqual(self.basic_cache_func_disable(1), 1)
+        self.assertEqual(self.basic_cache_func_disable(2), 2)
+
+    cacheme.CACHEME.ENABLE_CACHE = True
+
+    @cacheme(
+        key=lambda c: 'test>me',
+        invalid_keys=lambda c: ['test_invalid']
+    )
+    def basic_cache_func(self, n):
+        return n
 
     def test_basic(self):
         self.assertEqual(self.basic_cache_func(1), 1)
@@ -264,6 +272,18 @@ class CacheTestCase(BaseTestCase):
 
         cacheme.create_invalidation(pattern='test*')
         self.assertFalse(r.get('test:600'))
+
+    @cacheme(
+        key=lambda c: 'invalid_source',
+        invalid_keys=lambda c: ['test_invalid'],
+        invalid_sources=['apple']
+    )
+    def invalid_source_test_func(self, n):
+        return n
+
+    def test_invalid_source(self):
+        self.invalid_source_test_func(1)
+        self.assertEqual(self.invalid_source_test_func(2), 1)
 
 
 if __name__ == '__main__':

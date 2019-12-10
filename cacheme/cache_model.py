@@ -50,13 +50,14 @@ class CacheMe(object):
             self.update_settings({})
             logger.warning('No custom settings found, use default.')
 
+        if not self.CACHEME.ENABLE_CACHE:
+            return
+
         self.__class__.utils = CachemeUtils(self.CACHEME, self.conn)
 
         self.key_prefix = self.CACHEME.REDIS_CACHE_PREFIX
         self.deleted = self.key_prefix + 'delete'
 
-        if not self.CACHEME.ENABLE_CACHE:
-            return
         self.key = key
         self.invalid_keys = invalid_keys
         self.hit = hit
@@ -76,6 +77,9 @@ class CacheMe(object):
 
     def __call__(self, func):
 
+        if not self.CACHEME.ENABLE_CACHE:
+            return func
+
         self.function = func
 
         self.tag = self.tag or func.__name__
@@ -83,8 +87,6 @@ class CacheMe(object):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not self.CACHEME.ENABLE_CACHE:
-                return self.function(*args, **kwargs)
 
             # bind args and kwargs to true function params
             signature = _signature_from_function(Signature, func)
@@ -210,7 +212,7 @@ class CacheMe(object):
     def collect_sources(self):
         return self.invalid_sources
 
-    def connect(self):
+    def connect(self, source):
         pass
 
     def remove_from_progress(self, key):
