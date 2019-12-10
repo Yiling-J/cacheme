@@ -81,27 +81,6 @@ HDFS installations, some machine learning engines or your backend services.
 This heterogeneity requires a flexible caching strategy able to store data from disparate sources.
 And cacheme or memoize can help you.
 
-Consider this serializer:
-
-```
-Class BookSerializer(object):
-
-    def get_author(self, book):
-        ...
-
-    def get_chapters(self, book):
-        ...
-
-    def get_tables(self, book):
-        ...
-    ...
-```
-
-Each `get` method, has a relation, for example foreignkey or manytomany. Then we can cache
-each `get` separately, when author is changed, only author part is invalid, other cache is still
-working. 
-
-
 ## How to use
 
 #### - Cacheme Decorator
@@ -133,6 +112,24 @@ and the key func before will be stored in this invalid key.
 * `skip`: boolean or callable, default False. If value or callable value return true, will skip cache. For example,
 you can cache result if request param has user, but return None directly, if no user.
 * `timeout`: set ttl for this key, default `None`
+
+#### - Invalid
+
+`cacheme` provide you a method for invalidation:
+
+```
+cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
+```
+
+`create_invalidation` support 3 types of invalidation:
+
+* `key`: invalid one key
+
+* `invalid_key`: same as decorator, will invalid all keys saved in this key
+
+* `pattern`: invalid a redis pattern, for example `test*`
+
+Default for all 3 types are `None`, and you can use them together
 
 
 ## Tips:
