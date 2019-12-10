@@ -252,6 +252,12 @@ class CacheTestCase(BaseTestCase):
         result = self.cache_th(12)
         self.assertEqual(result, '100')
 
+    def test_invalid_key(self):
+        self.basic_cache_func(1)
+        self.assertEqual(self.basic_cache_func(2), 1)
+        cacheme.create_invalidation(key='test>me')
+        self.assertEqual(self.basic_cache_func(2), 2)
+
     def test_invalid_pattern(self):
         for i in range(10000):
             r.set('test:%s' % i, i)

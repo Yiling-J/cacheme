@@ -13,12 +13,6 @@ class CachemeUtils(object):
             return string.split(lg)[:2]
         return [string, 'base']
 
-    def invalid_keys_in_set(self, key):
-        key = self.CACHEME.REDIS_CACHE_PREFIX + key + ':invalid'
-        invalid_keys = self.conn.smembers(key)
-        if invalid_keys:
-            self.conn.sadd(self.CACHEME.REDIS_CACHE_PREFIX + 'delete', *invalid_keys)
-
     def flat_list(self, li):
         if type(li) not in (list, tuple, set):
             li = [li]
