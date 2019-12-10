@@ -52,7 +52,7 @@ class CacheTestCase(BaseTestCase):
     def test_basic(self):
         self.assertEqual(self.basic_cache_func(1), 1)
         self.assertEqual(self.basic_cache_func(2), 1)
-        cacheme.utils.invalid_keys_in_set('test_invalid')
+        cacheme.create_invalidation(invalid_key='test_invalid')
         self.assertEqual(self.basic_cache_func(2), 2)
 
     @cacheme(
@@ -65,7 +65,7 @@ class CacheTestCase(BaseTestCase):
     def test_basic2(self):
         self.assertEqual(self.basic_cache_func2(1), 1)
         self.assertEqual(self.basic_cache_func2(2), 1)
-        cacheme.utils.invalid_keys_in_set('test_invalid')
+        cacheme.create_invalidation(invalid_key='test_invalid')
         self.assertEqual(self.basic_cache_func2(2), 2)
 
     @cacheme(
@@ -78,7 +78,7 @@ class CacheTestCase(BaseTestCase):
     def test_basic3(self):
         self.assertEqual(self.basic_cache_func3(1), 1)
         self.assertEqual(self.basic_cache_func3(2), 1)
-        cacheme.utils.invalid_keys_in_set('test_invalid')
+        cacheme.create_invalidation(invalid_key='test_invalid')
         self.assertEqual(self.basic_cache_func3(2), 2)
 
     @cacheme(
@@ -256,7 +256,7 @@ class CacheTestCase(BaseTestCase):
         for i in range(10000):
             r.set('test:%s' % i, i)
 
-        cacheme.utils.invalid_pattern('test*')
+        cacheme.create_invalidation(pattern='test*')
         self.assertFalse(r.get('test:600'))
 
 

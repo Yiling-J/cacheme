@@ -42,7 +42,7 @@ class CacheMe(object):
         CACHEME.update(settings)
         return type('CACHEME', (), CACHEME)
 
-    def __init__(self, key, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_signals=None):
+    def __init__(self, key, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, **kwargs):
 
         if not self.connection_set:
             raise Exception('No connection find, please use set_connection first!')
@@ -65,10 +65,14 @@ class CacheMe(object):
         self.skip = skip
         self.timeout = timeout
         self.progress_key = self.key_prefix + 'progress'
-        self.invalid_signals = invalid_signals
+        self.invalid_sources = invalid_sources
+        self.kwargs = kwargs
 
         self.conn = self.conn
-        self.link()
+        sources = self.collect_sources()
+        if sources:
+            for source in sources:
+                self.connect(source)
 
     def __call__(self, func):
 
@@ -203,7 +207,10 @@ class CacheMe(object):
             invalid_key = self.key_prefix + invalid_key
             self.push_key(invalid_key, key)
 
-    def link(self):
+    def collect_sources(self):
+        return self.invalid_sources
+
+    def connect(self):
         pass
 
     def remove_from_progress(self, key):
@@ -211,3 +218,20 @@ class CacheMe(object):
 
     def add_to_progress(self, key):
         return self.conn.sadd(self.progress_key, key)
+
+    @classmethod
+    def create_invalidation(cls, key=None, invalid_key=None, pattern=None):
+        invalid_keys = set()
+
+        if isinstance(key, str):
+            invalid_keys.add(cls.CACHEME.REDIS_CACHE_PREFIX + key)
+
+        if isinstance(invalid_key, str):
+            key = cls.CACHEME.REDIS_CACHE_PREFIX + invalid_key + ':invalid'
+            invalid_keys.update(cls.conn.smembers(key))
+
+        if invalid_keys:
+            cls.conn.sadd(cls.CACHEME.REDIS_CACHE_PREFIX + 'delete', *invalid_keys)
+
+        if isinstance(pattern, str):
+            cls.utils.invalid_pattern(pattern)
