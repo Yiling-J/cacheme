@@ -111,7 +111,11 @@ and the key func before will be stored in this invalid key.
 
 * `skip`: boolean or callable, default False. If value or callable value return true, will skip cache. For example,
 you can cache result if request param has user, but return None directly, if no user.
+
 * `timeout`: set ttl for this key, default `None`
+
+* `invalid_sources`: something cause invalidation (for example Django/Flask signals). To use this, 
+You need to override `connect(self, source)` in your cache class.
 
 #### - Invalid
 
