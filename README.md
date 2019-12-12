@@ -1,8 +1,11 @@
 [![Build Status](https://travis-ci.com/Yiling-J/cacheme.svg?branch=master)](https://travis-ci.com/Yiling-J/cacheme)
 [![Build Status](https://codecov.io/gh/Yiling-J/cacheme/branch/master/graph/badge.svg)](https://codecov.io/gh/Yiling-J/cacheme)
-# Cacheme(WIP)
+# Cacheme
 
-A memoized/cache decorator for Python using redis. 
+A memoized/cache decorator for Python using redis.
+
+If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cacheme)
+
 
 ## Features
 
@@ -23,6 +26,8 @@ A memoized/cache decorator for Python using redis.
 `pip install cacheme`
 
 Find a good place to init cacheme globally, for example a **foobar_cache.py** file
+
+For example: https://github.com/Yiling-J/django-cacheme/blob/master/django_cacheme/cache_model.py
 ```
 import redis
 from cacheme import cacheme
