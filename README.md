@@ -67,7 +67,7 @@ class BookSerializer(object):
 	
 ```
 
-So for example we have a book, id is 100, and a user, id is 200. And we want to cache
+We have a book, id is 100, and a user, id is 200. And we want to cache
 book owner data in serializer. So the cache key will be `Book:100>owner`, "Book:100" as key, and
 "owner" as field in redis.
 
@@ -119,7 +119,7 @@ You need to override `connect(self, source)` in your cache class.
 
 #### - Invalid
 
-`cacheme` provide you a method for invalidation:
+You can create invalidation using following method:
 
 ```
 cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
