@@ -8,6 +8,7 @@ import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock
 from cacheme import cacheme
+from tests import nodes, invalid_nodes
 
 r = redis.Redis()
 
@@ -292,6 +293,34 @@ class CacheTestCase(BaseTestCase):
     def test_invalid_source(self):
         self.invalid_source_test_func(1)
         self.assertEqual(self.invalid_source_test_func(2), 1)
+
+
+class NodeTestCase(BaseTestCase):
+
+    @cacheme(
+        node=lambda c: nodes.TestNodeConstant(id=c.id)
+    )
+    def node_test_func_constant(self, id):
+        return id
+
+    @cacheme(
+        node=lambda c: nodes.TestNodeDynamic(id=c.id)
+    )
+    def node_test_func_dynamic(self, id):
+        return id
+
+    def test_node_cache_basic(self):
+        self.assertEqual(self.node_test_func_constant(1), 1)
+        self.assertEqual(self.node_test_func_constant(2), 1)
+
+        self.assertEqual(self.node_test_func_dynamic(1), 1)
+        self.assertEqual(self.node_test_func_dynamic(2), 2)
+
+    def test_node_cache_invalidation(self):
+        self.assertEqual(self.node_test_func_constant(1), 1)
+        cacheme.create_invalidation(invalid_key=str(invalid_nodes.InvalidUserNode(user=1)))
+        self.assertEqual(self.node_test_func_constant(2), 2)
+        self.assertEqual(self.node_test_func_constant(3), 2)
 
 
 if __name__ == '__main__':

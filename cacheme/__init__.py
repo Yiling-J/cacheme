@@ -1,1 +1,2 @@
-from .cache_model import CacheMe as cacheme
+from cacheme.cache_model import CacheMe as cacheme
+from cacheme import node

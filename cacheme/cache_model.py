@@ -6,7 +6,8 @@ import logging
 from functools import wraps
 from inspect import _signature_from_function, Signature
 
-from .utils import CachemeUtils
+from cacheme.utils import CachemeUtils
+from cacheme.node import NodeManager
 
 
 logger = logging.getLogger('cacheme')
@@ -21,6 +22,7 @@ class CacheMe(object):
     @classmethod
     def set_connection(cls, connection):
         cls.conn = connection
+        NodeManager.connection = connection
         cls.connection_set = True
 
     @classmethod
@@ -42,7 +44,7 @@ class CacheMe(object):
         CACHEME.update(settings)
         return type('CACHEME', (), CACHEME)
 
-    def __init__(self, key, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, **kwargs):
+    def __init__(self, key=None, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, node=None, **kwargs):
 
         if not self.connection_set:
             raise Exception('No connection find, please use set_connection first!')
@@ -58,6 +60,7 @@ class CacheMe(object):
         self.key_prefix = self.CACHEME.REDIS_CACHE_PREFIX
         self.deleted = self.key_prefix + 'delete'
 
+        self.node = node
         self.key = key
         self.invalid_keys = invalid_keys
         self.hit = hit
@@ -103,7 +106,12 @@ class CacheMe(object):
             elif self.skip:
                 return self.function(*args, **kwargs)
 
-            key = self.key_prefix + self.key(self.container)
+            node = None
+            if self.node:
+                node = self.node(self.container)
+                key = self.key_prefix + node.key()
+            else:
+                key = self.key_prefix + self.key(self.container)
 
             if self.timeout:
                 result = self.get_key(key)
@@ -112,7 +120,7 @@ class CacheMe(object):
                 result = self.function(*args, **kwargs)
                 self.set_result(key, result)
                 self.container.cacheme_result = result
-                self.add_to_invalid_list(key, args, kwargs)
+                self.add_to_invalid_list(node, key, args, kwargs)
                 return result
 
             if self.timeout is None:
@@ -131,7 +139,7 @@ class CacheMe(object):
                 self.set_result(key, result)
                 self.remove_from_progress(key)
                 self.container.cacheme_result = result
-                self.add_to_invalid_list(key, args, kwargs)
+                self.add_to_invalid_list(node, key, args, kwargs)
             else:
                 if self.hit:
                     self.hit(key, result, self.container)
@@ -196,14 +204,18 @@ class CacheMe(object):
     def push_key(self, key, value):
         return self.conn.sadd(key, value)
 
-    def add_to_invalid_list(self, key, args, kwargs):
-        invalid_keys = self.invalid_keys
+    def add_to_invalid_list(self, node, key, args, kwargs):
+        if node:
+            invalid_nodes = node.invalid_nodes()
+            if not invalid_nodes:
+                return
+            invalid_keys = [str(i) for i in self.utils.flat_list(invalid_nodes)]
+        else:
+            invalid_keys = self.invalid_keys
+            if not invalid_keys:
+                return
+            invalid_keys = self.utils.flat_list(invalid_keys(self.container))
 
-        if not invalid_keys:
-            return
-
-        invalid_keys = invalid_keys(self.container)
-        invalid_keys = self.utils.flat_list(invalid_keys)
         for invalid_key in set(filter(lambda x: x is not None, invalid_keys)):
             invalid_key += ':invalid'
             invalid_key = self.key_prefix + invalid_key
