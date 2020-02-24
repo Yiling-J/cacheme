@@ -28,7 +28,9 @@ class Node(object, metaclass=NodeMetaClass):
     def __init__(self, **kwargs):
         for field in self.required_fields.keys():
             if field not in kwargs:
-                raise Exception('required!')
+                raise Exception('{field} is required for {name}'.format(
+                    field=field, name=self.__class__.__name__
+                ))
             setattr(self, field, kwargs[field])
 
         self.objects = NodeManager(self)
