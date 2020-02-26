@@ -65,6 +65,12 @@ class NodeTestCase(BaseTestCase):
         self.node_test_func_constant(1)
         self.assertEqual(cacheme.tags['TestNodeConstant'].keys, {b'CM:test'})
 
+    def test_node_keys(self):
+        self.node_test_func_constant(1)
+        node = nodes.TestNodeConstant
+        self.assertEqual(node.objects.keys, {b'CM:test'})
+        self.assertEqual(nodes.InvalidUserNode.objects.keys(user=1), {b'CM:test'})
+
 
 if __name__ == '__main__':
     unittest.main()

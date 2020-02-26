@@ -1,4 +1,4 @@
-from cacheme.node import InvalidNode
+from cacheme.nodes import InvalidNode
 
 
 class InvalidUserNode(InvalidNode):

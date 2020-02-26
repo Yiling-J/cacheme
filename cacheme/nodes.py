@@ -4,12 +4,24 @@ tags = dict()
 class NodeManager(object):
     connection = None
 
-    def __init__(self, node_cls):
-        self.node_cls = node_cls
+    def __init__(self, key):
+        self.key = key
 
     @property
     def keys(self):
-        return self.connection.smembers(self.CACHEME.REDIS_CACHE_PREFIX + self.node_cls.__name__)
+        return self.connection.smembers(self.CACHEME.REDIS_CACHE_PREFIX + self.key)
+
+
+class InvalidNodeManager(NodeManager):
+
+    def __init__(self, node_cls):
+        self.node_cls = node_cls
+
+    def keys(self, **kwargs):
+        node = self.node_cls(**kwargs)
+        key = node.key_name
+        invalid_key = key + ':invalid'
+        return self.connection.smembers(self.CACHEME.REDIS_CACHE_PREFIX + invalid_key)
 
 
 class Field(object):
@@ -27,7 +39,7 @@ class NodeMetaClass(type):
         node_class = super().__new__(cls, name, bases, attrs)
         if name and name != 'Node':
             tags[name] = node_class
-            node_class.objects = NodeManager(node_class)
+            node_class.objects = NodeManager(node_class.__name__)
         return node_class
 
     @property
@@ -52,10 +64,19 @@ class Node(object, metaclass=NodeMetaClass):
         return None
 
 
-class InvalidNode(object):
+class InvalidNodeMetaClass(type):
+    def __new__(cls, name, bases, attrs):
+
+        node_class = super().__new__(cls, name, bases, attrs)
+        if name and name != 'InvalidNode':
+            node_class.objects = InvalidNodeManager(node_class)
+        return node_class
+
+
+class InvalidNode(object, metaclass=InvalidNodeMetaClass):
+
     def __init__(self, **kwargs):
         self.key_name = self.key(**kwargs)
-        self.objects = NodeManager(self)
 
     def __str__(self):
         return self.key_name

@@ -7,7 +7,7 @@ from functools import wraps
 from inspect import _signature_from_function, Signature
 
 from cacheme.utils import CachemeUtils
-from cacheme.node import NodeManager, tags
+from cacheme.nodes import NodeManager, tags
 
 
 logger = logging.getLogger('cacheme')

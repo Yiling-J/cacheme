@@ -1,4 +1,4 @@
-from cacheme.node import Node, Field
+from cacheme.nodes import Node, Field
 from tests.invalid_nodes import InvalidUserNode
 
 
