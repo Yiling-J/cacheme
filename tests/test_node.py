@@ -61,6 +61,10 @@ class NodeTestCase(BaseTestCase):
             'id is required for TestNodeConstant'
         )
 
+    def test_tag(self):
+        self.node_test_func_constant(1)
+        self.assertEqual(cacheme.tags['TestNodeConstant'].keys, {b'CM:test'})
+
 
 if __name__ == '__main__':
     unittest.main()
