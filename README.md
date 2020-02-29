@@ -23,6 +23,12 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 
 * **[Timeout(ttl) support](#timeoutttl-support)**
 
+## Why Cacheme
+
+For complicated page or API, you may need to fetch data from a variety of sources such as MySQL databases,
+HDFS installations, some machine learning engines or your backend services.
+This heterogeneity requires a flexible caching strategy able to store data from disparate sources.
+And cacheme or memoize can help you.
 
 ## Getting started
 
@@ -34,11 +40,11 @@ For example: https://github.com/Yiling-J/django-cacheme/blob/master/django_cache
 
 Or if you use node, create a package for better organization:
 ```
-\your_cache_module_name
+\your_cache_package_name
     __init__.py
-	cache.py
-	nodes.py
-	invalid_nodes.py
+    cache.py
+    nodes.py
+    invalid_nodes.py
 ```
 
 Initialize cacheme in your foobar_cache.py(or cache.py in package)
@@ -59,7 +65,6 @@ settings = {
 
 cacheme.set_connection(r)
 cacheme.update_settings(settings)
-
 ```
 Then in your project, when you need cacheme, just:
 
@@ -67,7 +72,7 @@ Then in your project, when you need cacheme, just:
 from foobar_cache import cacheme
 
 # using node
-# from your_cache_module_name.cache import cacheme
+# from your_cache_package_name.cache import cacheme
 ```
 
 ## Feature detail
@@ -78,7 +83,6 @@ from foobar_cache import cacheme
 @cacheme(key=lambda c: 'cat:{name}'.format(name=c.cat.name))
 def get_cat(self, cat):
 	return some_function(cat)
-
 ```
 This is how cacheme create key using lambda, the `c` in the lambda contains all args/kwargs of
 decorated function.
@@ -89,10 +93,9 @@ decorated function.
 @cacheme(node=lambda c: CatNode(cat=c.cat))
 def get_cat(self, cat):
 	return some_function(cat)
-
 ```
 Node give you a generic way to manage you cache. Different from key, node use a predefined
-node class. In this way, you can make cache reusable.
+node class. In this way, you can make cache reusable. [Detail](#declaring-node-and-invalidmode)
 
 #### Avoid thundering herd using stale data
 How cacheme avoid thundering herds: if there is stale data, use stale data until new data fill in, if there is no stale data, just wait a short time and retry.
@@ -118,7 +121,6 @@ If skip is true, will skip the whole cache part, and get result dierctly from fu
 )
 def get_cat(self, cat):
 	return some_function(cat)
-
 ```
 After define tags, you can use tag like this:
 ```
@@ -129,7 +131,6 @@ keys = instance.keys
 
 # invalid all keys
 instance.invalid_all()
-
 ```
 If you use node mode, tag will be node class name.
 
@@ -140,7 +141,6 @@ If you use node mode, tag will be node class name.
 	hit=lambda key, result, c: do_something,
 	miss=lambda key, c: do_something
 )
-
 ```
 Just hit/miss callback
 
@@ -172,8 +172,7 @@ class BookSerializer(object):
         invalid_keys=lambda c: [c.obj.owner.cache_key]
     )
     def get_owner(self, obj):
-        return BookOwnerSerializer(obj.owner).data
-	
+        return BookOwnerSerializer(obj.owner).data	
 ```
 
 We have a book, id is 100, and a user, id is 200. And we want to cache
@@ -182,13 +181,6 @@ book owner data in serializer. So the cache key will be `Book:100>owner`, "Book:
 
 Invalid key will be `User:200:invalid`, the ":invalid" suffix is auto added. And the redis data type
 of this key is set. The `Book:100>owner` key will be stored under this invalid key.
-
-## Introduction
-
-For complicated page or API, you may need to fetch data from a variety of sources such as MySQL databases,
-HDFS installations, some machine learning engines or your backend services.
-This heterogeneity requires a flexible caching strategy able to store data from disparate sources.
-And cacheme or memoize can help you.
 
 ## How to use
 
