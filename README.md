@@ -95,7 +95,7 @@ def get_cat(self, cat):
 	return some_function(cat)
 ```
 Node give you a generic way to manage you cache. Different from key, node use a predefined
-node class. In this way, you can make cache reusable. [Detail](#--declaring-node-and-invalidmode)
+node class. In this way, you can make cache reusable. [Detail](#--declaring-node-and-invalidnode)
 
 #### Avoid thundering herd using stale data
 How cacheme avoid thundering herds: if there is stale data, use stale data until new data fill in, if there is no stale data, just wait a short time and retry.
