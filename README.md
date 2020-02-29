@@ -9,19 +9,19 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 
 ## Features
 
-* **[Dynamic key based on args/kwargs](#Dynamic key based on args/kwargs)**
+* **[Dynamic key based on args/kwargs](#dynamic-key-based-on-argskwargs)**
 
-* **[Node for better management](#Node mode for better management)**
+* **[Node for better management](#node-for-better-management)**
 
-* **[Avoid thundering herd using stale data](#Avoid thundering herd using stale data)**
+* **[Avoid thundering herd using stale data](#avoid-thundering-herd-using-stale-data)**
 
-* **[Skip cache based on args/kwargs](#Skip cache based on args/kwargs)**
+* **[Skip cache based on args/kwargs](#skip-cache-based-on-argskwargs)**
 
-* **[Get/invalid all keys for tag](#Get/invalid all keys for tag)**
+* **[Get/invalid all keys for tag](#getinvalid-all-keys-for-tag)**
 
-* **[Hit/miss function support](#Hit/miss function support)**
+* **[Hit/miss function support](#hitmiss-function-support)**
 
-* **[Timeout(ttl) support](#Timeout(ttl) support)**
+* **[Timeout(ttl) support](#timeoutttl-support)**
 
 
 ## Getting started
