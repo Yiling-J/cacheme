@@ -244,8 +244,6 @@ class TestNode(Node):
 
     def invalid_nodes(self):
         return InvalidNode(id=self.id)
-
-
 ```
 
 You need to define all fields need in `key()` and `invalid_nodes()` uisng `Field`, and implement `key()`
@@ -259,7 +257,6 @@ class TestNode(Node):
     id = Field()
 	user = Field()
 	address = Field()
-
 ```
 Then in cacheme all 3 are required
 ```
@@ -268,7 +265,6 @@ Then in cacheme all 3 are required
 )
 def function(id, user, extra):
 ...
-
 ```
 We still use lambda for node, this is the only way to let node get parameters from function args/kwargs.
 
