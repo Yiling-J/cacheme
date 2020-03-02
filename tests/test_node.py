@@ -63,13 +63,14 @@ class NodeTestCase(BaseTestCase):
 
     def test_tag(self):
         self.node_test_func_constant(1)
-        self.assertEqual(cacheme.tags['TestNodeConstant'].keys, {b'CM:test'})
+        self.assertEqual(cacheme.tags['TestNodeConstant'].objects.invalid(), 1)
 
     def test_node_keys(self):
         self.node_test_func_constant(1)
         node = nodes.TestNodeConstant
-        self.assertEqual(node.objects.keys, {b'CM:test'})
-        self.assertEqual(nodes.InvalidUserNode.objects.keys(user=1), {b'CM:test'})
+        self.assertEqual(node.objects.invalid(), 1)
+        self.node_test_func_constant(1)
+        self.assertEqual(nodes.InvalidUserNode.objects.invalid(user=1), 1)
 
 
 if __name__ == '__main__':

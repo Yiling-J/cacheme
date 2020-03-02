@@ -17,7 +17,7 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 
 * **[Skip cache based on args/kwargs](#skip-cache-based-on-argskwargs)**
 
-* **[Get/invalid all keys for tag](#getinvalid-all-keys-for-tag)**
+* **[Invalid all keys for tag](#invalid-all-keys-for-tag)**
 
 * **[Hit/miss function support](#hitmiss-function-support)**
 
@@ -113,7 +113,7 @@ def get_cat(self, cat):
 ```
 If skip is true, will skip the whole cache part, and get result dierctly from function.
 
-#### Get/invalid all keys for tag
+#### Invalid all keys for tag
 ```
 @cacheme(
     key=lambda c: 'cat:{name}'.format(name=c.cat.name),
@@ -126,9 +126,6 @@ After define tags, you can use tag like this:
 ```
 instance = cacheme.tags['cats']
   
-# get all keys
-keys = instance.keys
-
 # invalid all keys
 instance.invalid_all()
 ```
@@ -267,6 +264,18 @@ def function(id, user, extra):
 ...
 ```
 We still use lambda for node, this is the only way to let node get parameters from function args/kwargs.
+
+#### - Invalid from Node
+```
+from my_cache import nodes
+
+
+# invalid keys create by *Node Class*
+nodes.TestNode.objects.invalid()
+
+# invalid keys store in *a single invalid node*
+nodes.TestInvalidNode.objects.invalid(id=123)
+```
 
 
 ## Tips:

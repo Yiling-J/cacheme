@@ -153,20 +153,12 @@ class CacheMe(object):
 
         return wrapper
 
-    @property
-    def keys(self):
-        return self.conn.smembers(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
-
-    @keys.setter
-    def keys(self, val):
+    def add_key_to_tag(self, val):
         self.conn.sadd(self.CACHEME.REDIS_CACHE_PREFIX + self.tag, val)
 
     def invalid_all(self):
-        keys = self.keys
-        if not keys:
-            return
-        self.conn.sadd(self.deleted, *keys)
-        self.conn.unlink(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
+        iterator = self.conn.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
+        return self.utils.invalid_iter(iterator)
 
     def get_result_from_func(self, args, kwargs, key):
         if self.miss:
@@ -196,7 +188,7 @@ class CacheMe(object):
         return result
 
     def set_key(self, key, value):
-        self.keys = key
+        self.add_key_to_tag(key)
         value = pickle.dumps(value)
         key, field = self.utils.split_key(key)
         if self.timeout:
@@ -251,4 +243,5 @@ class CacheMe(object):
             cls.conn.sadd(cls.CACHEME.REDIS_CACHE_PREFIX + 'delete', *invalid_keys)
 
         if isinstance(pattern, str):
-            cls.utils.invalid_pattern(pattern)
+            iterator = cls.conn.scan_iter(pattern, count=cls.CACHEME.REDIS_CACHE_SCAN_COUNT)
+            cls.utils.invalid_iter(iterator)

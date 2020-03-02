@@ -34,11 +34,13 @@ class CachemeUtils(object):
                 break
             yield result
 
-    def invalid_pattern(self, pattern):
-        chunks = self.chunk_iter(self.conn.scan_iter(pattern, count=self.CACHEME.REDIS_CACHE_SCAN_COUNT), 500, None)
+    def invalid_iter(self, iterator):
+        count = 0
+        chunks = self.chunk_iter(iterator, 500, None)
         for keys in chunks:
             if keys:
-                self.conn.unlink(*list(keys))
+                count += self.conn.unlink(*list(keys))
+        return count
 
     def get_epoch(self, seconds=0):
         dt = datetime.utcnow() + timedelta(seconds=seconds)

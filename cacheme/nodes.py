@@ -1,3 +1,5 @@
+from cacheme import utils
+
 tags = dict()
 
 
@@ -6,22 +8,25 @@ class NodeManager(object):
 
     def __init__(self, key):
         self.key = key
+        self.utils = utils.CachemeUtils(self.CACHEME, self.connection)
 
-    @property
-    def keys(self):
-        return self.connection.smembers(self.CACHEME.REDIS_CACHE_PREFIX + self.key)
+    def invalid(self):
+        iterator = self.connection.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + self.key)
+        return self.utils.invalid_iter(iterator)
 
 
 class InvalidNodeManager(NodeManager):
 
     def __init__(self, node_cls):
         self.node_cls = node_cls
+        self.utils = utils.CachemeUtils(self.CACHEME, self.connection)
 
-    def keys(self, **kwargs):
+    def invalid(self, **kwargs):
         node = self.node_cls(**kwargs)
         key = node.key_name
         invalid_key = key + ':invalid'
-        return self.connection.smembers(self.CACHEME.REDIS_CACHE_PREFIX + invalid_key)
+        iterator = self.connection.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + invalid_key)
+        return self.utils.invalid_iter(iterator)
 
 
 class Field(object):

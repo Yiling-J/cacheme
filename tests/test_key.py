@@ -148,12 +148,10 @@ class CacheTestCase(BaseTestCase):
         self.cache_inst_1()
         self.cache_inst_2()
         self.cache_inst_3()
-        self.assertEqual(cacheme.tags['cache_inst_1'].keys, {b'CM:INST:1'})
-        self.assertEqual(cacheme.tags['test_instance_sec'].keys, {b'CM:INST:2'})
-        self.assertEqual(cacheme.tags['three'].keys, {b'CM:INST:3'})
-        cacheme.tags['three'].invalid_all()
-        self.assertEqual(cacheme.tags['three'].keys, set())
-        cacheme.tags['four'].invalid_all()
+        self.assertEqual(cacheme.tags['cache_inst_1'].invalid_all(), 1)
+        self.assertEqual(cacheme.tags['test_instance_sec'].invalid_all(), 1)
+        self.assertEqual(cacheme.tags['three'].invalid_all(), 1)
+        self.assertEqual(cacheme.tags['three'].invalid_all(), 0)
 
     @cacheme(
         key=lambda c: "CACHE:SKIP:1",
