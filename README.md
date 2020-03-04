@@ -243,17 +243,17 @@ class TestNode(Node):
         return InvalidNode(id=self.id)
 ```
 
-You need to define all fields need in `key()` and `invalid_nodes()` uisng `Field`, and implement `key()`
+You need to add all fields needed in `key()` and `invalid_nodes()` as attributes, and implement `key()`
 method. `invalid_nodes()` method is optional.
 
-All fields you defined in Node class will be required kwargs when using node in cacheme decorator.
-For example if youe node has 3 fields:
+All fields you add in Node class will be **required** kwargs when using node in cacheme decorator.
+For example if your node has 3 fields:
 
 ```
 class TestNode(Node):
     id = Field()
-	user = Field()
-	address = Field()
+    user = Field()
+    address = Field()
 ```
 Then in cacheme all 3 are required
 ```
