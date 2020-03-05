@@ -5,9 +5,10 @@ tags = dict()
 
 class NodeManager(object):
     connection = None
+    _initialized = False
 
-    def __init__(self, key):
-        self.key = key
+    def __init__(self, node_class):
+        self.key = node_class.__name__
         self.utils = utils.CachemeUtils(self.CACHEME, self.connection)
 
     def invalid(self):
@@ -42,17 +43,23 @@ class NodeMetaClass(type):
         }
 
         node_class = super().__new__(cls, name, bases, attrs)
-        if name and name != 'Node':
-            tags[name] = node_class
-            node_class.objects = NodeManager(node_class.__name__)
+        if node_class.manager._initialized:
+            node_class.objects = node_class.manager(node_class)
+        node_class._update_class()
         return node_class
 
-    @property
-    def keys(cls):
-        return cls.objects.keys
+    def _update_class(cls):
+        pass
 
 
 class Node(object, metaclass=NodeMetaClass):
+    manager = NodeManager
+
+    @classmethod
+    def _update_class(cls):
+        name = cls.__name__
+        if name != 'Node':
+            tags[name] = cls
 
     def __init__(self, **kwargs):
         for field in self.required_fields.keys():
@@ -69,22 +76,22 @@ class Node(object, metaclass=NodeMetaClass):
         return None
 
 
-class InvalidNodeMetaClass(type):
-    def __new__(cls, name, bases, attrs):
-
-        node_class = super().__new__(cls, name, bases, attrs)
-        if name and name != 'InvalidNode':
-            node_class.objects = InvalidNodeManager(node_class)
-        return node_class
-
-
-class InvalidNode(object, metaclass=InvalidNodeMetaClass):
+class InvalidNode(object, metaclass=NodeMetaClass):
+    manager = InvalidNodeManager
 
     def __init__(self, **kwargs):
-        self.key_name = self.key(**kwargs)
+
+        for field in self.required_fields.keys():
+            if field not in kwargs:
+                raise Exception('{field} is required for {name}'.format(
+                    field=field, name=self.__class__.__name__
+                ))
+            setattr(self, field, kwargs[field])
+
+        self.key_name = self.key()
 
     def __str__(self):
         return self.key_name
 
-    def key(self, **kwargs):
+    def key(self):
         raise NotImplementedError()

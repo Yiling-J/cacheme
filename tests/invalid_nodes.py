@@ -1,6 +1,8 @@
-from cacheme.nodes import InvalidNode
+from cacheme import nodes
 
 
-class InvalidUserNode(InvalidNode):
-    def key(self, user):
-        return 'user:%s' % user
+class InvalidUserNode(nodes.InvalidNode):
+    user = nodes.Field()
+
+    def key(self):
+        return 'user:%s' % self.user

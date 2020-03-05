@@ -30,6 +30,7 @@ class CacheMe(object):
         cls.CACHEME = cls.merge_settings(settings)
         cls.settings_set = True
         NodeManager.CACHEME = cls.CACHEME
+        NodeManager._initialized = True
 
     @classmethod
     def merge_settings(cls, settings):
