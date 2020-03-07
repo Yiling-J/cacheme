@@ -231,6 +231,7 @@ Declaring a node is very simlpe:
 
 ```
 from cacheme.nodes import Node, Field
+from my_cache_package import invalid_nodes
 
 
 class TestNode(Node):
@@ -240,7 +241,7 @@ class TestNode(Node):
         return 'test:{id}'.format(id=self.id)
 
     def invalid_nodes(self):
-        return InvalidNode(id=self.id)
+        return invalid_nodes.InvalidNode(id=self.id)
 ```
 
 You need to add all fields needed in `key()` and `invalid_nodes()` as attributes, and implement `key()`
@@ -264,6 +265,19 @@ def function(id, user, extra):
 ...
 ```
 We still use lambda for node, this is the only way to let node get parameters from function args/kwargs.
+
+Invalid naode is similar:
+```
+from cacheme.nodes import InvalidNode, Field
+
+
+class TestInvalidNode(Node):
+    id = Field()
+
+    def key(self):
+        return 'test:{id}'.format(id=self.id)
+
+```
 
 #### - Invalid from Node
 ```
