@@ -24,6 +24,19 @@ class BaseTestCase(TestCase):
 
 class NodeTestCase(BaseTestCase):
 
+    def test_no_key(self):
+        with self.assertRaises(NotImplementedError):
+            cacheme(node=lambda c: nodes.NodeNoKey())(lambda: 1)()
+
+        with self.assertRaises(NotImplementedError):
+            invalid_nodes.InvalidNodeNoKey()
+
+    @cacheme(
+        node=lambda c: nodes.BasicNode()
+    )
+    def node_test_func_basic(self, id):
+        return id
+
     @cacheme(
         node=lambda c: nodes.TestNodeConstant(id=c.id)
     )
@@ -37,6 +50,8 @@ class NodeTestCase(BaseTestCase):
         return id
 
     def test_node_cache_basic(self):
+        self.assertEqual(self.node_test_func_basic(1), 1)
+
         self.assertEqual(self.node_test_func_constant(1), 1)
         self.assertEqual(self.node_test_func_constant(2), 1)
 
@@ -59,6 +74,13 @@ class NodeTestCase(BaseTestCase):
         self.assertEqual(
             str(e.exception),
             'id is required for TestNodeConstant'
+        )
+
+        with self.assertRaises(Exception) as e:
+            invalid_nodes.InvalidUserNode()
+        self.assertEqual(
+            str(e.exception),
+            'user is required for InvalidUserNode'
         )
 
     def test_tag(self):

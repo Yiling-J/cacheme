@@ -68,6 +68,7 @@ class Node(object, metaclass=NodeMetaClass):
                     field=field, name=self.__class__.__name__
                 ))
             setattr(self, field, kwargs[field])
+        self.key_name = self.key()
 
     def key(self):
         raise NotImplementedError()

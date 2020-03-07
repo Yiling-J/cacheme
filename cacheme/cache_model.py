@@ -112,7 +112,7 @@ class CacheMe(object):
             node = None
             if self.node:
                 node = self.node(self.container)
-                key = self.key_prefix + node.key()
+                key = self.key_prefix + node.key_name
                 self.tag = node.__class__.__name__
             else:
                 key = self.key_prefix + self.key(self.container)

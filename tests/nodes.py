@@ -1,9 +1,19 @@
-from cacheme.nodes import Node, Field
+from cacheme import nodes
 from tests.invalid_nodes import InvalidUserNode
 
 
-class TestNodeConstant(Node):
-    id = Field()
+class NodeNoKey(nodes.Node):
+    pass
+
+
+class BasicNode(nodes.Node):
+
+    def key(self):
+        return 'basic'
+
+
+class TestNodeConstant(nodes.Node):
+    id = nodes.Field()
 
     def key(self):
         return 'test'
@@ -12,8 +22,8 @@ class TestNodeConstant(Node):
         return InvalidUserNode(user=self.id)
 
 
-class TestNodeDynamic(Node):
-    id = Field()
+class TestNodeDynamic(nodes.Node):
+    id = nodes.Field()
 
     def key(self):
         return 'test:%s' % self.id
