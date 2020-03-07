@@ -34,9 +34,7 @@ And cacheme or memoize can help you.
 
 `pip install cacheme`
 
-Find a good place to init cacheme globally, for example a **foobar_cache.py** file
-
-For example: https://github.com/Yiling-J/django-cacheme/blob/master/django_cacheme/cache_model.py
+Find a good place to init cacheme globally, for example `foobar_cache.py`
 
 Or if you use node, create a package for better organization:
 ```
@@ -47,7 +45,7 @@ Or if you use node, create a package for better organization:
     invalid_nodes.py
 ```
 
-Initialize cacheme in your foobar_cache.py(or cache.py in package)
+Initialize cacheme in your `foobar_cache.py` (or `cache.py` in package)
 
 ```
 import redis
@@ -82,7 +80,7 @@ from foobar_cache import cacheme
 ```
 @cacheme(key=lambda c: 'cat:{name}'.format(name=c.cat.name))
 def get_cat(self, cat):
-	return some_function(cat)
+    return some_function(cat)
 ```
 This is how cacheme create key using lambda, the `c` in the lambda contains all args/kwargs of
 decorated function.
@@ -92,7 +90,7 @@ decorated function.
 ```
 @cacheme(node=lambda c: CatNode(cat=c.cat))
 def get_cat(self, cat):
-	return some_function(cat)
+    return some_function(cat)
 ```
 Node give you a generic way to manage you cache. Different from key, node use a predefined
 node class. In this way, you can make cache reusable. [Detail](#--declaring-node-and-invalidnode)
@@ -109,7 +107,7 @@ How cacheme avoid thundering herds: if there is stale data, use stale data until
 def get_cat(self, cat):
     if not cat:
         return None
-	return some_function(cat)
+    return some_function(cat)
 ```
 If skip is true, will skip the whole cache part, and get result dierctly from function.
 
@@ -117,10 +115,10 @@ If skip is true, will skip the whole cache part, and get result dierctly from fu
 ```
 @cacheme(
     key=lambda c: 'cat:{name}'.format(name=c.cat.name),
-	tag='cats'
+    tag='cats'
 )
 def get_cat(self, cat):
-	return some_function(cat)
+    return some_function(cat)
 ```
 After define tags, you can use tag like this:
 ```
@@ -129,14 +127,14 @@ instance = cacheme.tags['cats']
 # invalid all keys
 instance.invalid_all()
 ```
-If you use node mode, tag will be node class name.
+If you use node mode, tag will be node class name. Invalid will delete keys directly, no stale data.
 
 #### Hit/miss function support
 ```
 @cacheme(
     key=lambda c: 'cat:{name}'.format(name=c.cat.name),
-	hit=lambda key, result, c: do_something,
-	miss=lambda key, c: do_something
+    hit=lambda key, result, c: do_something,
+    miss=lambda key, c: do_something
 )
 ```
 Just hit/miss callback
@@ -145,10 +143,10 @@ Just hit/miss callback
 ```
 @cacheme(
     key=lambda c: 'cat:{name}'.format(name=c.cat.name),
-	timeouy=300
+    timeout=300
 )
 def get_cat(self, cat):
-	return some_function(cat)
+    return some_function(cat)
 ```
 set ttl for your cache, in seconds.
 
@@ -290,7 +288,7 @@ nodes.TestNode.objects.invalid()
 # invalid keys store in *a single invalid node*
 nodes.TestInvalidNode.objects.invalid(id=123)
 ```
-
+Invalid will delete keys directly, no stale data.
 
 ## Tips:
 
