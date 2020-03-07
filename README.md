@@ -264,7 +264,7 @@ def function(id, user, extra):
 ```
 We still use lambda for node, this is the only way to let node get parameters from function args/kwargs.
 
-Invalid naode is similar:
+Invalid node is similar:
 ```
 from cacheme.nodes import InvalidNode, Field
 
