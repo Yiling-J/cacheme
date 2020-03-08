@@ -98,6 +98,19 @@ class NodeTestCase(BaseTestCase):
         result = self.node_test_func_constant(3)
         self.assertEqual(result, 3)
 
+    def test_get_node_value(self):
+        result = self.node_test_func_constant(1)
+        self.assertEqual(result, 1)
+        self.assertEqual(nodes.TestNodeConstant.objects.get(id=1), 1)
+
+    def test_get_node_no_value(self):
+        with self.assertRaises(Exception) as e:
+            nodes.TestNodeDynamic.objects.get(id=1)
+        self.assertEqual(
+            str(e.exception),
+            'Node CM:test:1 does not exist'
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

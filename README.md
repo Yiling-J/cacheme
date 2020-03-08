@@ -290,6 +290,15 @@ nodes.TestInvalidNode.objects.invalid(id=123)
 ```
 Invalid will delete keys directly, no stale data.
 
+#### - Get a single node value
+```
+from my_cache import nodes
+
+
+value = nodes.TestNode.objects.get(id=123)
+
+```
+
 ## Tips:
 
 * key and invalid_keys callable: the first argument in the callable is the container, this container

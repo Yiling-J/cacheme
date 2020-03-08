@@ -7,7 +7,7 @@ from functools import wraps
 from inspect import _signature_from_function, Signature
 
 from cacheme.utils import CachemeUtils
-from cacheme.nodes import NodeManager, tags
+from cacheme import nodes
 
 
 logger = logging.getLogger('cacheme')
@@ -17,20 +17,20 @@ class CacheMe(object):
     connection_set = False
     settings_set = False
     utils = None
-    tags = tags
+    tags = nodes.tags
 
     @classmethod
     def set_connection(cls, connection):
         cls.conn = connection
-        NodeManager.connection = connection
+        nodes.NodeManager.connection = connection
         cls.connection_set = True
 
     @classmethod
     def update_settings(cls, settings):
         cls.CACHEME = cls.merge_settings(settings)
         cls.settings_set = True
-        NodeManager.CACHEME = cls.CACHEME
-        NodeManager._initialized = True
+        nodes.CACHEME = cls.CACHEME
+        nodes.NodeManager._initialized = True
 
     @classmethod
     def merge_settings(cls, settings):
@@ -112,7 +112,7 @@ class CacheMe(object):
             node = None
             if self.node:
                 node = self.node(self.container)
-                key = self.key_prefix + node.key_name
+                key = node.key_name
                 self.tag = node.__class__.__name__
             else:
                 key = self.key_prefix + self.key(self.container)
