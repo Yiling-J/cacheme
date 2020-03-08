@@ -6,7 +6,8 @@ import logging
 from functools import wraps
 from inspect import _signature_from_function, Signature
 
-from .utils import CachemeUtils
+from cacheme.utils import CachemeUtils
+from cacheme import nodes
 
 
 logger = logging.getLogger('cacheme')
@@ -16,17 +17,20 @@ class CacheMe(object):
     connection_set = False
     settings_set = False
     utils = None
-    tags = dict()
+    tags = nodes.tags
 
     @classmethod
     def set_connection(cls, connection):
         cls.conn = connection
+        nodes.NodeManager.connection = connection
         cls.connection_set = True
 
     @classmethod
     def update_settings(cls, settings):
         cls.CACHEME = cls.merge_settings(settings)
         cls.settings_set = True
+        nodes.CACHEME = cls.CACHEME
+        nodes.NodeManager._initialized = True
 
     @classmethod
     def merge_settings(cls, settings):
@@ -42,7 +46,7 @@ class CacheMe(object):
         CACHEME.update(settings)
         return type('CACHEME', (), CACHEME)
 
-    def __init__(self, key, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, **kwargs):
+    def __init__(self, key=None, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, node=None, **kwargs):
 
         if not self.connection_set:
             raise Exception('No connection find, please use set_connection first!')
@@ -58,6 +62,7 @@ class CacheMe(object):
         self.key_prefix = self.CACHEME.REDIS_CACHE_PREFIX
         self.deleted = self.key_prefix + 'delete'
 
+        self.node = node
         self.key = key
         self.invalid_keys = invalid_keys
         self.hit = hit
@@ -83,7 +88,8 @@ class CacheMe(object):
         self.function = func
 
         self.tag = self.tag or func.__name__
-        self.tags[self.tag] = self
+        if not self.node:
+            self.tags[self.tag] = self
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -103,7 +109,13 @@ class CacheMe(object):
             elif self.skip:
                 return self.function(*args, **kwargs)
 
-            key = self.key_prefix + self.key(self.container)
+            node = None
+            if self.node:
+                node = self.node(self.container)
+                key = node.key_name
+                self.tag = node.__class__.__name__
+            else:
+                key = self.key_prefix + self.key(self.container)
 
             if self.timeout:
                 result = self.get_key(key)
@@ -112,7 +124,7 @@ class CacheMe(object):
                 result = self.function(*args, **kwargs)
                 self.set_result(key, result)
                 self.container.cacheme_result = result
-                self.add_to_invalid_list(key, args, kwargs)
+                self.add_to_invalid_list(node, key, args, kwargs)
                 return result
 
             if self.timeout is None:
@@ -131,7 +143,7 @@ class CacheMe(object):
                 self.set_result(key, result)
                 self.remove_from_progress(key)
                 self.container.cacheme_result = result
-                self.add_to_invalid_list(key, args, kwargs)
+                self.add_to_invalid_list(node, key, args, kwargs)
             else:
                 if self.hit:
                     self.hit(key, result, self.container)
@@ -142,20 +154,12 @@ class CacheMe(object):
 
         return wrapper
 
-    @property
-    def keys(self):
-        return self.conn.smembers(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
-
-    @keys.setter
-    def keys(self, val):
+    def add_key_to_tag(self, val):
         self.conn.sadd(self.CACHEME.REDIS_CACHE_PREFIX + self.tag, val)
 
     def invalid_all(self):
-        keys = self.keys
-        if not keys:
-            return
-        self.conn.sadd(self.deleted, *keys)
-        self.conn.unlink(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
+        iterator = self.conn.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
+        return self.utils.invalid_iter(iterator)
 
     def get_result_from_func(self, args, kwargs, key):
         if self.miss:
@@ -185,7 +189,7 @@ class CacheMe(object):
         return result
 
     def set_key(self, key, value):
-        self.keys = key
+        self.add_key_to_tag(key)
         value = pickle.dumps(value)
         key, field = self.utils.split_key(key)
         if self.timeout:
@@ -196,14 +200,18 @@ class CacheMe(object):
     def push_key(self, key, value):
         return self.conn.sadd(key, value)
 
-    def add_to_invalid_list(self, key, args, kwargs):
-        invalid_keys = self.invalid_keys
+    def add_to_invalid_list(self, node, key, args, kwargs):
+        if node:
+            invalid_nodes = node.invalid_nodes()
+            if not invalid_nodes:
+                return
+            invalid_keys = [str(i) for i in self.utils.flat_list(invalid_nodes)]
+        else:
+            invalid_keys = self.invalid_keys
+            if not invalid_keys:
+                return
+            invalid_keys = self.utils.flat_list(invalid_keys(self.container))
 
-        if not invalid_keys:
-            return
-
-        invalid_keys = invalid_keys(self.container)
-        invalid_keys = self.utils.flat_list(invalid_keys)
         for invalid_key in set(filter(lambda x: x is not None, invalid_keys)):
             invalid_key += ':invalid'
             invalid_key = self.key_prefix + invalid_key
@@ -236,4 +244,5 @@ class CacheMe(object):
             cls.conn.sadd(cls.CACHEME.REDIS_CACHE_PREFIX + 'delete', *invalid_keys)
 
         if isinstance(pattern, str):
-            cls.utils.invalid_pattern(pattern)
+            iterator = cls.conn.scan_iter(pattern, count=cls.CACHEME.REDIS_CACHE_SCAN_COUNT)
+            cls.utils.invalid_iter(iterator)
