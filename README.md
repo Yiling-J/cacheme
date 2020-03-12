@@ -282,8 +282,11 @@ class TestInvalidNode(Node):
 from my_cache import nodes
 
 
-# invalid keys create by *Node Class*
+# invalid all keys create by *Node Class*
 nodes.TestNode.objects.invalid()
+
+# invalid one key in node
+nodes.TestNode.objects.invalid(id=123)
 
 # invalid keys store in *a single invalid node*
 nodes.TestInvalidNode.objects.invalid(id=123)

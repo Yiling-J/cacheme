@@ -14,9 +14,14 @@ class NodeManager(object):
         self.key = self.node_class.__name__
         self.utils = utils.CachemeUtils(CACHEME, self.connection)
 
-    def invalid(self):
-        iterator = self.connection.sscan_iter(CACHEME.REDIS_CACHE_PREFIX + self.key)
-        return self.utils.invalid_iter(iterator)
+    def invalid(self, **kwargs):
+        if not kwargs:
+            iterator = self.connection.sscan_iter(CACHEME.REDIS_CACHE_PREFIX + self.key)
+            return self.utils.invalid_iter(iterator)
+        node = self.node_class(**kwargs)
+        key, field = self.utils.split_key(node.key_name)
+        result = self.connection.hdel(key, field)
+        return result
 
     def get(self, **kwargs):
         node = self.node_class(**kwargs)

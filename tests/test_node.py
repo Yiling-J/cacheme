@@ -111,6 +111,26 @@ class NodeTestCase(BaseTestCase):
             'Node CM:test:1 does not exist'
         )
 
+    @cacheme(
+        node=lambda c: nodes.TestNodeDynamic(id=c.id)
+    )
+    def node_test_func_counter(self, id):
+        return self.counter
+
+    def test_invalidation(self):
+        self.counter = 0
+        self.assertEqual(self.node_test_func_counter(1), 0)
+        self.counter += 1
+        self.assertEqual(self.node_test_func_counter(1), 0)
+        self.assertEqual(nodes.TestNodeDynamic.objects.invalid(), 1)
+        self.assertEqual(self.node_test_func_counter(1), 1)
+        self.counter += 1
+        self.assertEqual(self.node_test_func_counter(1), 1)
+        self.assertEqual(nodes.TestNodeDynamic.objects.invalid(id=1), 1)
+        self.assertEqual(self.node_test_func_counter(1), 2)
+        self.assertEqual(nodes.TestNodeDynamic.objects.invalid(id=2), 0)
+        self.assertEqual(self.node_test_func_counter(1), 2)
+
 
 if __name__ == '__main__':
     unittest.main()
