@@ -290,7 +290,7 @@ class TestNode(Node):
     id = Field()
 
     class Meta:
-	    stale = False
+        stale = False
 
 ```
 
