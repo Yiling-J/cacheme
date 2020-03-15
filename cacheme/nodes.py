@@ -63,15 +63,16 @@ class NodeMetaClass(type):
             if isinstance(obj, Field)
         }
 
-        meta = dict()
-        if 'Meta' in attrs and '_meta_fields' in attrs:
-            for k, v in attrs.pop('Meta').__dict__.items():
-                if k in attrs['_meta_fields']:
-                    meta[k] = v
-
-        attrs['meta'] = meta
+        if 'Meta' in attrs:
+            attrs['_raw_meta'] = attrs.pop('Meta')
 
         node_class = super().__new__(cls, name, bases, attrs)
+        node_class.meta = dict()
+        if getattr(node_class, '_raw_meta', False) and getattr(node_class, '_meta_fields', False):
+            for k, v in node_class._raw_meta.__dict__.items():
+                if k in node_class._meta_fields:
+                    node_class.meta[k] = v
+
         if node_class.manager._initialized:
             node_class.objects = node_class.manager(node_class)
         node_class._update_class()

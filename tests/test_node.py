@@ -1,6 +1,7 @@
-
+import time
 import redis
-import unittest
+
+from multiprocessing import Pool
 from unittest import TestCase
 from unittest.mock import MagicMock
 from cacheme import cacheme
@@ -132,5 +133,49 @@ class NodeTestCase(BaseTestCase):
         self.assertEqual(self.node_test_func_counter(1), 2)
 
 
-if __name__ == '__main__':
-    unittest.main()
+@cacheme(node=lambda c: nodes.TestNodeStale())
+def stale_test_func(n):
+    time.sleep(0.1)
+    return n
+
+
+@cacheme(node=lambda c: nodes.TestNodeNoStale())
+def no_stale_test_func(n):
+    time.sleep(0.1)
+    return n
+
+
+class StaleTestMixin(object):
+
+    def tearDown(self):
+        connection = redis.Redis()
+        connection.flushdb()
+
+    def invalid(self, key):
+        raise NotImplementedError()
+
+    def test_stale(self):
+        stale_test_func(1)
+        self.invalid('test>stale')
+
+        p = Pool(2)
+        result = p.map(stale_test_func, [2, 2])
+        self.assertEqual(set(result), {1, 2})
+
+    def test_no_stale(self):
+        no_stale_test_func(1)
+        self.invalid('test>no_stale')
+
+        p = Pool(2)
+        result = p.map(no_stale_test_func, [2, 2])
+        self.assertEqual(set(result), {2, 2})
+
+
+class StaleInvalidationKeyTestCase(StaleTestMixin, TestCase):
+
+    def invalid(self, key):
+        node_map = {
+            'test>stale': nodes.TestNodeStale,
+            'test>no_stale': nodes.TestNodeNoStale
+        }
+        node_map[key].objects.invalid()

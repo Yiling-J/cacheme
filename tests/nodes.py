@@ -30,3 +30,18 @@ class TestNodeDynamic(nodes.Node):
 
     def invalid_nodes(self):
         return InvalidUserNode(user=self.id)
+
+
+class TestNodeStale(nodes.Node):
+
+    def key(self):
+        return 'test>stale'
+
+
+class TestNodeNoStale(nodes.Node):
+
+    def key(self):
+        return 'test>no_stale'
+
+    class Meta:
+        stale = False
