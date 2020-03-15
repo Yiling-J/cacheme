@@ -124,7 +124,7 @@ def get_cat(self, cat):
 After define tags, you can use tag like this:
 ```
 instance = cacheme.tags['cats']
-  
+
 # invalid all keys
 instance.invalid_all()
 ```
@@ -168,7 +168,7 @@ class BookSerializer(object):
         invalid_keys=lambda c: [c.obj.owner.cache_key]
     )
     def get_owner(self, obj):
-        return BookOwnerSerializer(obj.owner).data	
+        return BookOwnerSerializer(obj.owner).data
 ```
 
 We have a book, id is 100, and a user, id is 200. And we want to cache
@@ -197,7 +197,7 @@ and the key func before will be stored in this invalid key.
 
 * `miss`: callback when cache miss, need 2 arguments `(key, container)`
 
-* `tag`: string, default func name(node class name if using node). 
+* `tag`: string, default func name(node class name if using node).
 Using tag to get cache instance, then get all keys under that tag.
 
 * `skip`: boolean or callable, default False. If value or callable value return true, will skip cache. For example,
@@ -205,7 +205,7 @@ you can cache result if request param has user, but return None directly, if no 
 
 * `timeout`: set ttl for this key, default `None`
 
-* `invalid_sources`: something cause invalidation (for example Django/Flask signals). To use this, 
+* `invalid_sources`: something cause invalidation (for example Django/Flask signals). To use this,
 You need to override `connect(self, source)` in your cache class.
 
 #### - Invalidation
