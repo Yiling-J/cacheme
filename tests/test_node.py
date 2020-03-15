@@ -128,7 +128,7 @@ class NodeTestCase(BaseTestCase):
         self.assertEqual(self.node_test_func_counter(1), 1)
         self.assertEqual(nodes.TestNodeDynamic.objects.invalid(id=1), 1)
         self.assertEqual(self.node_test_func_counter(1), 2)
-        self.assertEqual(nodes.TestNodeDynamic.objects.invalid(id=2), 0)
+        self.assertEqual(nodes.TestNodeDynamic.objects.invalid(id=2), 1)
         self.assertEqual(self.node_test_func_counter(1), 2)
 
 

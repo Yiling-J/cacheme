@@ -11,16 +11,20 @@ class NodeManager(object):
 
     def __init__(self, node_class):
         self.node_class = node_class
-        self.key = self.node_class.__name__
         self.utils = utils.CachemeUtils(CACHEME, self.connection)
 
     def invalid(self, **kwargs):
         if not kwargs:
-            iterator = self.connection.sscan_iter(CACHEME.REDIS_CACHE_PREFIX + self.key)
+            iterator = self.connection.sscan_iter(
+                CACHEME.REDIS_CACHE_PREFIX + self.node_class.__name__,
+                count=CACHEME.REDIS_CACHE_SCAN_COUNT
+            )
             return self.utils.invalid_iter(iterator)
+
         node = self.node_class(**kwargs)
-        key, field = self.utils.split_key(node.key_name)
-        result = self.connection.hdel(key, field)
+        result = self.utils.invalid_key(
+            node.key_name
+        )
         return result
 
     def get(self, **kwargs):
@@ -59,6 +63,14 @@ class NodeMetaClass(type):
             if isinstance(obj, Field)
         }
 
+        meta = dict()
+        if 'Meta' in attrs and '_meta_fields' in attrs:
+            for k, v in attrs.pop('Meta').__dict__.items():
+                if k in attrs['_meta_fields']:
+                    meta[k] = v
+
+        attrs['meta'] = meta
+
         node_class = super().__new__(cls, name, bases, attrs)
         if node_class.manager._initialized:
             node_class.objects = node_class.manager(node_class)
@@ -71,6 +83,7 @@ class NodeMetaClass(type):
 
 class Node(object, metaclass=NodeMetaClass):
     manager = NodeManager
+    _meta_fields = ('timeout', 'stale')
 
     @classmethod
     def _update_class(cls):

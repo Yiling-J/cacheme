@@ -4,6 +4,7 @@ import time
 import datetime
 
 import redis
+from multiprocessing import Pool
 from unittest import TestCase
 from unittest.mock import MagicMock
 from cacheme import cacheme
@@ -289,3 +290,84 @@ class CacheTestCase(BaseTestCase):
     def test_invalid_source(self):
         self.invalid_source_test_func(1)
         self.assertEqual(self.invalid_source_test_func(2), 1)
+
+
+@cacheme(
+    key=lambda c: 'test>stale',
+    invalid_keys=lambda c: ['test_stale'],
+    tag='test_stale'
+)
+def stale_test_func(n):
+    time.sleep(0.1)
+    return n
+
+
+@cacheme(
+    key=lambda c: 'test>no_stale',
+    invalid_keys=lambda c: ['test_no_stale'],
+    stale=False,
+    tag='test_no_stale'
+)
+def no_stale_test_func(n):
+    time.sleep(0.1)
+    return n
+
+
+class StaleTestMixin(object):
+
+    def tearDown(self):
+        connection = redis.Redis()
+        connection.flushdb()
+
+    def invalid(self, key):
+        raise NotImplementedError()
+
+    def test_stale(self):
+        stale_test_func(1)
+        self.invalid('test>stale')
+
+        p = Pool(2)
+        result = p.map(stale_test_func, [2, 2])
+        self.assertEqual(set(result), {1, 2})
+
+    def test_no_stale(self):
+        no_stale_test_func(1)
+        self.invalid('test>no_stale')
+
+        p = Pool(2)
+        result = p.map(no_stale_test_func, [2, 2])
+        self.assertEqual(set(result), {2, 2})
+
+
+class StaleInvalidationKeyTestCase(StaleTestMixin, TestCase):
+
+    def invalid(self, key):
+        cacheme.create_invalidation(key=key)
+
+
+class StaleInvalidationInvalidKeyTestCase(StaleTestMixin, TestCase):
+
+    def invalid(self, key):
+        invalid_key = key.replace('>', '_')
+        cacheme.create_invalidation(invalid_key=invalid_key)
+
+
+class StaleInvalidationTagTestCast(StaleTestMixin, TestCase):
+
+    def invalid(self, key):
+        tag = key.replace('>', '_')
+        cacheme.tags[tag].invalid_all()
+
+
+class StaleInvalidationPatternTestCast(StaleTestMixin, TestCase):
+
+    def invalid(self, key):
+        cacheme.create_invalidation(pattern='CM:test*')
+
+    def test_stale(self):
+        stale_test_func(1)
+        self.invalid('test>stale')
+
+        p = Pool(2)
+        result = p.map(stale_test_func, [2, 2])
+        self.assertEqual(set(result), {2, 2})
