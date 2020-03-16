@@ -226,8 +226,8 @@ cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
 
 Default for all 3 types are `None`, and you can use them together.
 
-Pattern invalidation use redis pattern, so '>' and stale are not supported, All matched keys will be
-deleted directly!
+Pattern invalidation use redis pattern, so '>' and stale are not supported, **All matched keys will be
+deleted directly!**
 
 #### - Declaring Node and InvalidNode
 
@@ -308,7 +308,6 @@ nodes.TestNode.objects.invalid(id=123)
 # invalid keys store in *a single invalid node*
 nodes.TestInvalidNode.objects.invalid(id=123)
 ```
-Invalid will delete keys directly, no stale data.
 
 #### - Get a single node value
 ```
