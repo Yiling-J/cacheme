@@ -104,31 +104,32 @@ class CacheMe(object):
             # then apply args and kwargs to a container,
             # in this way, we can have clear lambda with just one
             # argument, and access what we need from this container
-            self.container = type('Container', (), bind.arguments)
+            container = type('Container', (), bind.arguments)
 
-            if callable(self.skip) and self.skip(self.container):
+            if callable(self.skip) and self.skip(container):
                 return self.function(*args, **kwargs)
             elif self.skip:
                 return self.function(*args, **kwargs)
 
+            stale = self.stale
             node = None
             if self.node:
-                node = self.node(self.container)
+                node = self.node(container)
                 key = node.key_name
                 self.tag = node.__class__.__name__
-                self.stale = node.meta.get('stale', self.stale)
+                stale = node.meta.get('stale', self.stale)
             else:
-                key = self.key_prefix + self.key(self.container)
+                key = self.key_prefix + self.key(container)
 
             if self.timeout:
                 result = self.get_key(key)
 
-            if self.stale:
+            if stale:
                 if self.conn.srem(self.deleted, key):
                     result = self.function(*args, **kwargs)
                     self.set_result(key, result)
-                    self.container.cacheme_result = result
-                    self.add_to_invalid_list(node, key, args, kwargs)
+                    container.cacheme_result = result
+                    self.add_to_invalid_list(node, key, container, args, kwargs)
                     return result
                 else:
                     result = self.get_key(key)
@@ -153,17 +154,16 @@ class CacheMe(object):
                         if result:
                             return result
 
-                result = self.get_result_from_func(args, kwargs, key)
+                result = self.get_result_from_func(key, container, args, kwargs)
                 self.set_result(key, result)
                 self.remove_from_progress(key)
-                self.container.cacheme_result = result
-                self.add_to_invalid_list(node, key, args, kwargs)
+                container.cacheme_result = result
+                self.add_to_invalid_list(node, key, container, args, kwargs)
             else:
                 if self.hit:
-                    self.hit(key, result, self.container)
+                    self.hit(key, result, container)
                 result = result
 
-            self.container = None
             return result
 
         return wrapper
@@ -175,9 +175,9 @@ class CacheMe(object):
         iterator = self.conn.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
         return self.utils.invalid_iter(iterator)
 
-    def get_result_from_func(self, args, kwargs, key):
+    def get_result_from_func(self, key, container, args, kwargs):
         if self.miss:
-            self.miss(key, self.container)
+            self.miss(key, container)
 
         start = datetime.datetime.now()
         result = self.function(*args, **kwargs)
@@ -214,7 +214,7 @@ class CacheMe(object):
     def push_key(self, key, value):
         return self.conn.sadd(key, value)
 
-    def add_to_invalid_list(self, node, key, args, kwargs):
+    def add_to_invalid_list(self, node, key, container, args, kwargs):
         invalid_suffix = ':invalid'
         if node:
             invalid_nodes = node.invalid_nodes()
@@ -225,7 +225,7 @@ class CacheMe(object):
             invalid_keys = self.invalid_keys
             if not invalid_keys:
                 return
-            invalid_keys = self.utils.flat_list(invalid_keys(self.container))
+            invalid_keys = self.utils.flat_list(invalid_keys(container))
 
         for invalid_key in set(filter(lambda x: x is not None, invalid_keys)):
             invalid_key += invalid_suffix
