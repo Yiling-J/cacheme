@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- Node support Meta class
+- Add stale option to settings/cacheme decorator/node meta
 
 ## [0.1.0]
 ### Added

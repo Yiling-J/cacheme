@@ -59,6 +59,7 @@ settings = {
     'REDIS_CACHE_PREFIX': 'MYCACHE:',  # cacheme key prefix, optional, 'CM:' as default
     'THUNDERING_HERD_RETRY_COUNT': 5,  # thundering herd retry count, if key missing, default 5
     'THUNDERING_HERD_RETRY_TIME': 20  # thundering herd wait time(millisecond) between each retry, default 20
+	'STALE': True  # Global setting for using stale, default True
 }
 
 cacheme.set_connection(r)
@@ -123,7 +124,7 @@ def get_cat(self, cat):
 After define tags, you can use tag like this:
 ```
 instance = cacheme.tags['cats']
-  
+
 # invalid all keys
 instance.invalid_all()
 ```
@@ -167,7 +168,7 @@ class BookSerializer(object):
         invalid_keys=lambda c: [c.obj.owner.cache_key]
     )
     def get_owner(self, obj):
-        return BookOwnerSerializer(obj.owner).data	
+        return BookOwnerSerializer(obj.owner).data
 ```
 
 We have a book, id is 100, and a user, id is 200. And we want to cache
@@ -190,11 +191,13 @@ Cacheme need following params when init the decorator.
 * `invalid_keys`: Callable or None, default None. an invalid key that will store this key, use redis set,
 and the key func before will be stored in this invalid key.
 
+* `stale`: Boolean. Whether use stale here, will override global setting
+
 * `hit`: callback when cache hit, need 3 arguments `(key, result, container)`
 
 * `miss`: callback when cache miss, need 2 arguments `(key, container)`
 
-* `tag`: string, default func name(node class name if using node). 
+* `tag`: string, default func name(node class name if using node).
 Using tag to get cache instance, then get all keys under that tag.
 
 * `skip`: boolean or callable, default False. If value or callable value return true, will skip cache. For example,
@@ -202,7 +205,7 @@ you can cache result if request param has user, but return None directly, if no 
 
 * `timeout`: set ttl for this key, default `None`
 
-* `invalid_sources`: something cause invalidation (for example Django/Flask signals). To use this, 
+* `invalid_sources`: something cause invalidation (for example Django/Flask signals). To use this,
 You need to override `connect(self, source)` in your cache class.
 
 #### - Invalidation
@@ -221,7 +224,10 @@ cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
 
 * `pattern`: invalid a redis pattern, for example `test*`
 
-Default for all 3 types are `None`, and you can use them together
+Default for all 3 types are `None`, and you can use them together.
+
+Pattern invalidation use redis pattern, so '>' and stale are not supported, All matched keys will be
+deleted directly!
 
 #### - Declaring Node and InvalidNode
 
@@ -274,6 +280,17 @@ class TestInvalidNode(Node):
 
     def key(self):
         return 'test:{id}'.format(id=self.id)
+
+```
+
+#### - Node Meta
+Node can have Meta class. Current support meta field: stale
+```
+class TestNode(Node):
+    id = Field()
+
+    class Meta:
+        stale = False
 
 ```
 

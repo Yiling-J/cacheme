@@ -39,8 +39,25 @@ class CachemeUtils(object):
         chunks = self.chunk_iter(iterator, 500, None)
         for keys in chunks:
             if keys:
+                count += self.conn.sadd(
+                    self.CACHEME.REDIS_CACHE_PREFIX + 'delete',
+                    *list(keys)
+                )
+        return count
+
+    def unlink_iter(self, iterator):
+        count = 0
+        chunks = self.chunk_iter(iterator, 500, None)
+        for keys in chunks:
+            if keys:
                 count += self.conn.unlink(*list(keys))
         return count
+
+    def invalid_key(self, key):
+        return self.conn.sadd(
+            self.CACHEME.REDIS_CACHE_PREFIX + 'delete',
+            key
+        )
 
     def get_epoch(self, seconds=0):
         dt = datetime.utcnow() + timedelta(seconds=seconds)
