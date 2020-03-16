@@ -4,7 +4,7 @@ import time
 import datetime
 
 import redis
-from multiprocessing import Pool
+from multiprocessing.dummy import Pool
 from unittest import TestCase
 from unittest.mock import MagicMock
 from cacheme import cacheme

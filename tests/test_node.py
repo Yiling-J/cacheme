@@ -1,7 +1,7 @@
 import time
 import redis
 
-from multiprocessing import Pool
+from multiprocessing.dummy import Pool
 from unittest import TestCase
 from unittest.mock import MagicMock
 from cacheme import cacheme
@@ -95,7 +95,7 @@ class NodeTestCase(BaseTestCase):
         self.assertEqual(node.objects.invalid(), 1)
         result = self.node_test_func_constant(2)
         self.assertEqual(result, 2)
-        self.assertEqual(nodes.InvalidUserNode.objects.invalid(user=2), 1)
+        self.assertEqual(invalid_nodes.InvalidUserNode.objects.invalid(user=2), 1)
         result = self.node_test_func_constant(3)
         self.assertEqual(result, 3)
 
@@ -171,11 +171,21 @@ class StaleTestMixin(object):
         self.assertEqual(set(result), {2, 2})
 
 
-class StaleInvalidationKeyTestCase(StaleTestMixin, TestCase):
+class StaleInvalidationNodeTestCase(StaleTestMixin, TestCase):
 
     def invalid(self, key):
         node_map = {
             'test>stale': nodes.TestNodeStale,
             'test>no_stale': nodes.TestNodeNoStale
+        }
+        node_map[key].objects.invalid()
+
+
+class StaleInvalidationInvalidNodeTestCase(StaleTestMixin, TestCase):
+
+    def invalid(self, key):
+        node_map = {
+            'test>stale': invalid_nodes.StaleInvalidNode,
+            'test>no_stale': invalid_nodes.NoStaleInvalidNode
         }
         node_map[key].objects.invalid()

@@ -1,5 +1,5 @@
 from cacheme import nodes
-from tests.invalid_nodes import InvalidUserNode
+from tests import invalid_nodes
 
 
 class NodeNoKey(nodes.Node):
@@ -19,7 +19,7 @@ class TestNodeConstant(nodes.Node):
         return 'test'
 
     def invalid_nodes(self):
-        return InvalidUserNode(user=self.id)
+        return invalid_nodes.InvalidUserNode(user=self.id)
 
 
 class TestNodeDynamic(nodes.Node):
@@ -29,7 +29,7 @@ class TestNodeDynamic(nodes.Node):
         return 'test:%s' % self.id
 
     def invalid_nodes(self):
-        return InvalidUserNode(user=self.id)
+        return invalid_nodes.InvalidUserNode(user=self.id)
 
 
 class TestNodeStale(nodes.Node):
@@ -37,11 +37,17 @@ class TestNodeStale(nodes.Node):
     def key(self):
         return 'test>stale'
 
+    def invalid_nodes(self):
+        return invalid_nodes.StaleInvalidNode()
+
 
 class TestNodeNoStale(nodes.Node):
 
     def key(self):
         return 'test>no_stale'
+
+    def invalid_nodes(self):
+        return invalid_nodes.NoStaleInvalidNode()
 
     class Meta:
         stale = False
