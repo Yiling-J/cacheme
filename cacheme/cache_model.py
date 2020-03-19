@@ -154,7 +154,7 @@ class CacheMe(object):
                         if result:
                             return result
 
-                result = self.get_result_from_func(key, container, args, kwargs)
+                result = self.get_result_from_func(key, container, node, args, kwargs)
                 self.set_result(key, result)
                 self.remove_from_progress(key)
                 container.cacheme_result = result
@@ -162,6 +162,8 @@ class CacheMe(object):
             else:
                 if self.hit:
                     self.hit(key, result, container)
+                elif node:
+                    node.hit(key, result)
                 result = result
 
             return result
@@ -175,9 +177,11 @@ class CacheMe(object):
         iterator = self.conn.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
         return self.utils.invalid_iter(iterator)
 
-    def get_result_from_func(self, key, container, args, kwargs):
+    def get_result_from_func(self, key, container, node, args, kwargs):
         if self.miss:
             self.miss(key, container)
+        elif node:
+            node.miss(key)
 
         start = datetime.datetime.now()
         result = self.function(*args, **kwargs)

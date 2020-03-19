@@ -1,5 +1,6 @@
 import time
 import redis
+import mock
 
 from multiprocessing.dummy import Pool
 from unittest import TestCase
@@ -10,11 +11,11 @@ from tests import nodes, invalid_nodes
 r = redis.Redis()
 
 
-hit = MagicMock()
-miss = MagicMock()
-
 cacheme.set_connection(r)
 cacheme.update_settings({'ENABLE_CACHE': True})
+
+hit_m = MagicMock()
+miss_m = MagicMock()
 
 
 class BaseTestCase(TestCase):
@@ -131,6 +132,38 @@ class NodeTestCase(BaseTestCase):
         self.assertEqual(self.node_test_func_counter(1), 2)
         self.assertEqual(nodes.TestNodeDynamic.objects.invalid(id=2), 1)
         self.assertEqual(self.node_test_func_counter(1), 2)
+
+    @cacheme(
+        node=lambda c: nodes.TestNodeHitMiss(id=c.id)
+    )
+    def node_test_hit_miss(self, id):
+        return id
+
+    @cacheme(
+        node=lambda c: nodes.TestNodeHitMiss(id=c.id),
+        hit=hit_m,
+        miss=miss_m
+    )
+    def node_test_hit_miss_override(self, id):
+        return id
+
+    @mock.patch('tests.nodes.TestNodeHitMiss.hit')
+    @mock.patch('tests.nodes.TestNodeHitMiss.miss')
+    def test_hit_miss(self, miss, hit):
+        self.node_test_hit_miss(1)
+        self.assertEqual((miss.called, hit.called), (True, False))
+        self.node_test_hit_miss(1)
+        self.assertEqual((miss.called, hit.called), (True, True))
+
+    @mock.patch('tests.nodes.TestNodeHitMiss.hit')
+    @mock.patch('tests.nodes.TestNodeHitMiss.miss')
+    def test_hit_miss_override(self, miss, hit):
+        self.node_test_hit_miss_override(1)
+        self.assertEqual((miss.called, hit.called), (False, False))
+        self.assertTrue(miss_m.called)
+        self.node_test_hit_miss_override(1)
+        self.assertEqual((miss.called, hit.called), (False, False))
+        self.assertTrue(hit_m.called)
 
 
 @cacheme(node=lambda c: nodes.TestNodeStale())

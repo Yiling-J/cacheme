@@ -51,3 +51,16 @@ class TestNodeNoStale(nodes.Node):
 
     class Meta:
         stale = False
+
+
+class TestNodeHitMiss(nodes.Node):
+    id = nodes.Field()
+
+    def key(self):
+        return 'test:%s' % self.id
+
+    def hit(self, key, result):
+        return
+
+    def miss(self, key):
+        return

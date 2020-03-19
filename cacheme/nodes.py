@@ -110,6 +110,12 @@ class Node(object, metaclass=NodeMetaClass):
     def invalid_nodes(self):
         return None
 
+    def hit(self, key, result):
+        pass
+
+    def miss(self, key):
+        pass
+
 
 class InvalidNode(object, metaclass=NodeMetaClass):
     manager = InvalidNodeManager

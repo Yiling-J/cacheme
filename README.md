@@ -26,9 +26,10 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 ## Why Cacheme
 
 For complicated page or API, you may need to fetch data from a variety of sources such as MySQL databases,
-HDFS installations, some machine learning engines or your backend services.
+HDFS installations, some machine learning engines or your backend services. And each of them may have very
+different context and lifecycle.
 This heterogeneity requires a flexible caching strategy able to store data from disparate sources.
-And cacheme or memoize can help you.
+Cacheme, as a memoized/cache decorator, can help engineers overcome these complicated cache challenges.
 
 ## Getting started
 
@@ -241,11 +242,19 @@ from my_cache_package import invalid_nodes
 class TestNode(Node):
     id = Field()
 
-    def key(self):
+    def key(self):  # only key function is required
         return 'test:{id}'.format(id=self.id)
 
     def invalid_nodes(self):
         return invalid_nodes.InvalidNode(id=self.id)
+
+    # you can also def hit/miss for node, make decorator simple
+    # if you have hit/miss both in node and decorator, decorator one will be used.
+    def hit(self, key, result):
+        pass
+
+    def miss(self, key):
+        pass
 ```
 
 You need to add all fields needed in `key()` and `invalid_nodes()` as attributes, and implement `key()`
