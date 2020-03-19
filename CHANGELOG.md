@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Node support Meta class
 - Add stale option to settings/cacheme decorator/node meta
+- Node support hit/miss function
 
 ## [0.1.0]
 ### Added
