@@ -28,7 +28,9 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 For complicated page or API, you may need to fetch data from a variety of sources such as MySQL databases,
 HDFS installations, some machine learning engines or your backend services. And each of them may have very
 different context and lifecycle.
+
 This heterogeneity requires a flexible caching strategy able to store data from disparate sources.
+
 Cacheme, as a memoized/cache decorator, can help engineers overcome these complicated cache challenges.
 
 ## Getting started
