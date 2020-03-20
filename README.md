@@ -39,7 +39,7 @@ Cacheme, as a memoized/cache decorator, can help engineers overcome these compli
 
 Find a good place to init cacheme globally, for example `foobar_cache.py`
 
-Or if you use node, create a package for better organization:
+Or if you prefer [node](#--declaring-node-and-invalidnode), create a package for better organization:
 ```
 \your_cache_package_name
     __init__.py
