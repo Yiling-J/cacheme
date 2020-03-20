@@ -58,7 +58,6 @@ r = redis.Redis()
 
 settings = {
     'ENABLE_CACHE': True,
-    'REDIS_CACHE_ALIAS': 'cacheme',  # your CACHES alias name in settings, optional, 'default' as default
     'REDIS_CACHE_PREFIX': 'MYCACHE:',  # cacheme key prefix, optional, 'CM:' as default
     'THUNDERING_HERD_RETRY_COUNT': 5,  # thundering herd retry count, if key missing, default 5
     'THUNDERING_HERD_RETRY_TIME': 20  # thundering herd wait time(millisecond) between each retry, default 20
