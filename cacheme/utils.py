@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
+from cacheme import settings
 
 
 class CachemeUtils(object):
 
-    def __init__(self, settings, conn):
-        self.CACHEME = settings
+    def __init__(self, conn):
+        self.CACHEME = settings.CACHEME
         self.conn = conn
 
     def split_key(self, string):

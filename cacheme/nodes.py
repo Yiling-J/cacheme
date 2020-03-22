@@ -1,8 +1,7 @@
 import pickle
-from cacheme import utils
+from cacheme import utils, settings
 
 tags = dict()
-CACHEME = None
 
 
 class NodeManager(object):
@@ -11,13 +10,13 @@ class NodeManager(object):
 
     def __init__(self, node_class):
         self.node_class = node_class
-        self.utils = utils.CachemeUtils(CACHEME, self.connection)
+        self.utils = utils.CachemeUtils(self.connection)
 
     def invalid(self, **kwargs):
         if not kwargs:
             iterator = self.connection.sscan_iter(
-                CACHEME.REDIS_CACHE_PREFIX + self.node_class.__name__,
-                count=CACHEME.REDIS_CACHE_SCAN_COUNT
+                settings.CACHEME.REDIS_CACHE_PREFIX + self.node_class.__name__,
+                count=settings.CACHEME.REDIS_CACHE_SCAN_COUNT
             )
             return self.utils.invalid_iter(iterator)
 
@@ -42,7 +41,7 @@ class InvalidNodeManager(NodeManager):
 
     def __init__(self, node_cls):
         self.node_cls = node_cls
-        self.utils = utils.CachemeUtils(CACHEME, self.connection)
+        self.utils = utils.CachemeUtils(self.connection)
 
     def invalid(self, **kwargs):
         node = self.node_cls(**kwargs)
@@ -99,7 +98,7 @@ class Node(object, metaclass=NodeMetaClass):
                     field=field, name=self.__class__.__name__
                 ))
             setattr(self, field, kwargs[field])
-        self.key_name = CACHEME.REDIS_CACHE_PREFIX + self.key()
+        self.key_name = settings.CACHEME.REDIS_CACHE_PREFIX + self.key()
 
     def key(self):
         raise NotImplementedError()
@@ -132,7 +131,7 @@ class InvalidNode(object, metaclass=NodeMetaClass):
         self.raw_key_name = self.key()
 
         self.key_name = '{prefix}{key}{suffix}'.format(
-            prefix=CACHEME.REDIS_CACHE_PREFIX,
+            prefix=settings.CACHEME.REDIS_CACHE_PREFIX,
             key=self.raw_key_name,
             suffix=':invalid')
 

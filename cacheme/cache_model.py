@@ -6,7 +6,7 @@ import logging
 from functools import wraps
 from inspect import _signature_from_function, Signature
 
-from cacheme.utils import CachemeUtils
+from cacheme import settings, utils
 from cacheme import nodes
 
 
@@ -26,41 +26,27 @@ class CacheMe(object):
         cls.connection_set = True
 
     @classmethod
-    def update_settings(cls, settings):
-        cls.CACHEME = cls.merge_settings(settings)
-        cls.settings_set = True
-        nodes.CACHEME = cls.CACHEME
+    def update_settings(cls, new_settings):
+        cls.merge_settings(new_settings)
         nodes.NodeManager._initialized = True
 
     @classmethod
-    def merge_settings(cls, settings):
-        CACHEME = {
-            'ENABLE_CACHE': True,
-            'REDIS_CACHE_PREFIX': 'CM:',  # key prefix for cache
-            'REDIS_CACHE_SCAN_COUNT': 10,
-            'REDIS_URL': 'redis://localhost:6379/0',
-            'THUNDERING_HERD_RETRY_COUNT': 5,
-            'THUNDERING_HERD_RETRY_TIME': 20,
-            'STALE': True
-        }
-
-        CACHEME.update(settings)
-        return type('CACHEME', (), CACHEME)
+    def merge_settings(cls, new_settings):
+        settings.CACHEME.update(new_settings)
 
     def __init__(self, key=None, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, node=None, stale=None, **kwargs):
 
         if not self.connection_set:
             raise Exception('No connection find, please use set_connection first!')
         if not self.settings_set:
-            self.update_settings({})
             logger.warning('No custom settings found, use default.')
 
-        if not self.CACHEME.ENABLE_CACHE:
+        if not settings.CACHEME.ENABLE_CACHE:
             return
 
-        self.__class__.utils = CachemeUtils(self.CACHEME, self.conn)
+        self.__class__.utils = utils.CachemeUtils(self.conn)
 
-        self.key_prefix = self.CACHEME.REDIS_CACHE_PREFIX
+        self.key_prefix = settings.CACHEME.REDIS_CACHE_PREFIX
         self.deleted = self.key_prefix + 'delete'
 
         self.node = node
@@ -74,7 +60,7 @@ class CacheMe(object):
         self.progress_key = self.key_prefix + 'progress'
         self.invalid_sources = invalid_sources
         self.kwargs = kwargs
-        self.stale = self.CACHEME.STALE if stale is None else stale
+        self.stale = settings.CACHEME.STALE if stale is None else stale
 
         self.conn = self.conn
         sources = self.collect_sources()
@@ -84,7 +70,7 @@ class CacheMe(object):
 
     def __call__(self, func):
 
-        if not self.CACHEME.ENABLE_CACHE:
+        if not settings.CACHEME.ENABLE_CACHE:
             return func
 
         self.function = func
@@ -148,8 +134,8 @@ class CacheMe(object):
             if result is None:
 
                 if self.add_to_progress(key) == 0:  # already in progress
-                    for i in range(self.CACHEME.THUNDERING_HERD_RETRY_COUNT):
-                        time.sleep(self.CACHEME.THUNDERING_HERD_RETRY_TIME/1000)
+                    for i in range(settings.CACHEME.THUNDERING_HERD_RETRY_COUNT):
+                        time.sleep(settings.CACHEME.THUNDERING_HERD_RETRY_TIME/1000)
                         result = self.get_key(key)
                         if result:
                             return result
@@ -171,10 +157,10 @@ class CacheMe(object):
         return wrapper
 
     def add_key_to_tag(self, val):
-        self.conn.sadd(self.CACHEME.REDIS_CACHE_PREFIX + self.tag, val)
+        self.conn.sadd(settings.CACHEME.REDIS_CACHE_PREFIX + self.tag, val)
 
     def invalid_all(self):
-        iterator = self.conn.sscan_iter(self.CACHEME.REDIS_CACHE_PREFIX + self.tag)
+        iterator = self.conn.sscan_iter(settings.CACHEME.REDIS_CACHE_PREFIX + self.tag)
         return self.utils.invalid_iter(iterator)
 
     def get_result_from_func(self, key, container, node, args, kwargs):
@@ -253,15 +239,15 @@ class CacheMe(object):
 
         if isinstance(key, str):
             cls.conn.sadd(
-                cls.CACHEME.REDIS_CACHE_PREFIX + 'delete',
-                cls.CACHEME.REDIS_CACHE_PREFIX + key
+                settings.CACHEME.REDIS_CACHE_PREFIX + 'delete',
+                settings.CACHEME.REDIS_CACHE_PREFIX + key
             )
 
         if isinstance(invalid_key, str):
-            invalid_key = cls.CACHEME.REDIS_CACHE_PREFIX + invalid_key
-            iterator = cls.conn.sscan_iter(invalid_key + ':invalid', count=cls.CACHEME.REDIS_CACHE_SCAN_COUNT)
+            invalid_key = settings.CACHEME.REDIS_CACHE_PREFIX + invalid_key
+            iterator = cls.conn.sscan_iter(invalid_key + ':invalid', count=settings.CACHEME.REDIS_CACHE_SCAN_COUNT)
             cls.utils.invalid_iter(iterator)
 
         if isinstance(pattern, str):
-            iterator = cls.conn.scan_iter(pattern, count=cls.CACHEME.REDIS_CACHE_SCAN_COUNT)
+            iterator = cls.conn.scan_iter(pattern, count=settings.CACHEME.REDIS_CACHE_SCAN_COUNT)
             cls.utils.unlink_iter(iterator)

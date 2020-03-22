@@ -7,7 +7,7 @@ import redis
 from multiprocessing.dummy import Pool
 from unittest import TestCase
 from unittest.mock import MagicMock
-from cacheme import cacheme
+from cacheme import cacheme, settings
 
 r = redis.Redis()
 
@@ -29,6 +29,14 @@ cacheme.set_connection(r)
 cacheme.update_settings({'ENABLE_CACHE': False})
 
 
+class SettingsTest(TestCase):
+    def test_settings(self):
+        cacheme.update_settings({'foo': 'bar'})
+        self.assertEqual(settings.CACHEME.foo, 'bar')
+        with self.assertRaises(AttributeError):
+            settings.CACHEME.bar
+
+
 class BaseTestCase(TestCase):
     def tearDown(self):
         connection = redis.Redis()
@@ -48,7 +56,7 @@ class CacheTestCase(BaseTestCase):
         self.assertEqual(self.basic_cache_func_disable(1), 1)
         self.assertEqual(self.basic_cache_func_disable(2), 2)
 
-    cacheme.settings_set = False
+    cacheme.update_settings({'ENABLE_CACHE': True})
 
     @cacheme(
         key=lambda c: 'test>me',
