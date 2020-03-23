@@ -32,9 +32,9 @@ cacheme.update_settings({'ENABLE_CACHE': False})
 class SettingsTest(TestCase):
     def test_settings(self):
         cacheme.update_settings({'foo': 'bar'})
-        self.assertEqual(settings.CACHEME.foo, 'bar')
+        self.assertEqual(settings.foo, 'bar')
         with self.assertRaises(AttributeError):
-            settings.CACHEME.bar
+            settings.bar
 
 
 class BaseTestCase(TestCase):

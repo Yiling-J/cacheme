@@ -5,7 +5,6 @@ from cacheme import settings
 class CachemeUtils(object):
 
     def __init__(self, conn):
-        self.CACHEME = settings.CACHEME
         self.conn = conn
 
     def split_key(self, string):
@@ -41,7 +40,7 @@ class CachemeUtils(object):
         for keys in chunks:
             if keys:
                 count += self.conn.sadd(
-                    self.CACHEME.REDIS_CACHE_PREFIX + 'delete',
+                    settings.REDIS_CACHE_PREFIX + 'delete',
                     *list(keys)
                 )
         return count
@@ -56,7 +55,7 @@ class CachemeUtils(object):
 
     def invalid_key(self, key):
         return self.conn.sadd(
-            self.CACHEME.REDIS_CACHE_PREFIX + 'delete',
+            settings.REDIS_CACHE_PREFIX + 'delete',
             key
         )
 
@@ -66,7 +65,7 @@ class CachemeUtils(object):
 
     def get_metakey(self, key, field):
         return '%s%s:%s' % (
-            self.CACHEME.REDIS_CACHE_PREFIX,
+            settings.REDIS_CACHE_PREFIX,
             'Meta:Expire-Buckets:',
             key
         )
@@ -88,7 +87,7 @@ class CachemeUtils(object):
 
         expired = self.conn.zrangebyscore(metadataKey, 0, now)
         if expired:
-            self.conn.sadd(self.CACHEME.REDIS_CACHE_PREFIX + 'delete', *expired)
+            self.conn.sadd(settings.REDIS_CACHE_PREFIX + 'delete', *expired)
         pipe.zremrangebyscore(metadataKey, 0, now)
 
         pipe.hget(key, field)

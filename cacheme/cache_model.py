@@ -32,7 +32,7 @@ class CacheMe(object):
 
     @classmethod
     def merge_settings(cls, new_settings):
-        settings.CACHEME.update(new_settings)
+        settings.update(new_settings)
 
     def __init__(self, key=None, invalid_keys=None, hit=None, miss=None, tag=None, skip=False, timeout=None, invalid_sources=None, node=None, stale=None, **kwargs):
 
@@ -41,12 +41,12 @@ class CacheMe(object):
         if not self.settings_set:
             logger.warning('No custom settings found, use default.')
 
-        if not settings.CACHEME.ENABLE_CACHE:
+        if not settings.ENABLE_CACHE:
             return
 
         self.__class__.utils = utils.CachemeUtils(self.conn)
 
-        self.key_prefix = settings.CACHEME.REDIS_CACHE_PREFIX
+        self.key_prefix = settings.REDIS_CACHE_PREFIX
         self.deleted = self.key_prefix + 'delete'
 
         self.node = node
@@ -60,7 +60,7 @@ class CacheMe(object):
         self.progress_key = self.key_prefix + 'progress'
         self.invalid_sources = invalid_sources
         self.kwargs = kwargs
-        self.stale = settings.CACHEME.STALE if stale is None else stale
+        self.stale = settings.STALE if stale is None else stale
 
         self.conn = self.conn
         sources = self.collect_sources()
@@ -70,7 +70,7 @@ class CacheMe(object):
 
     def __call__(self, func):
 
-        if not settings.CACHEME.ENABLE_CACHE:
+        if not settings.ENABLE_CACHE:
             return func
 
         self.function = func
@@ -134,8 +134,8 @@ class CacheMe(object):
             if result is None:
 
                 if self.add_to_progress(key) == 0:  # already in progress
-                    for i in range(settings.CACHEME.THUNDERING_HERD_RETRY_COUNT):
-                        time.sleep(settings.CACHEME.THUNDERING_HERD_RETRY_TIME/1000)
+                    for i in range(settings.THUNDERING_HERD_RETRY_COUNT):
+                        time.sleep(settings.THUNDERING_HERD_RETRY_TIME/1000)
                         result = self.get_key(key)
                         if result:
                             return result
@@ -157,10 +157,10 @@ class CacheMe(object):
         return wrapper
 
     def add_key_to_tag(self, val):
-        self.conn.sadd(settings.CACHEME.REDIS_CACHE_PREFIX + self.tag, val)
+        self.conn.sadd(settings.REDIS_CACHE_PREFIX + self.tag, val)
 
     def invalid_all(self):
-        iterator = self.conn.sscan_iter(settings.CACHEME.REDIS_CACHE_PREFIX + self.tag)
+        iterator = self.conn.sscan_iter(settings.REDIS_CACHE_PREFIX + self.tag)
         return self.utils.invalid_iter(iterator)
 
     def get_result_from_func(self, key, container, node, args, kwargs):
@@ -239,15 +239,15 @@ class CacheMe(object):
 
         if isinstance(key, str):
             cls.conn.sadd(
-                settings.CACHEME.REDIS_CACHE_PREFIX + 'delete',
-                settings.CACHEME.REDIS_CACHE_PREFIX + key
+                settings.REDIS_CACHE_PREFIX + 'delete',
+                settings.REDIS_CACHE_PREFIX + key
             )
 
         if isinstance(invalid_key, str):
-            invalid_key = settings.CACHEME.REDIS_CACHE_PREFIX + invalid_key
-            iterator = cls.conn.sscan_iter(invalid_key + ':invalid', count=settings.CACHEME.REDIS_CACHE_SCAN_COUNT)
+            invalid_key = settings.REDIS_CACHE_PREFIX + invalid_key
+            iterator = cls.conn.sscan_iter(invalid_key + ':invalid', count=settings.REDIS_CACHE_SCAN_COUNT)
             cls.utils.invalid_iter(iterator)
 
         if isinstance(pattern, str):
-            iterator = cls.conn.scan_iter(pattern, count=settings.CACHEME.REDIS_CACHE_SCAN_COUNT)
+            iterator = cls.conn.scan_iter(pattern, count=settings.REDIS_CACHE_SCAN_COUNT)
             cls.utils.unlink_iter(iterator)
