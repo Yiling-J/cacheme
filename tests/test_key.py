@@ -157,10 +157,10 @@ class CacheTestCase(BaseTestCase):
         self.cache_inst_1()
         self.cache_inst_2()
         self.cache_inst_3()
-        self.assertEqual(cacheme.tags['cache_inst_1'].invalid_all(), 1)
-        self.assertEqual(cacheme.tags['test_instance_sec'].invalid_all(), 1)
-        self.assertEqual(cacheme.tags['three'].invalid_all(), 1)
-        self.assertEqual(cacheme.tags['three'].invalid_all(), 0)
+        self.assertEqual(cacheme.tags['cache_inst_1'].objects.invalid(), 1)
+        self.assertEqual(cacheme.tags['test_instance_sec'].objects.invalid(), 1)
+        self.assertEqual(cacheme.tags['three'].objects.invalid(), 1)
+        self.assertEqual(cacheme.tags['three'].objects.invalid(), 0)
 
     @cacheme(
         key=lambda c: "CACHE:SKIP:1",
@@ -364,7 +364,7 @@ class StaleInvalidationTagTestCast(StaleTestMixin, TestCase):
 
     def invalid(self, key):
         tag = key.replace('>', '_')
-        cacheme.tags[tag].invalid_all()
+        cacheme.tags[tag].objects.invalid()
 
 
 class StaleInvalidationPatternTestCast(StaleTestMixin, TestCase):

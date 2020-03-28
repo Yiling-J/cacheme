@@ -77,7 +77,7 @@ class CacheMe(object):
 
         self.tag = self.tag or func.__name__
         if not self.node:
-            self.tags[self.tag] = self
+            self.tags[self.tag] = type(self.tag, (nodes.Node,), {})
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -158,10 +158,6 @@ class CacheMe(object):
 
     def add_key_to_tag(self, val):
         self.conn.sadd(settings.REDIS_CACHE_PREFIX + self.tag, val)
-
-    def invalid_all(self):
-        iterator = self.conn.sscan_iter(settings.REDIS_CACHE_PREFIX + self.tag)
-        return self.utils.invalid_iter(iterator)
 
     def get_result_from_func(self, key, container, node, args, kwargs):
         if self.miss:
