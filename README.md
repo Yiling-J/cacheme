@@ -128,7 +128,7 @@ After define tags, you can use tag like this:
 instance = cacheme.tags['cats']
 
 # invalid all keys
-instance.invalid_all()
+instance.objects.invalid()
 ```
 If you use node mode, tag will be node class name. Invalid will delete keys directly, no stale data.
 
