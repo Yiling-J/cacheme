@@ -80,16 +80,16 @@ class CachemeUtils(object):
         pipe.hset(key, field, value)
         pipe.execute()
 
-    def hget_with_ttl(self, key, field):
+    def invalid_ttl(self, key):
+        key, field = self.split_key(key)
         pipe = self.conn.pipeline()
         metadataKey = self.get_metakey(key, field)
         now = self.get_epoch()
 
         pipe.zrangebyscore(metadataKey, 0, now)
         pipe.zremrangebyscore(metadataKey, 0, now)
-        pipe.hget(key, field)
         results = pipe.execute()
         if results[0]:
             self.conn.sadd(settings.REDIS_CACHE_PREFIX + 'delete', *results[0])
 
-        return results[-1]
+        return results[1]

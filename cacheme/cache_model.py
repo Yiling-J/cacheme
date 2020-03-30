@@ -108,7 +108,7 @@ class CacheMe(object):
                 key = self.key_prefix + self.key(container)
 
             if self.timeout:
-                result = self.get_key(key)
+                self.utils.invalid_ttl(key)
 
             if stale:
                 if self.conn.srem(self.deleted, key):
@@ -179,10 +179,7 @@ class CacheMe(object):
 
     def get_key(self, key):
         key, field = self.utils.split_key(key)
-        if self.timeout:
-            result = self.utils.hget_with_ttl(key, field)
-        else:
-            result = self.conn.hget(key, field)
+        result = self.conn.hget(key, field)
 
         if result:
             result = pickle.loads(result)
