@@ -85,10 +85,11 @@ class CachemeUtils(object):
         metadataKey = self.get_metakey(key, field)
         now = self.get_epoch()
 
-        expired = self.conn.zrangebyscore(metadataKey, 0, now)
-        if expired:
-            self.conn.sadd(settings.REDIS_CACHE_PREFIX + 'delete', *expired)
+        pipe.zrangebyscore(metadataKey, 0, now)
         pipe.zremrangebyscore(metadataKey, 0, now)
-
         pipe.hget(key, field)
-        return pipe.execute()[-1]
+        results = pipe.execute()
+        if results[0]:
+            self.conn.sadd(settings.REDIS_CACHE_PREFIX + 'delete', *results[0])
+
+        return results[-1]
