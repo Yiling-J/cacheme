@@ -197,8 +197,8 @@ class CacheMe(object):
         else:
             self.conn.hset(key, field, value)
 
-    def push_key(self, key, value):
-        return self.conn.sadd(key, value)
+    def _push_key_pipe(self, key, value, pipe):
+        pipe.sadd(key, value)
 
     def add_to_invalid_list(self, node, key, container, args, kwargs):
         invalid_suffix = ':invalid'
@@ -213,10 +213,12 @@ class CacheMe(object):
                 return
             invalid_keys = self.utils.flat_list(invalid_keys(container))
 
+        pipe = self.conn.pipeline()
         for invalid_key in set(filter(lambda x: x is not None, invalid_keys)):
             invalid_key += invalid_suffix
             invalid_key = self.key_prefix + invalid_key
-            self.push_key(invalid_key, key)
+            self._push_key_pipe(invalid_key, key, pipe)
+        pipe.execute()
 
     def collect_sources(self):
         return self.invalid_sources
