@@ -111,28 +111,11 @@ class CacheMe(object):
                 self.utils.invalid_ttl(key)
 
             if stale:
-                if self.conn.srem(self.deleted, key):
-                    result = self.function(*args, **kwargs)
-                    self.set_result(key, result)
-                    container.cacheme_result = result
-                    self.add_to_invalid_list(node, key, container, args, kwargs)
-                    return result
-                else:
-                    result = self.get_key(key)
+                status, result = self._get_key_stale(key)
             else:
-                redis_call = "if redis.call('srem',KEYS[1], KEYS[2]) == 1 then return redis.call('hdel', KEYS[3], KEYS[4]) else return 0 end"
-                deleted = self.conn.eval(
-                    redis_call, 4,
-                    self.deleted, key,
-                    *self.utils.split_key(key)
-                )
-                if deleted:
-                    result = None
-                else:
-                    result = self.get_key(key)
+                status, result = self._get_key_no_stale(key)
 
-            if result is None:
-
+            if status in ('new', 'deleted'):
                 if self.add_to_progress(key) == 0:  # already in progress
                     for i in range(settings.THUNDERING_HERD_RETRY_COUNT):
                         time.sleep(settings.THUNDERING_HERD_RETRY_TIME/1000)
@@ -184,6 +167,28 @@ class CacheMe(object):
         if result:
             result = pickle.loads(result)
         return result
+
+    def _get_key_stale(self, key):
+        redis_call = "if redis.call('srem',KEYS[1], KEYS[2]) == 0 then return {'valid', redis.call('hget', KEYS[3], KEYS[4])} else return {'deleted', 0} end"
+        response = self.conn.eval(
+            redis_call, 4,
+            self.deleted, key,
+            *self.utils.split_key(key)
+        )
+        if response[0] == b'valid':
+            return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
+        return ('deleted', 0)
+
+    def _get_key_no_stale(self, key):
+        redis_call = "if redis.call('srem',KEYS[1], KEYS[2]) == 1 then return {'deleted', redis.call('hdel', KEYS[3], KEYS[4])} else return {'valid', redis.call('hget', KEYS[3], KEYS[4])} end"
+        response = self.conn.eval(
+            redis_call, 4,
+            self.deleted, key,
+            *self.utils.split_key(key)
+        )
+        if response[0] == b'valid':
+            return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
+        return ('deleted', 0)
 
     def set_key(self, key, value):
         self.add_key_to_tag(key)
