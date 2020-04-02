@@ -169,22 +169,24 @@ class CacheMe(object):
         return result
 
     def _get_key_stale(self, key):
-        redis_call = "if redis.call('srem',KEYS[1], KEYS[2]) == 0 then return {'valid', redis.call('hget', KEYS[3], KEYS[4])} else return {'deleted', 0} end"
+        redis_call = "if redis.call('srem',KEYS[1], ARGV[1]) == 0 then return {'valid', redis.call('hget', KEYS[2], ARGV[2])} else return {'deleted', 0} end"
+        key_base, field = self.utils.split_key(key)
         response = self.conn.eval(
-            redis_call, 4,
-            self.deleted, key,
-            *self.utils.split_key(key)
+            redis_call, 2,
+            self.deleted, key_base,
+            key, field
         )
         if response[0] == b'valid':
             return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
         return ('deleted', 0)
 
     def _get_key_no_stale(self, key):
-        redis_call = "if redis.call('srem',KEYS[1], KEYS[2]) == 1 then return {'deleted', redis.call('hdel', KEYS[3], KEYS[4])} else return {'valid', redis.call('hget', KEYS[3], KEYS[4])} end"
+        redis_call = "if redis.call('srem',KEYS[1], ARGV[1]) == 1 then return {'deleted', redis.call('hdel', KEYS[2], ARGV[2])} else return {'valid', redis.call('hget', KEYS[2], ARGV[2])} end"
+        key_base, field = self.utils.split_key(key)
         response = self.conn.eval(
-            redis_call, 4,
-            self.deleted, key,
-            *self.utils.split_key(key)
+            redis_call, 2,
+            self.deleted, key_base,
+            key, field
         )
         if response[0] == b'valid':
             return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
