@@ -70,12 +70,11 @@ class CachemeUtils(object):
             key
         )
 
-    def hset_with_ttl(self, key, field, value, ttl):
+    def hset_with_ttl(self, key, field, value, ttl, pipe):
         if field != 'base':
             raw = '>'.join([key, field])
         else:
             raw = key
-        pipe = self.conn.pipeline()
         pipe.zadd(self.get_metakey(key, field), {raw: self.get_epoch(ttl)})
         pipe.hset(key, field, value)
         pipe.execute()

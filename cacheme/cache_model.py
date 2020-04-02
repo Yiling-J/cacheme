@@ -124,10 +124,12 @@ class CacheMe(object):
                             return result
 
                 result = self.get_result_from_func(key, container, node, args, kwargs)
-                self.set_result(key, result)
-                self.remove_from_progress(key)
+                pipe = self.conn.pipeline()
+                self.set_result(key, result, pipe)
+                self.remove_from_progress(key, pipe)
                 container.cacheme_result = result
-                self.add_to_invalid_list(node, key, container, args, kwargs)
+                self.add_to_invalid_list(node, key, container, pipe, args, kwargs)
+                pipe.execute()
             else:
                 if self.hit:
                     self.hit(key, result, container)
@@ -139,8 +141,8 @@ class CacheMe(object):
 
         return wrapper
 
-    def add_key_to_tag(self, val):
-        self.conn.sadd(settings.REDIS_CACHE_PREFIX + self.tag, val)
+    def add_key_to_tag(self, val, pipe):
+        pipe.sadd(settings.REDIS_CACHE_PREFIX + self.tag, val)
 
     def get_result_from_func(self, key, container, node, args, kwargs):
         if self.miss:
@@ -157,8 +159,8 @@ class CacheMe(object):
         )
         return result
 
-    def set_result(self, key, result):
-        self.set_key(key, result)
+    def set_result(self, key, result, pipe):
+        self.set_key(key, result, pipe)
 
     def get_key(self, key):
         key, field = self.utils.split_key(key)
@@ -192,19 +194,19 @@ class CacheMe(object):
             return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
         return ('deleted', 0)
 
-    def set_key(self, key, value):
-        self.add_key_to_tag(key)
+    def set_key(self, key, value, pipe):
+        self.add_key_to_tag(key, pipe)
         value = pickle.dumps(value)
         key, field = self.utils.split_key(key)
         if self.timeout:
-            self.utils.hset_with_ttl(key, field, value, self.timeout)
+            self.utils.hset_with_ttl(key, field, value, self.timeout, pipe)
         else:
-            self.conn.hset(key, field, value)
+            pipe.hset(key, field, value)
 
     def _push_key_pipe(self, key, value, pipe):
         pipe.sadd(key, value)
 
-    def add_to_invalid_list(self, node, key, container, args, kwargs):
+    def add_to_invalid_list(self, node, key, container, pipe, args, kwargs):
         invalid_suffix = ':invalid'
         if node:
             invalid_nodes = node.invalid_nodes()
@@ -217,7 +219,6 @@ class CacheMe(object):
                 return
             invalid_keys = self.utils.flat_list(invalid_keys(container))
 
-        pipe = self.conn.pipeline()
         for invalid_key in set(filter(lambda x: x is not None, invalid_keys)):
             invalid_key += invalid_suffix
             invalid_key = self.key_prefix + invalid_key
@@ -230,8 +231,8 @@ class CacheMe(object):
     def connect(self, source):
         pass
 
-    def remove_from_progress(self, key):
-        self.conn.srem(self.progress_key, key)
+    def remove_from_progress(self, key, pipe):
+        pipe.srem(self.progress_key, key)
 
     def add_to_progress(self, key):
         return self.conn.sadd(self.progress_key, key)
