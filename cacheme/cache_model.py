@@ -6,7 +6,7 @@ import logging
 from functools import wraps
 from inspect import _signature_from_function, Signature
 
-from cacheme import settings, utils
+from cacheme import settings, utils as cacheme_utils
 from cacheme import nodes
 
 
@@ -16,14 +16,16 @@ logger = logging.getLogger('cacheme')
 class CacheMe(object):
     connection_set = False
     settings_set = False
-    utils = None
+    utils = cacheme_utils.CachemeUtils()
     tags = nodes.tags
+    meta_keys = cacheme_utils.MetaKeys()
 
     @classmethod
     def set_connection(cls, connection):
         cls.conn = connection
         nodes.NodeManager.connection = connection
         cls.connection_set = True
+        cls.utils.conn = connection
 
     @classmethod
     def update_settings(cls, new_settings):
@@ -44,10 +46,7 @@ class CacheMe(object):
         if not settings.ENABLE_CACHE:
             return
 
-        self.__class__.utils = utils.CachemeUtils(self.conn)
-
         self.key_prefix = settings.REDIS_CACHE_PREFIX
-        self.deleted = self.key_prefix + 'delete'
 
         self.node = node
         self.key = key
@@ -57,7 +56,6 @@ class CacheMe(object):
         self.tag = tag
         self.skip = skip
         self.timeout = timeout
-        self.progress_key = self.key_prefix + 'progress'
         self.invalid_sources = invalid_sources
         self.kwargs = kwargs
         self.stale = settings.STALE if stale is None else stale
@@ -175,7 +173,7 @@ class CacheMe(object):
         key_base, field = self.utils.split_key(key)
         response = self.conn.eval(
             redis_call, 2,
-            self.deleted, key_base,
+            self.meta_keys.deleted, key_base,
             key, field
         )
         if response[0] == b'valid':
@@ -187,7 +185,7 @@ class CacheMe(object):
         key_base, field = self.utils.split_key(key)
         response = self.conn.eval(
             redis_call, 2,
-            self.deleted, key_base,
+            self.meta_keys.deleted, key_base,
             key, field
         )
         if response[0] == b'valid':
@@ -232,17 +230,17 @@ class CacheMe(object):
         pass
 
     def remove_from_progress(self, key, pipe):
-        pipe.srem(self.progress_key, key)
+        pipe.srem(self.meta_keys.progress, key)
 
     def add_to_progress(self, key):
-        return self.conn.sadd(self.progress_key, key)
+        return self.conn.sadd(self.meta_keys.progress, key)
 
     @classmethod
     def create_invalidation(cls, key=None, invalid_key=None, pattern=None):
 
         if isinstance(key, str):
             cls.conn.sadd(
-                settings.REDIS_CACHE_PREFIX + 'delete',
+                cls.meta_keys.deleted,
                 settings.REDIS_CACHE_PREFIX + key
             )
 

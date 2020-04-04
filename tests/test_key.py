@@ -239,7 +239,7 @@ class CacheTestCase(BaseTestCase):
         return n
 
     def test_key_missing(self):
-        r.sadd('CM:progress', 'CM:CACHE:TH')
+        r.sadd(cacheme.meta_keys.progress, 'CM:CACHE:TH')
         start = datetime.datetime.now()
         result = self.cache_th(12)
         end = datetime.datetime.now()
@@ -247,7 +247,7 @@ class CacheTestCase(BaseTestCase):
         self.assertEqual(result, 12)
         self.assertTrue(delta > 50)
 
-        r.sadd('CM:progress', 'CM:CACHE:TH')
+        r.sadd(cacheme.meta_keys.progress, 'CM:CACHE:TH')
         start = datetime.datetime.now()
         result = self.cache_th(15)
         end = datetime.datetime.now()
@@ -270,7 +270,7 @@ class CacheTestCase(BaseTestCase):
 
     @mock.patch('cacheme.cache_model.time', new_callable=faker)
     def test_thunder_herd_wait_suucess(self, m):
-        r.sadd('CM:progress', 'CM:CACHE:TH')
+        r.sadd(cacheme.meta_keys.progress, 'CM:CACHE:TH')
         result = self.cache_th(12)
         self.assertEqual(result, '100')
 

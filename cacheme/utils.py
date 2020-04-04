@@ -2,9 +2,20 @@ from datetime import datetime, timedelta
 from cacheme import settings
 
 
-class CachemeUtils(object):
+class MetaKeys(object):
+    data = set()
+    prefix = settings.REDIS_CACHE_PREFIX + 'meta:'
 
-    def __init__(self, conn):
+    def __getattr__(self, attr):
+        if attr not in self.data:
+            self.data.add(attr)
+        return self.prefix + attr
+
+
+class CachemeUtils(object):
+    meta_keys = MetaKeys()
+
+    def __init__(self, conn=None):
         self.conn = conn
 
     def split_key(self, string):
@@ -40,7 +51,7 @@ class CachemeUtils(object):
         for keys in chunks:
             if keys:
                 count += self.conn.sadd(
-                    settings.REDIS_CACHE_PREFIX + 'delete',
+                    self.meta_keys.deleted,
                     *list(keys)
                 )
         return count
@@ -55,7 +66,7 @@ class CachemeUtils(object):
 
     def invalid_key(self, key):
         return self.conn.sadd(
-            settings.REDIS_CACHE_PREFIX + 'delete',
+            self.meta_keys.deleted,
             key
         )
 
@@ -89,6 +100,6 @@ class CachemeUtils(object):
         pipe.zremrangebyscore(metadataKey, 0, now)
         results = pipe.execute()
         if results[0]:
-            self.conn.sadd(settings.REDIS_CACHE_PREFIX + 'delete', *results[0])
+            self.conn.sadd(self.meta_keys.deleted, *results[0])
 
         return results[1]
