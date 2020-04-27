@@ -41,6 +41,8 @@ class BaseTestCase(TestCase):
     def tearDown(self):
         connection = redis.Redis()
         connection.flushdb()
+        hit.reset_mock()
+        miss.reset_mock()
 
 
 class CacheTestCase(BaseTestCase):
@@ -107,8 +109,7 @@ class CacheTestCase(BaseTestCase):
         self.pp = 3
         result = self.cache_bind_func(1, 2, ff=14, qq=5)
         self.assertEqual(result, 20)
-        result = r.hget('CM:' + '20', 'base')
-        self.assertEqual(pickle.loads(result), 20)
+        self.assertEqual(cacheme.get_key(cacheme, 'CM:20'), 20)
 
     @cacheme(
         key=lambda c: "Test:123",
@@ -262,14 +263,14 @@ class CacheTestCase(BaseTestCase):
 
         def sleep(self, n):
             self.counter += 1
-            if self.counter == 5:
+            if self.counter % 5 == 0:
                 r.hset('CM:CACHE:TH', 'base', pickle.dumps('100'))
             return mock.Mock()
 
     faker = FakeTime()
 
     @mock.patch('cacheme.cache_model.time', new_callable=faker)
-    def test_thunder_herd_wait_suucess(self, m):
+    def test_thunder_herd_wait_success(self, m):
         r.sadd(cacheme.meta_keys.progress, 'CM:CACHE:TH')
         result = self.cache_th(12)
         self.assertEqual(result, '100')
@@ -330,6 +331,17 @@ class StaleTestMixin(object):
     def invalid(self, key):
         raise NotImplementedError()
 
+    def test_base(self):
+        self.assertEqual(
+            stale_test_func(1),
+            stale_test_func(2)
+        )
+
+        self.assertEqual(
+            no_stale_test_func(1),
+            no_stale_test_func(2)
+        )
+
     def test_stale(self):
         stale_test_func(1)
         self.invalid('test>stale')
@@ -379,3 +391,28 @@ class StaleInvalidationPatternTestCast(StaleTestMixin, TestCase):
         p = Pool(2)
         result = p.map(stale_test_func, [2, 2])
         self.assertEqual(set(result), {2, 2})
+
+
+class CompressTestCase(CacheTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cacheme.update_settings({'COMPRESS': True, 'COMPRESSTHRESHOLD': 0})
+
+    @classmethod
+    def tearDownClass(cls):
+        cacheme.update_settings({'COMPRESS': False, 'COMPRESSTHRESHOLD': 1000})
+
+
+class StaleInvalidationKeyCompressTestCase(StaleTestMixin, TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cacheme.update_settings({'COMPRESS': True, 'COMPRESSTHRESHOLD': 0})
+
+    @classmethod
+    def tearDownClass(cls):
+        cacheme.update_settings({'COMPRESS': False, 'COMPRESSTHRESHOLD': 1000})
+
+    def invalid(self, key):
+        cacheme.create_invalidation(key=key)

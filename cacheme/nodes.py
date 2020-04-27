@@ -1,3 +1,4 @@
+import zlib
 import pickle
 from cacheme import utils, settings
 
@@ -34,6 +35,9 @@ class NodeManager(object):
             raise Exception(
                 'Node {node} does not exist'.format(node=node)
             )
+        if result[:2] == b'x\x9c' and settings.COMPRESS:
+            result = zlib.decompress(result)
+
         return pickle.loads(result)
 
 

@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- Support compress
+
 ## [0.1.1]
 ### Added
 - Node support Meta class

@@ -222,3 +222,14 @@ class StaleInvalidationInvalidNodeTestCase(StaleTestMixin, TestCase):
             'test>no_stale': invalid_nodes.NoStaleInvalidNode
         }
         node_map[key].objects.invalid()
+
+
+class CompressTestCase(NodeTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cacheme.update_settings({'COMPRESS': True, 'COMPRESSTHRESHOLD': 0})
+
+    @classmethod
+    def tearDownClass(cls):
+        cacheme.update_settings({'COMPRESS': False, 'COMPRESSTHRESHOLD': 1000})

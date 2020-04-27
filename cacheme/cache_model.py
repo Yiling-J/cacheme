@@ -1,4 +1,5 @@
 import time
+import zlib
 import pickle
 import datetime
 import logging
@@ -164,6 +165,8 @@ class CacheMe(object):
         key, field = self.utils.split_key(key)
         result = self.conn.hget(key, field)
 
+        if result and result[:2] == b'x\x9c' and settings.COMPRESS:
+            result = zlib.decompress(result)
         if result:
             result = pickle.loads(result)
         return result
@@ -177,7 +180,11 @@ class CacheMe(object):
             key, field
         )
         if response[0] == b'valid':
-            return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
+            result = response[1]
+            if result and result[:2] == b'x\x9c' and settings.COMPRESS:
+                result = zlib.decompress(result)
+
+            return ('valid', pickle.loads(result)) if result is not None else ('new', 0)
         return ('deleted', 0)
 
     def _get_key_no_stale(self, key):
@@ -189,12 +196,18 @@ class CacheMe(object):
             key, field
         )
         if response[0] == b'valid':
-            return ('valid', pickle.loads(response[1])) if response[1] is not None else ('new', 0)
+            result = response[1]
+            if result and result[:2] == b'x\x9c' and settings.COMPRESS:
+                result = zlib.decompress(result)
+
+            return ('valid', pickle.loads(result)) if response[1] is not None else ('new', 0)
         return ('deleted', 0)
 
     def set_key(self, key, value, pipe):
         self.add_key_to_tag(key, pipe)
         value = pickle.dumps(value)
+        if settings.COMPRESS and len(value) >= settings.COMPRESSTHRESHOLD:
+            value = zlib.compress(value)
         key, field = self.utils.split_key(key)
         if self.timeout:
             self.utils.hset_with_ttl(key, field, value, self.timeout, pipe)

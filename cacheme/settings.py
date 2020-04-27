@@ -7,7 +7,9 @@ CACHEME_BASE = {
     'REDIS_URL': 'redis://localhost:6379/0',
     'THUNDERING_HERD_RETRY_COUNT': 5,
     'THUNDERING_HERD_RETRY_TIME': 20,
-    'STALE': True
+    'STALE': True,
+    'COMPRESS': False,
+    'COMPRESSTHRESHOLD': 1000
 }
 
 
