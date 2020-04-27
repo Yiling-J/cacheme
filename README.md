@@ -60,8 +60,10 @@ settings = {
     'ENABLE_CACHE': True,
     'REDIS_CACHE_PREFIX': 'MYCACHE:',  # cacheme key prefix, optional, 'CM:' as default
     'THUNDERING_HERD_RETRY_COUNT': 5,  # thundering herd retry count, if key missing, default 5
-    'THUNDERING_HERD_RETRY_TIME': 20  # thundering herd wait time(millisecond) between each retry, default 20
-    'STALE': True  # Global setting for using stale, default True
+    'THUNDERING_HERD_RETRY_TIME': 20,  # thundering herd wait time(millisecond) between each retry, default 20
+    'STALE': True,  # global setting for using stale, default True
+    'COMPRESS': False,  # enable compress, default False
+    'COMPRESSTHRESHOLD': 1000  # threshold in bytes upon which a payload will be compressed, default 1000
 }
 
 cacheme.set_connection(r)
