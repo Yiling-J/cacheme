@@ -63,7 +63,7 @@ settings = {
     'THUNDERING_HERD_RETRY_TIME': 20,  # thundering herd wait time(millisecond) between each retry, default 20
     'STALE': True,  # global setting for using stale, default True
     'COMPRESS': False,  # enable compress, default False
-    'COMPRESSTHRESHOLD': 1000  # threshold in bytes upon which a payload will be compressed, default 1000
+    'COMPRESSTHRESHOLD': 1000  # threshold upon which a pickled payload will be compressed, default 1000
 }
 
 cacheme.set_connection(r)
