@@ -11,7 +11,7 @@ from cacheme import settings, utils as cacheme_utils
 from cacheme import nodes
 
 
-logger = logging.getLogger('cacheme')
+logger = logging.getLogger(__name__)
 
 
 class CacheMe(object):
@@ -154,7 +154,12 @@ class CacheMe(object):
         end = datetime.datetime.now()
         delta = (end - start).total_seconds() * 1000
         logger.debug(
-            '[CACHEME FUNC LOG] key: "%s", time: %s ms' % (key, delta)
+            '[CACHEME FUNCTION LOG] {start}/{function}/{key}/{delta}'.format(
+                start=start,
+                function=self.function.__name__,
+                key=key,
+                delta=delta
+            )
         )
         return result
 
