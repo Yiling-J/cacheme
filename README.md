@@ -35,11 +35,29 @@ Cacheme, as a memoized/cache decorator, can help engineers overcome these compli
 
 ## Getting started
 
+First of all, some basic concepts in cacheme:
+
+* cache_keys(or cache_node)
+
+   All cache keys store in `redis` as `Hashes`, basic format of keys are `key>field`, for example:
+   `book:123>author`. Cacheme will split by `>`, so `book:123` will be key
+   and `author` will be field, and redis command to get value would be `HGET book:123 author`.
+
+* invalid_keys(or invalid_node)
+
+   You can consider an `invalid_key` as a group of related `cache_keys`, make it easy to invalid those
+   `cache_keys` together. Data type in `redis` is `Set`. For example, we can put all these keys
+   `["book:123>author", "book:123>index", "book:123>publisher", "book:123>notes", ...]` into invalid_key
+   `book:123:invalid`. So when you tell cacheme: "I want to invalid all related caches for book 123",
+   cacheme can do that for you automatically!
+
+Now let's start:
+
 `pip install cacheme`
 
-Find a good place to init cacheme globally, for example `foobar_cache.py`
+Find a good place to init cacheme globally, for example create a file called `foobar_cache.py`
 
-Or if you prefer [node](#--declaring-node-and-invalidnode), create a package for better organization:
+**OR**, cacheme support another way [NODE](#--declaring-node-and-invalidnode) for better organization:
 ```
 \your_cache_package_name
     __init__.py
@@ -287,7 +305,7 @@ Invalid node is similar:
 from cacheme.nodes import InvalidNode, Field
 
 
-class TestInvalidNode(Node):
+class TestInvalidNode(InvalidNode):
     id = Field()
 
     def key(self):
