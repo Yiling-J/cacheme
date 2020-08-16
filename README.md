@@ -9,13 +9,13 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 
 ## Features
 
-* **[Dynamic key based on args/kwargs](#dynamic-key-based-on-argskwargs)**
+* **[Dynamic key based on parameters](#dynamic-key-based-on-parameters)**
 
 * **[Node for better management](#node-for-better-management)**
 
 * **[Avoid thundering herd using stale data](#avoid-thundering-herd-using-stale-data)**
 
-* **[Skip cache based on args/kwargs](#skip-cache-based-on-argskwargs)**
+* **[Skip cache based on parameters](#skip-cache-based-on-parameters)**
 
 * **[Invalid all keys for tag](#invalid-all-keys-for-tag)**
 
@@ -118,15 +118,15 @@ from foobar_cache import cacheme
 
 ## Feature detail
 
-#### Dynamic key based on args/kwargs
+#### Dynamic key based on parameters
 
 ```
 @cacheme(key=lambda c: 'cat:{name}'.format(name=c.cat.name))
 def get_cat(self, cat):
     return some_function(cat)
 ```
-This is how cacheme create key using lambda, the `c` in the lambda contains all args/kwargs of
-decorated function.
+This is how cacheme create key using lambda, the `c` in the lambda contains all parameters of
+decorated function, including `self`.
 
 #### Node for better management
 
@@ -141,7 +141,7 @@ node class. In this way, you can make cache reusable. [Detail](#--declaring-node
 #### Avoid thundering herd using stale data
 How cacheme avoid thundering herds: if there is stale data, use stale data until new data fill in, if there is no stale data, just wait a short time and retry.
 
-#### Skip cache based on args/kwargs
+#### Skip cache based on parameters
 ```
 @cacheme(
     node=lambda c: CatNode(cat=c.cat),
