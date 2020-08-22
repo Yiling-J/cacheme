@@ -9,7 +9,7 @@ If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cache
 
 ## Features
 
-* **[Dynamic key based on parameters](#dynamic-key-based-on-parameters)**
+* **[Dynamic cache key based on parameters](#dynamic-cache-key-based-on-parameters)**
 
 * **[Node for better management](#node-for-better-management)**
 
@@ -117,7 +117,7 @@ from foobar_cache import cacheme
 
 ## Feature detail
 
-#### Dynamic key based on parameters
+#### Dynamic cache key based on parameters
 
 ```python
 @cacheme(key=lambda c: 'cat:{name}'.format(name=c.cat.name))
