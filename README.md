@@ -70,7 +70,7 @@ First of all, some basic concepts in cacheme:
    
    This may not easy to understand, but the benefit is better performance, because only changed parts are updated, not whole cache.
 
-Now let's start, first install using pip:
+**Now let's start, first install using pip:**
 
 `pip install cacheme`
 
@@ -108,7 +108,7 @@ cacheme.update_settings(settings)
 ```
 Then in your project, when you need cacheme, just:
 
-```
+```python
 from foobar_cache import cacheme
 
 # using node
@@ -253,7 +253,7 @@ You need to override `connect(self, source)` in your cache class.
 
 You can create invalidation using following method:
 
-```
+```python
 cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
 ```
 
