@@ -59,9 +59,9 @@ First of all, some basic concepts in cacheme:
    
    * book name change(will call invalidation on `book:{id}:name:invalid`)
    
-   * book tags change(will call invalidation on `book:{id}tags:invalid`)
+   * book tags change(will call invalidation on `book:{id}:tags:invalid`)
       
-   * user tags change(will call invalidation on `user:{id}tags:invalid`)
+   * user tags change(will call invalidation on `user:{id}:tags:invalid`)
       
    To avoid user getting wrong results when book name changing or book tags changing or user updating
    their tags, we need 3 invalid_keys: `book:{id}:name:invalid, book:{id}:tags:invalid, user:{id}:tags:invalid`.
