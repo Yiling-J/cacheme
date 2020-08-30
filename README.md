@@ -4,12 +4,26 @@
 
 A memoized/cache decorator for Python using redis.
 
+```python
+# cache
+@cacheme(key=lambda c: f'book:{c.book.id}')
+def get_book_info(self, book):
+    return some_function(book)
+    
+# invalidation
+book_id = 123
+cacheme.create_invalidation(key=f'book:{book_id}')
+
+```
+
 If you use Django, try [Django-Cacheme](https://github.com/Yiling-J/django-cacheme)
 
 
 ## Features
 
 * **[Dynamic cache key based on parameters](#dynamic-cache-key-based-on-parameters)**
+
+* **[Flexible invalidation rules](#flexible-invalidation-rules)**
 
 * **[Node for better management](#node-for-better-management)**
 
@@ -120,12 +134,35 @@ from foobar_cache import cacheme
 #### Dynamic cache key based on parameters
 
 ```python
-@cacheme(key=lambda c: 'cat:{name}'.format(name=c.cat.name))
+@cacheme(key=lambda c: f'cat:{c.cat.name}')
 def get_cat(self, cat):
     return some_function(cat)
 ```
 This is how cacheme create key using lambda, the `c` in the lambda contains all parameters of
 decorated function, including `self`.
+
+#### Flexible invalidation rules
+
+You can create invalidation using following method:
+
+```python
+cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
+```
+
+`create_invalidation` support 3 types of invalidation:
+
+* `key`: invalid one key
+
+* `invalid_key`: same as decorator, will invalid all keys saved in this key
+
+* `pattern`: invalid a redis pattern, for example `test*`
+
+Default for all 3 types are `None`, and you can use them together.
+
+Pattern invalidation use **redis pattern**, so '>' and stale are not supported, **All matched keys will be
+deleted directly!**
+
+(Node has it's own invalid methods, see [Invalid from Node](#--invalid-from-node))
 
 #### Node for better management
 
@@ -156,7 +193,7 @@ If skip is true, will skip the whole cache part, and get result dierctly from fu
 #### Invalid all keys for tag
 ```python
 @cacheme(
-    key=lambda c: 'cat:{name}'.format(name=c.cat.name),
+    key=lambda c: f'cat:{c.cat.name}',
     tag='cats'
 )
 def get_cat(self, cat):
@@ -174,7 +211,7 @@ If you use node mode, tag will be node class name. Invalid will delete keys dire
 #### Hit/miss function support
 ```python
 @cacheme(
-    key=lambda c: 'cat:{name}'.format(name=c.cat.name),
+    key=lambda c: f'cat:{c.cat.name}',
     hit=lambda key, result, c: do_something,
     miss=lambda key, c: do_something
 )
@@ -184,7 +221,7 @@ Just hit/miss callback
 #### Timeout(ttl) support
 ```python
 @cacheme(
-    key=lambda c: 'cat:{name}'.format(name=c.cat.name),
+    key=lambda c: f'cat:{c.cat.name}',
     timeout=300
 )
 def get_cat(self, cat):
@@ -205,7 +242,7 @@ from foobar_cache import cacheme
 class BookSerializer(object):
 
     @cacheme(
-        key=lambda c: c.obj.cache_key + ">" + "owner",
+        key=lambda c: f'{c.obj.cache_key}>owner',
         invalid_keys=lambda c: [c.obj.owner.cache_key]
     )
     def get_owner(self, obj):
@@ -249,27 +286,6 @@ you can cache result if request param has user, but return None directly, if no 
 * `invalid_sources`: something cause invalidation (for example Django/Flask signals). To use this,
 You need to override `connect(self, source)` in your cache class.
 
-#### - Invalidation
-
-You can create invalidation using following method:
-
-```python
-cacheme.create_invalidation(key=None, invalid_key=None, pattern=None)
-```
-
-`create_invalidation` support 3 types of invalidation:
-
-* `key`: invalid one key
-
-* `invalid_key`: same as decorator, will invalid all keys saved in this key
-
-* `pattern`: invalid a redis pattern, for example `test*`
-
-Default for all 3 types are `None`, and you can use them together.
-
-Pattern invalidation use redis pattern, so '>' and stale are not supported, **All matched keys will be
-deleted directly!**
-
 #### - Declaring Node and InvalidNode
 
 Declaring a node is very simlpe:
@@ -283,7 +299,7 @@ class TestNode(Node):
     id = Field()
 
     def key(self):  # only key function is required
-        return 'test:{id}'.format(id=self.id)
+        return f'test:{self.id}'
 
     def invalid_nodes(self):
         return invalid_nodes.InvalidNode(id=self.id)
@@ -328,7 +344,7 @@ class TestInvalidNode(InvalidNode):
     id = Field()
 
     def key(self):
-        return 'test:{id}'.format(id=self.id)
+        return f'test:{self.id}'
 
 ```
 
