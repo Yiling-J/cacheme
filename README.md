@@ -392,9 +392,5 @@ then you can access `a` and `b` in your callable by `container.a`, `container.b`
 
 * For invalid_keys callable, you can aslo get your function result through `container.cacheme_result`, so you can invalid based on this result.
 
-* There is another thing you can do to avoid thundering herds, if you use cacheme in a class, for example a `Serializer`,
-and cache many methods in this class, and, order of these methods does not matter. Then you can make the order of call to theses methods randomly.
-For example, if your class has 10 cached methods, and 100 clients call this method same time, then some clients will call method1 first, some will call method2 first..., so they can run in parallel.
-
 * Cacheme logs some info under debug level when key missing and function is called, format: `'[CACHEME FUNCTION LOG] {start}/{function}/{key}/{delta}'`, here
 start is start time, key is missing cache key and delta is function running time.
