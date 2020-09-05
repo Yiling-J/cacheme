@@ -2,7 +2,7 @@
 [![Build Status](https://codecov.io/gh/Yiling-J/cacheme/branch/master/graph/badge.svg)](https://codecov.io/gh/Yiling-J/cacheme)
 # Cacheme
 
-A memoized/cache decorator for Python using redis.
+A memoized/cache decorator for Python using Redis.
 
 ```python
 # cache
