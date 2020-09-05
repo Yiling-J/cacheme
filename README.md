@@ -227,7 +227,8 @@ Just hit/miss callback
 def get_cat(self, cat):
     return some_function(cat)
 ```
-set ttl for your cache, in seconds.
+set ttl for your cache, in seconds. Because cacheme using hash as main store type, and Redis natively doesn’t support hash ttl,
+cacheme use same solution as [dyno](https://github.com/Netflix/dyno): (https://github.com/Netflix/dyno/wiki/Expire-Hash)
 
 
 ## Example
@@ -390,11 +391,6 @@ contains the args and kwargs for you function. For example, if your function is 
 then you can access `a` and `b` in your callable by `container.a`, `container.b`, also `container.kwargs`.
 
 * For invalid_keys callable, you can aslo get your function result through `container.cacheme_result`, so you can invalid based on this result.
-
-* if code is changed, developer should check if cache should invalid or not, for example you add some
-fields to json, then cache for that json should be invalid, there is no signal for this, so do it manually
-
-* For keys with timeout set, because cacheme store k/v using hash, we also store timeout in another redis sorted set
 
 * There is another thing you can do to avoid thundering herds, if you use cacheme in a class, for example a `Serializer`,
 and cache many methods in this class, and, order of these methods does not matter. Then you can make the order of call to theses methods randomly.
