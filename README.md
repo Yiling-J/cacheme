@@ -2,7 +2,7 @@
 [![Build Status](https://codecov.io/gh/Yiling-J/cacheme/branch/master/graph/badge.svg)](https://codecov.io/gh/Yiling-J/cacheme)
 # Cacheme
 
-A memoized/cache decorator for Python using Redis.
+A memoize/cache decorator for Python using Redis.
 
 ```python
 # cache
@@ -45,7 +45,7 @@ different context and lifecycle.
 
 This heterogeneity requires **a flexible caching strategy able to store data from disparate sources**.
 
-Cacheme, as a memoized/cache decorator, can help engineers overcome these complicated cache challenges.
+Cacheme, as a memoize/cache decorator, can help engineers overcome these complicated cache challenges.
 
 ## Getting started
 
