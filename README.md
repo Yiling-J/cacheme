@@ -53,7 +53,7 @@ First of all, some basic concepts in cacheme:
 
 * **cache_keys(or cache_node)**
 
-   All cache keys store in redis as Hashes, basic format of keys are `key>field`, for example:
+   Cacheme store cache in redis as Hashes, basic format of keys are `key>field`, for example:
    `book:123>author`. Cacheme will split by `>`, so `book:123` will be key
    and `author` will be field, and redis command to get value would be `HGET book:123 author`.
 
