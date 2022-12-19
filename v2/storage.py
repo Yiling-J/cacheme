@@ -1,4 +1,4 @@
-from typing import Protocol, Any, cast
+from typing import Protocol, cast
 from databases import Database
 import structlog
 from sqlalchemy import (
@@ -10,8 +10,8 @@ from sqlalchemy import (
     LargeBinary,
     DateTime,
 )
-from sqlalchemy.ext.asyncio import create_async_engine
 from datetime import timedelta, datetime
+from dataclasses import dataclass
 
 logger = structlog.get_logger()
 
@@ -32,6 +32,18 @@ async def create_cache_table(address: str, table: str) -> Table:
     return tb
 
 
+@dataclass
+class CacheKey:
+    node: str
+    prefix: str
+    key: str
+    version: str
+
+    @property
+    def full_key(self) -> str:
+        return f"{self.prefix}:{self.key}:{self.version}"
+
+
 class Storage(Protocol):
     def __init__(self, address: str, table: str):
         ...
@@ -39,10 +51,10 @@ class Storage(Protocol):
     async def connect(self):
         ...
 
-    async def get(self, key: str) -> bytes | None:
+    async def get(self, key: CacheKey) -> bytes | None:
         ...
 
-    async def set(self, key: str, value: bytes, ttl: timedelta):
+    async def set(self, key: CacheKey, value: bytes, ttl: timedelta):
         ...
 
 
@@ -57,32 +69,34 @@ class SQLStorage:
         await self.database.connect()
         self.table = await create_cache_table(self.a, self.b)
 
-    async def get(self, key: str) -> bytes | None:
-        query = self.table.select().where(self.table.c.key == key)
+    async def get(self, key: CacheKey) -> bytes | None:
+        query = self.table.select().where(self.table.c.key == key.full_key)
         result = await self.database.fetch_one(query)
         if result == None:
-            logger.info("cache miss", key=key)
+            logger.info("cache miss", key=key.full_key, node=key.node)
             return None
         if result["expire"] <= datetime.utcnow():
-            logger.info("cache expired", key=key)
+            logger.info("cache expired", key=key.full_key, node=key.node)
             return None
-        logger.info("cache hit", key=key)
+        logger.info("cache hit", key=key.full_key, node=key.node)
         return cast(bytes, result["value"])
 
-    async def set(self, key: str, value: bytes, ttl: timedelta):
-        query = self.table.select(self.table.c.key == key).with_for_update()
+    async def set(self, key: CacheKey, value: bytes, ttl: timedelta):
+        query = self.table.select(self.table.c.key == key.full_key).with_for_update()
         async with self.database.transaction():
             record = await self.database.fetch_one(query)
             expire = datetime.utcnow() + ttl
             if record == None:
-                logger.info("cache set", key=key)
+                logger.info("cache set", key=key.full_key, node=key.node)
                 await self.database.execute(
-                    self.table.insert().values(key=key, value=value, expire=expire)
+                    self.table.insert().values(
+                        key=key.full_key, value=value, expire=expire
+                    )
                 )
             else:
-                logger.info("cache update", key=key)
+                logger.info("cache update", key=key.full_key, node=key.node)
                 await self.database.execute(
-                    self.table.update(self.table.c.key == key).values(
+                    self.table.update(self.table.c.key == key.full_key).values(
                         value=value, expire=expire
                     )
                 )

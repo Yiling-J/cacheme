@@ -1,11 +1,11 @@
 from __future__ import annotations
 from typing import Callable, TypeVar, ParamSpec, Any, Generic, Protocol, cast, Optional
 from asyncio import Event
-from storage import Storage
-from storage import SQLStorage
+from storage import Storage, CacheKey
 from serializer import Serializer
 from datetime import timedelta
 import structlog
+
 
 from localcache import LocalCache
 
@@ -57,22 +57,29 @@ P = ParamSpec("P")
 
 async def get(node: CacheNode[C_co]) -> C_co:
     storage = _storages[node.Meta.storage]
-    key = f"cacheme:{node.key()}:{node.Meta.version}"
+    cache_key = CacheKey(
+        node=node.__class__.__name__,
+        prefix="cacheme",
+        key=node.key(),
+        version=node.Meta.version,
+    )
     if node.Meta.local_cache.enable:
-        result = node.Meta.local_cache.get(key)
+        result = node.Meta.local_cache.get(cache_key)
         if result != None:
-            logger.info("local cache hit", key=key)
+            logger.info("local cache hit", key=cache_key.full_key, node=cache_key.node)
             return result
-    raw = await storage.get(key)
+    raw = await storage.get(cache_key)
     if raw == None:
+        logger.info("cache miss", key=cache_key.full_key, node=cache_key.node)
         result = node.fetch()
         b = node.Meta.serializer.dumps(result)
-        await storage.set(key, b, node.Meta.ttl)
+        await storage.set(cache_key, b, node.Meta.ttl)
     else:
+        logger.info("cache hit", key=cache_key.full_key, node=cache_key.node)
         result = node.Meta.serializer.loads(raw)
     if node.Meta.local_cache.enable:
-        node.Meta.local_cache.set(key, result)
-        logger.info("local cache set", key=key)
+        node.Meta.local_cache.set(cache_key, result)
+        logger.info("local cache set", key=cache_key.full_key, node=cache_key.node)
     return cast(C_co, result)
 
 

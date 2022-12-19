@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from models import *
+from storage import SQLStorage
 from serializer import PickleSerializer
 from serializer import CompressedPickleSerializer, MsgPackSerializer
 
