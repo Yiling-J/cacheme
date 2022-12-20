@@ -22,6 +22,9 @@ class FooNode:
             "c": self.level,
         }
 
+    def tags(self) -> list[str]:
+        return [f"user:{self.user_id}", f"foo:{self.foo_id}"]
+
     class Meta:
         version = "v1"
         storage = "foo"
@@ -39,6 +42,9 @@ class BarNode:
 
     def fetch(self) -> dict[int, Any]:
         return {}
+
+    def tags(self) -> list[str]:
+        return []
 
     class Meta:
         version = "v1"
@@ -77,9 +83,14 @@ async def main():
             "bar": SQLStorage("sqlite+aiosqlite:///example.db", "bar"),
         }
     )
-    for i in range(200):
+    await init_tag_storage(SQLStorage("sqlite+aiosqlite:///example.db", "tags"))
+    for i in range(100):
         await get(FooNode(user_id="a", foo_id="b", level=i))
-    for i in range(200):
+    for i in range(100):
+        await get(FooNode(user_id="a", foo_id="b", level=i))
+    await asyncio.sleep(6)
+    await invalid_tag("user:a")
+    for i in range(100):
         await get(FooNode(user_id="a", foo_id="b", level=i))
 
 

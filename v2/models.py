@@ -1,15 +1,14 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Callable, TypeVar, ParamSpec, Any, Generic, Protocol, cast, Optional
 from asyncio import Event
-from storage import Storage, CacheKey
+from storage import Storage, CacheKey, log, get_tag_storage, set_tag_storage
 from serializer import Serializer
-from datetime import timedelta
-import structlog
+from datetime import datetime, timedelta
 
 
 from localcache import LocalCache
 
-logger = structlog.get_logger()
 
 C_co = TypeVar("C_co", covariant=True)
 S = TypeVar("S", bound=Serializer)
@@ -24,8 +23,16 @@ async def init_storages(storages: dict[str, Storage]):
         await v.connect()
 
 
+async def init_tag_storage(storage: Storage):
+    await storage.connect()
+    set_tag_storage(storage)
+
+
 class MemoNode(Protocol):
     def key(self) -> str:
+        ...
+
+    def tags(self) -> list[str]:
         ...
 
     class Meta(Protocol[S]):
@@ -41,6 +48,9 @@ class CacheNode(Protocol[C_co]):
         ...
 
     def fetch(self) -> C_co:
+        ...
+
+    def tags(self) -> list[str]:
         ...
 
     class Meta(Protocol[S]):
@@ -62,24 +72,25 @@ async def get(node: CacheNode[C_co]) -> C_co:
         prefix="cacheme",
         key=node.key(),
         version=node.Meta.version,
+        tags=node.tags(),
     )
     if node.Meta.local_cache.enable:
         result = node.Meta.local_cache.get(cache_key)
         if result != None:
-            logger.info("local cache hit", key=cache_key.full_key, node=cache_key.node)
+            log("local cache hit", cache_key)
             return result
     raw = await storage.get(cache_key)
     if raw == None:
-        logger.info("cache miss", key=cache_key.full_key, node=cache_key.node)
+        log("cache miss", cache_key)
         result = node.fetch()
         b = node.Meta.serializer.dumps(result)
         await storage.set(cache_key, b, node.Meta.ttl)
     else:
-        logger.info("cache hit", key=cache_key.full_key, node=cache_key.node)
+        log("cache hit", cache_key)
         result = node.Meta.serializer.loads(raw)
     if node.Meta.local_cache.enable:
         node.Meta.local_cache.set(cache_key, result)
-        logger.info("local cache set", key=cache_key.full_key, node=cache_key.node)
+        log("local cache set", cache_key)
     return cast(C_co, result)
 
 
@@ -88,6 +99,11 @@ def get_many(nodes: list[CacheNode[C_co]]) -> list[C_co]:
     for node in nodes:
         results.append(node.fetch())
     return results
+
+
+async def invalid_tag(tag: str):
+    storage = get_tag_storage()
+    await storage.invalid_tag(tag)
 
 
 class Locker:
@@ -110,7 +126,6 @@ class Wrapper(Generic[P, T]):
         locker = self.lockers.get(key, None)
         if locker != None:
             await locker.event.wait()
-            print("cached", locker.value)
             return locker.value
         else:
             locker = Locker()
@@ -119,7 +134,6 @@ class Wrapper(Generic[P, T]):
             locker.value = result
             self.lockers.pop(key)
             locker.event.set()
-            print("calculated", result)
             return result
 
     def to_node(self, fn: Callable[P, T]) -> Wrapper:
