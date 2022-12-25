@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, TypeVar, ParamSpec, Any, Generic, Protocol, cast, Optional
-from asyncio import Event
+from asyncio import Event, Task, create_task
 from storage import Storage, CacheKey, log, get_tag_storage, set_tag_storage
 from serializer import Serializer
 from datetime import timedelta
@@ -105,35 +105,19 @@ async def invalid_tag(tag: str):
     await storage.invalid_tag(tag)
 
 
-class Locker:
-    event: Event
-    value: Any
-
-    def __init__(self):
-        self.event = Event()
-        self.value = None
-
-
 class Wrapper(Generic[P, T]):
     def __init__(self, fn: Callable[P, Any], node: type[T]):
         self.func = fn
-        self.lockers: dict[str, Locker] = {}
+        self.tasks: dict[str, Task] = {}
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Any:
         node = self.key_func(*args, **kwargs)
         key = node.key()
-        locker = self.lockers.get(key, None)
-        if locker != None:
-            await locker.event.wait()
-            return locker.value
-        else:
-            locker = Locker()
-            self.lockers[key] = locker
-            result = await self.func(*args, **kwargs)
-            locker.value = result
-            self.lockers.pop(key)
-            locker.event.set()
-            return result
+        tmp = create_task(self.func(*args, **kwargs))
+        tmp.add_done_callback(lambda task: self.tasks.pop(key))
+        task = self.tasks.setdefault(key, tmp)
+        await task
+        return task.result()
 
     def to_node(self, fn: Callable[P, T]) -> Wrapper:
         self.key_func = fn

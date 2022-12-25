@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from models import *
 from storage import SQLStorage
 from serializer import PickleSerializer
-from serializer import CompressedPickleSerializer, MsgPackSerializer
+from serializer import MsgPackSerializer
 
 
 @dataclass
@@ -84,6 +84,8 @@ async def main():
         }
     )
     await init_tag_storage(SQLStorage("sqlite+aiosqlite:///example.db"))
+    await test(a=1, b="2")
+    await test(a=3, b="4")
     for i in range(100):
         await get(FooNode(user_id="a", foo_id="b", level=i))
     for i in range(100):
