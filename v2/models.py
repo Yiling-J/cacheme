@@ -4,14 +4,15 @@ from typing import Callable, TypeVar, ParamSpec, Any, Generic, Protocol, cast, O
 from asyncio import Event
 from storage import Storage, CacheKey, log, get_tag_storage, set_tag_storage
 from serializer import Serializer
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 
 from localcache import LocalCache
 
 
+S = TypeVar("S", bound=Optional[Serializer])
 C_co = TypeVar("C_co", covariant=True)
-S = TypeVar("S", bound=Serializer)
+
 
 _storages: dict[str, Storage] = {}
 
@@ -79,15 +80,13 @@ async def get(node: CacheNode[C_co]) -> C_co:
         if result != None:
             log("local cache hit", cache_key)
             return result
-    raw = await storage.get(cache_key)
-    if raw == None:
+    result = await storage.get(cache_key, node.Meta.serializer)
+    if result == None:
         log("cache miss", cache_key)
         result = node.fetch()
-        b = node.Meta.serializer.dumps(result)
-        await storage.set(cache_key, b, node.Meta.ttl)
+        await storage.set(cache_key, result, node.Meta.ttl, node.Meta.serializer)
     else:
         log("cache hit", cache_key)
-        result = node.Meta.serializer.loads(raw)
     if node.Meta.local_cache.enable:
         node.Meta.local_cache.set(cache_key, result)
         log("local cache set", cache_key)

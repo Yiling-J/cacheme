@@ -3,11 +3,19 @@ import base64
 import pickle
 import json
 import lzma
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, cast, TypeVar, Optional
 import msgpack
 
 import pydantic
 from pydantic.json import pydantic_encoder
+
+
+class Serializer(Protocol):
+    def dumps(self, obj: Any) -> bytes:
+        raise NotImplementedError()
+
+    def loads(self, blob: bytes) -> Any:
+        raise NotImplementedError()
 
 
 def to_qualified_name(obj: Any) -> str:
@@ -51,14 +59,6 @@ def prefect_json_object_decoder(result: dict):
             from_qualified_name(result["__class__"]), result["data"]
         )
     return result
-
-
-class Serializer(Protocol):
-    def dumps(self, obj: Any) -> bytes:
-        ...
-
-    def loads(self, blob: bytes) -> Any:
-        ...
 
 
 class PickleSerializer:

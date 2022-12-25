@@ -1,4 +1,4 @@
-from typing import Protocol, cast
+from typing import Any, Optional, Protocol, cast
 from databases import Database
 import structlog
 from sqlalchemy import (
@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
+
+from serializer import PickleSerializer, Serializer
 
 logger = structlog.getLogger(__name__)
 
@@ -64,16 +66,22 @@ def log(msg: str, key: CacheKey):
 
 
 class Storage(Protocol):
-    def __init__(self, address: str, table: str):
+    def __init__(self, address: str):
         ...
 
     async def connect(self):
         ...
 
-    async def get(self, key: CacheKey) -> bytes | None:
+    async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
         ...
 
-    async def set(self, key: CacheKey, value: bytes, ttl: timedelta):
+    async def set(
+        self,
+        key: CacheKey,
+        value: Any,
+        ttl: timedelta,
+        serializer: Optional[Serializer],
+    ):
         ...
 
     async def validate_key_with_tags(
@@ -101,17 +109,18 @@ def set_tag_storage(storage: Storage):
 
 
 class SQLStorage:
-    def __init__(self, address: str, table: str):
+    def __init__(self, address: str):
         database = Database(address)
         self.database = database
-        self.a = address
-        self.b = table
+        self.address = address
 
     async def connect(self):
         await self.database.connect()
-        self.table = await create_cache_table(self.a, self.b)
+        self.table = await create_cache_table(self.address, "cacheme_data")
 
-    async def get(self, key: CacheKey) -> bytes | None:
+    async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
+        if serializer == None:
+            serializer = PickleSerializer()
         query = self.table.select().where(self.table.c.key == key.full_key)
         result = await self.database.fetch_one(query)
         if result == None:
@@ -129,9 +138,18 @@ class SQLStorage:
             if not valid:
                 log("cache tag expired", key)
                 return None
-        return cast(bytes, result["value"])
+        return serializer.loads(cast(bytes, result["value"]))
 
-    async def set(self, key: CacheKey, value: bytes, ttl: timedelta):
+    async def set(
+        self,
+        key: CacheKey,
+        value: Any,
+        ttl: timedelta,
+        serializer: Optional[Serializer],
+    ):
+        if serializer == None:
+            serializer = PickleSerializer()
+        v = serializer.dumps(value)
         query = self.table.select(self.table.c.key == key.full_key).with_for_update()
         async with self.database.transaction():
             record = await self.database.fetch_one(query)
@@ -139,15 +157,13 @@ class SQLStorage:
             if record == None:
                 log("cache set", key)
                 await self.database.execute(
-                    self.table.insert().values(
-                        key=key.full_key, value=value, expire=expire
-                    )
+                    self.table.insert().values(key=key.full_key, value=v, expire=expire)
                 )
             else:
                 log("cache update", key)
                 await self.database.execute(
                     self.table.update(self.table.c.key == key.full_key).values(
-                        value=value, expire=expire
+                        value=v, expire=expire
                     )
                 )
 

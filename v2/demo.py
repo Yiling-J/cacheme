@@ -79,11 +79,11 @@ def _(a: int, b: int) -> BarNode:
 async def main():
     await init_storages(
         {
-            "foo": SQLStorage("sqlite+aiosqlite:///example.db", "foo"),
-            "bar": SQLStorage("sqlite+aiosqlite:///example.db", "bar"),
+            "foo": SQLStorage("sqlite+aiosqlite:///example.db"),
+            "bar": SQLStorage("sqlite+aiosqlite:///example.db"),
         }
     )
-    await init_tag_storage(SQLStorage("sqlite+aiosqlite:///example.db", "tags"))
+    await init_tag_storage(SQLStorage("sqlite+aiosqlite:///example.db"))
     for i in range(100):
         await get(FooNode(user_id="a", foo_id="b", level=i))
     for i in range(100):
