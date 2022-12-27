@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from models import *
-from storage import SQLStorage
+from storage import SQLStorage, TLFUStorage
 from serializer import PickleSerializer
 from serializer import MsgPackSerializer
 
@@ -27,9 +27,9 @@ class FooNode:
 
     class Meta:
         version = "v1"
-        storage = "foo"
+        storage = "local"
         ttl = timedelta(seconds=20)
-        local_cache = LocalCache(enable=True)
+        local_cache = None
         serializer = MsgPackSerializer()
 
 
@@ -50,7 +50,7 @@ class BarNode:
         version = "v1"
         storage = "bar"
         ttl = timedelta(seconds=20)
-        local_cache = LocalCache(enable=False)
+        local_cache = None
         serializer = PickleSerializer()
 
 
@@ -79,19 +79,15 @@ def _(a: int, b: int) -> BarNode:
 async def main():
     await init_storages(
         {
-            "foo": SQLStorage("sqlite+aiosqlite:///example.db"),
-            "bar": SQLStorage("sqlite+aiosqlite:///example.db"),
+            "sqlite": SQLStorage("sqlite+aiosqlite:///example.db"),
+            "local": TLFUStorage(50),
         }
     )
     await init_tag_storage(SQLStorage("sqlite+aiosqlite:///example.db"))
-    await test(a=1, b="2")
-    await test(a=3, b="4")
+    # await test(a=1, b="2")
+    # await test(a=3, b="4")
     for i in range(100):
         await get(FooNode(user_id="a", foo_id="b", level=i))
-    for i in range(100):
-        await get(FooNode(user_id="a", foo_id="b", level=i))
-    await asyncio.sleep(6)
-    await invalid_tag("user:a")
     for i in range(100):
         await get(FooNode(user_id="a", foo_id="b", level=i))
 

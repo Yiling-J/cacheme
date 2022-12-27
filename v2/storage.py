@@ -17,6 +17,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
 
 from serializer import PickleSerializer, Serializer
+from tinylfu import tinylfu
 
 logger = structlog.getLogger(__name__)
 
@@ -66,9 +67,6 @@ def log(msg: str, key: CacheKey):
 
 
 class Storage(Protocol):
-    def __init__(self, address: str):
-        ...
-
     async def connect(self):
         ...
 
@@ -189,3 +187,34 @@ class SQLStorage:
             if tag["updated_at"] >= updated_at:
                 return False
         return True
+
+
+class TLFUStorage:
+    def __init__(self, size: int):
+        self.cache = tinylfu.Cache(size)
+
+    async def connect(self):
+        return
+
+    async def get(
+        self, key: CacheKey, serializer: Optional[Serializer]
+    ) -> Optional[Any]:
+        return self.cache.get(key.full_key)
+
+    async def set(
+        self,
+        key: CacheKey,
+        value: Any,
+        ttl: timedelta,
+        serializer: Optional[Serializer],
+    ):
+        self.cache.set(key.full_key, value, ttl)
+        return
+
+    async def validate_key_with_tags(
+        self, updated_at: datetime, tags: list[str]
+    ) -> bool:
+        raise NotImplementedError()
+
+    async def invalid_tag(self, tag: str):
+        raise NotImplementedError()

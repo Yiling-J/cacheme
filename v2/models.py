@@ -12,6 +12,7 @@ from localcache import LocalCache
 
 S = TypeVar("S", bound=Optional[Serializer])
 C_co = TypeVar("C_co", covariant=True)
+LC = TypeVar("LC", bound=Optional[str])
 
 
 _storages: dict[str, Storage] = {}
@@ -36,11 +37,11 @@ class MemoNode(Protocol):
     def tags(self) -> list[str]:
         ...
 
-    class Meta(Protocol[S]):
+    class Meta(Protocol[S, LC]):
         version: str
         storage: str
         ttl: timedelta
-        local_cache: LocalCache
+        local_cache: LC
         serializer: S
 
 
@@ -54,11 +55,11 @@ class CacheNode(Protocol[C_co]):
     def tags(self) -> list[str]:
         ...
 
-    class Meta(Protocol[S]):
+    class Meta(Protocol[S, LC]):
         version: str
         storage: str
         ttl: timedelta
-        local_cache: LocalCache
+        local_cache: LC
         serializer: S
 
 
@@ -75,8 +76,9 @@ async def get(node: CacheNode[C_co]) -> C_co:
         version=node.Meta.version,
         tags=node.tags(),
     )
-    if node.Meta.local_cache.enable:
-        result = node.Meta.local_cache.get(cache_key)
+    if node.Meta.local_cache != None:
+        local_storage = _storages[node.Meta.local_cache]
+        result = await local_storage.get(cache_key, None)
         if result != None:
             log("local cache hit", cache_key)
             return result
@@ -87,8 +89,9 @@ async def get(node: CacheNode[C_co]) -> C_co:
         await storage.set(cache_key, result, node.Meta.ttl, node.Meta.serializer)
     else:
         log("cache hit", cache_key)
-    if node.Meta.local_cache.enable:
-        node.Meta.local_cache.set(cache_key, result)
+    if node.Meta.local_cache != None:
+        local_storage = _storages[node.Meta.local_cache]
+        await local_storage.set(cache_key, result, node.Meta.ttl, None)
         log("local cache set", cache_key)
     return cast(C_co, result)
 
