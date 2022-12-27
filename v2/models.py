@@ -7,12 +7,13 @@ from serializer import Serializer
 from datetime import timedelta
 
 
-from localcache import LocalCache
+from filter import BloomFilter
 
 
 S = TypeVar("S", bound=Optional[Serializer])
 C_co = TypeVar("C_co", covariant=True)
 LC = TypeVar("LC", bound=Optional[str])
+DK = TypeVar("DK", bound=Optional[BloomFilter])
 
 
 _storages: dict[str, Storage] = {}
@@ -37,12 +38,13 @@ class MemoNode(Protocol):
     def tags(self) -> list[str]:
         ...
 
-    class Meta(Protocol[S, LC]):
+    class Meta(Protocol[S, LC, DK]):
         version: str
         storage: str
         ttl: timedelta
         local_cache: LC
         serializer: S
+        doorkeeper: DK
 
 
 class CacheNode(Protocol[C_co]):
@@ -55,12 +57,13 @@ class CacheNode(Protocol[C_co]):
     def tags(self) -> list[str]:
         ...
 
-    class Meta(Protocol[S, LC]):
+    class Meta(Protocol[S, LC, DK]):
         version: str
         storage: str
         ttl: timedelta
         local_cache: LC
         serializer: S
+        doorkeeper: DK
 
 
 T = TypeVar("T", bound=MemoNode)
@@ -86,6 +89,10 @@ async def get(node: CacheNode[C_co]) -> C_co:
     if result == None:
         log("cache miss", cache_key)
         result = node.fetch()
+        if node.Meta.doorkeeper != None:
+            exist = node.Meta.doorkeeper.set(cache_key.hash)
+            if not exist:
+                return cast(C_co, result)
         await storage.set(cache_key, result, node.Meta.ttl, node.Meta.serializer)
     else:
         log("cache hit", cache_key)

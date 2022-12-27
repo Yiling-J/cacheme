@@ -31,6 +31,7 @@ class FooNode:
         ttl = timedelta(seconds=20)
         local_cache = None
         serializer = MsgPackSerializer()
+        doorkeeper = None
 
 
 @dataclass
@@ -52,6 +53,7 @@ class BarNode:
         ttl = timedelta(seconds=20)
         local_cache = None
         serializer = PickleSerializer()
+        doorkeeper = None
 
 
 @Memoize(FooNode)

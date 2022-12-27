@@ -18,7 +18,7 @@ class CountMinSketch:
         counter_size = next_power_of_two(width * 3)
         self.row_size = counter_size >> 2
         self.row_mask = self.row_size - 1
-        self.counters = (c_uint64 * (counter_size >> 4))()
+        self.table = (c_uint64 * (counter_size >> 4))()
         self.additions = 0
         self.sample_size = 10 * counter_size
 
@@ -48,20 +48,20 @@ class CountMinSketch:
 
     def inc(self, i: int, offset: int) -> bool:
         mask = 0xF << offset
-        if self.counters[i] & mask != mask:
-            self.counters[i] += 1 << offset
+        if self.table[i] & mask != mask:
+            self.table[i] += 1 << offset
             return True
         return False
 
     def reset(self):
-        for i, counter in enumerate(self.counters):
+        for i, counter in enumerate(self.table):
             if counter != 0:
-                self.counters[i] = (counter >> 1) & 0x7777777777777777
+                self.table[i] = (counter >> 1) & 0x7777777777777777
         self.additions = self.additions >> 1
 
     def __get_count(self, keyh: int, depth: int) -> int:
         index, offset = self.index_of(keyh, depth)
-        return (self.counters[index] >> offset) & 0xF
+        return (self.table[index] >> offset) & 0xF
 
     def estimate(self, keyh: int) -> int:
         count0 = self.__get_count(keyh, 0)

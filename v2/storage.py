@@ -11,13 +11,14 @@ from sqlalchemy import (
     DateTime,
 )
 from datetime import timedelta, datetime
-from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
 
 from serializer import PickleSerializer, Serializer
 from tinylfu import tinylfu
+from data_types import CacheKey
+
 
 logger = structlog.getLogger(__name__)
 
@@ -47,19 +48,6 @@ async def create_cache_table(address: str, table: str) -> Table:
     async with engine.begin() as conn:
         await conn.run_sync(meta.create_all)
     return tb
-
-
-@dataclass
-class CacheKey:
-    node: str
-    prefix: str
-    key: str
-    version: str
-    tags: list[str]
-
-    @property
-    def full_key(self) -> str:
-        return f"{self.prefix}:{self.key}:{self.version}"
 
 
 def log(msg: str, key: CacheKey):
@@ -199,7 +187,7 @@ class TLFUStorage:
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
     ) -> Optional[Any]:
-        return self.cache.get(key.full_key)
+        return self.cache.get(key)
 
     async def set(
         self,
@@ -208,7 +196,7 @@ class TLFUStorage:
         ttl: timedelta,
         serializer: Optional[Serializer],
     ):
-        self.cache.set(key.full_key, value, ttl)
+        self.cache.set(key, value, ttl)
         return
 
     async def validate_key_with_tags(

@@ -45,7 +45,7 @@ class SLRU:
         if last != None:
             last.item = value.item
             self.probation.move_to_front(last)
-            self.cache.pop(last.item.key, None)
+            self.cache.pop(last.item.key.full_key, None)
 
     def victim(self) -> Optional[Element]:
         if len(self.probation) + len(self.protected) < self.maxsize:

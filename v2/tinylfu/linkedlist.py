@@ -2,19 +2,19 @@ import datetime
 
 from typing import Any
 
-from tinylfu.hash import hash_string
+
+from data_types import CacheKey
 
 
 class Item:
-    key: str
+    key: CacheKey
     value: Any
-    key_hash: int
     list_id: int | None
     expire: datetime.datetime
 
     def __init__(
         self,
-        key: str,
+        key: CacheKey,
         value: Any,
         ttl: datetime.timedelta,
         list_id: int | None = None,
@@ -22,7 +22,6 @@ class Item:
         self.expire = datetime.datetime.now() + ttl
         self.key = key
         self.value = value
-        self.key_hash = hash_string(key)
         self.list_id = list_id
 
 
@@ -37,12 +36,18 @@ class Element:
 
     @property
     def keyh(self) -> int:
-        return self.item.key_hash
+        return self.item.key.hash
 
 
 class LinkedList:
     def __init__(self):
-        self.root = Element(Item(key="root", value=0, ttl=datetime.timedelta(days=600)))
+        self.root = Element(
+            Item(
+                key=CacheKey(node="", prefix="", key="root", version="0", tags=[]),
+                value=0,
+                ttl=datetime.timedelta(days=600),
+            )
+        )
         self.root.list = self
         self.root.prev = self.root
         self.root.next = self.root
