@@ -147,7 +147,11 @@ class SQLStorage:
 
     async def invalid_tag(self, tag: str):
         full_tag = f"cacheme:internal:{tag}"
-        query = self.table.select(self.table.c.key == full_tag).with_for_update()
+        query = (
+            self.table.select(self.table.c.key == full_tag)
+            .values("id")
+            .with_for_update()
+        )
         async with self.database.transaction():
             record = await self.database.fetch_one(query)
             if record == None:
@@ -161,7 +165,11 @@ class SQLStorage:
         self, updated_at: datetime, tags: list[str]
     ) -> bool:
         full_tags = [f"cacheme:internal:{tag}" for tag in tags]
-        query = self.table.select().where(self.table.c.key.in_(full_tags))
+        query = (
+            self.table.select()
+            .where(self.table.c.key.in_(full_tags))
+            .values("updated_at")
+        )
         records = await self.database.fetch_all(query)
         for tag in records:
             if tag["updated_at"] >= updated_at:

@@ -37,23 +37,14 @@ def from_qualified_name(name: str) -> Any:
     return getattr(module, attr_name)
 
 
-def prefect_json_object_encoder(obj: Any) -> Any:
-    """
-    `JSONEncoder.default` for encoding objects into JSON with extended type support.
-
-    Raises a `TypeError` to fallback on other encoders on failure.
-    """
+def object_encoder(obj: Any) -> Any:
     return {
         "__class__": to_qualified_name(obj.__class__),
         "data": pydantic_encoder(obj),
     }
 
 
-def prefect_json_object_decoder(result: dict):
-    """
-    `JSONDecoder.object_hook` for decoding objects from JSON when previously encoded
-    with `prefect_json_object_encoder`
-    """
+def object_decoder(result: dict):
     if "__class__" in result:
         return pydantic.parse_obj_as(
             from_qualified_name(result["__class__"]), result["data"]
@@ -72,18 +63,18 @@ class PickleSerializer:
 
 class JSONSerializer:
     def dumps(self, obj: Any) -> bytes:
-        return json.dumps(obj, default=prefect_json_object_encoder).encode()
+        return json.dumps(obj, default=object_encoder).encode()
 
     def loads(self, blob: bytes) -> Any:
-        return json.loads(blob.decode(), object_hook=prefect_json_object_decoder)
+        return json.loads(blob.decode(), object_hook=object_decoder)
 
 
 class MsgPackSerializer:
     def dumps(self, obj: Any) -> bytes:
-        return cast(bytes, msgpack.dumps(obj, default=prefect_json_object_encoder))
+        return cast(bytes, msgpack.dumps(obj, default=object_encoder))
 
     def loads(self, blob: bytes) -> Any:
-        return msgpack.loads(blob, object_hook=prefect_json_object_decoder)
+        return msgpack.loads(blob, object_hook=object_decoder, strict_map_key=False)
 
 
 class CompressedSerializer:
