@@ -14,9 +14,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
 
-from serializer import PickleSerializer, Serializer
-from tinylfu import tinylfu
-from models import CacheKey
+from cacheme.v2.serializer import PickleSerializer, Serializer
+from cacheme.v2.tinylfu import tinylfu
+from cacheme.v2.models import CacheKey
 
 
 @compiles(now, "sqlite")

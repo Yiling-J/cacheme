@@ -1,4 +1,5 @@
-from tinylfu.linkedlist import Element, LinkedList
+from cacheme.v2.tinylfu.linkedlist import LinkedList
+from cacheme.v2.models import Element
 from typing import Optional
 
 

@@ -1,6 +1,6 @@
 import datetime
 
-from models import CacheKey, Item, Element
+from cacheme.v2.models import CacheKey, Item, Element
 
 
 class LinkedList:

@@ -1,11 +1,10 @@
 import asyncio
 from dataclasses import dataclass
-from models import *
-from storage import SQLStorage, TLFUStorage
-from serializer import PickleSerializer
-from serializer import MsgPackSerializer
+from cacheme.v2.models import *
+from cacheme.v2.storage import SQLStorage, TLFUStorage
+from cacheme.v2.serializer import PickleSerializer, MsgPackSerializer
 from datetime import timedelta
-from cacheme import init_storages, init_tag_storage, get
+from cacheme.v2.core import init_storages, init_tag_storage, get
 
 
 @dataclass

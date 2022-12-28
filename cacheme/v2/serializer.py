@@ -3,7 +3,7 @@ import base64
 import pickle
 import json
 import lzma
-from typing import Any, Protocol, cast, TypeVar, Optional
+from typing import Any, Protocol, cast
 import msgpack
 
 import pydantic

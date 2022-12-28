@@ -1,10 +1,8 @@
 from datetime import timedelta
-from tinylfu.lru import LRU, SLRU
-from tinylfu.sketch import CountMinSketch
+from cacheme.v2.tinylfu.lru import LRU, SLRU
+from cacheme.v2.tinylfu.sketch import CountMinSketch
 
-from tinylfu.linkedlist import Element
-from tinylfu.linkedlist import Item
-from models import CacheKey
+from cacheme.v2.models import CacheKey, Element, Item
 
 
 class Cache:

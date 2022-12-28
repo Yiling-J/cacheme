@@ -2,7 +2,7 @@ import datetime
 from collections import OrderedDict
 from typing import Any
 
-from storage import CacheKey
+from cacheme.v2.storage import CacheKey
 
 
 class LocalCache:

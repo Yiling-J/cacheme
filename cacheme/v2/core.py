@@ -1,8 +1,9 @@
-from storage import Storage
-from models import CacheKey
+from cacheme.v2.storage import Storage
+from cacheme.v2.models import CacheKey
 from typing import TypeVar, cast
-from interfaces import CacheNode
-from storage import get_tag_storage, set_tag_storage
+from cacheme.v2.interfaces import CacheNode
+from cacheme.v2.storage import get_tag_storage, set_tag_storage
+
 
 C_co = TypeVar("C_co", covariant=True)
 

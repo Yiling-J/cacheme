@@ -17,6 +17,7 @@ def test_sketch():
         key = f"foo:bar:{i}"
         h = hash_string(key)
         index, offset = sketch.index_of(h, i % 4)
+        # 32 uint64 * 4 rows
         assert index < 128
         assert offset < 64
 

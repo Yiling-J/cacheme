@@ -1,5 +1,5 @@
 from typing import TypeVar, Optional, Protocol, Any
-from filter import BloomFilter
+from cacheme.v2.filter import BloomFilter
 from datetime import timedelta
 
 C_co = TypeVar("C_co")

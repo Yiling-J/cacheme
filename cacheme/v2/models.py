@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Callable, TypeVar, ParamSpec, Any, Generic
+from typing import Callable, Optional, TypeVar, ParamSpec, Any, Generic
 from asyncio import Task, create_task
 from functools import cached_property
-from utils import hash_string
+from cacheme.v2.utils import hash_string
 from dataclasses import dataclass
-from interfaces import CacheNode, MemoNode
+from cacheme.v2.interfaces import CacheNode, MemoNode
 import structlog
 import datetime
 
@@ -93,8 +93,8 @@ class Item:
 
 
 class Element:
-    prev: Any
-    next: Any
+    prev: Optional[Element]
+    next: Optional[Element]
     list: Any
     item: Item
 
