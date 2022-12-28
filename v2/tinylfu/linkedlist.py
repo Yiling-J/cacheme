@@ -1,42 +1,6 @@
 import datetime
 
-from typing import Any
-
-
-from data_types import CacheKey
-
-
-class Item:
-    key: CacheKey
-    value: Any
-    list_id: int | None
-    expire: datetime.datetime
-
-    def __init__(
-        self,
-        key: CacheKey,
-        value: Any,
-        ttl: datetime.timedelta,
-        list_id: int | None = None,
-    ):
-        self.expire = datetime.datetime.now() + ttl
-        self.key = key
-        self.value = value
-        self.list_id = list_id
-
-
-class Element:
-    prev: Any
-    next: Any
-    list: Any
-    item: Item
-
-    def __init__(self, item: Item):
-        self.item = item
-
-    @property
-    def keyh(self) -> int:
-        return self.item.key.hash
+from models import CacheKey, Item, Element
 
 
 class LinkedList:

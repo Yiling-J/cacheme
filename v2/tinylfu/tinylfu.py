@@ -4,7 +4,7 @@ from tinylfu.sketch import CountMinSketch
 
 from tinylfu.linkedlist import Element
 from tinylfu.linkedlist import Item
-from data_types import CacheKey
+from models import CacheKey
 
 
 class Cache:

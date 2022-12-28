@@ -1,6 +1,5 @@
 from typing import Any, Optional, Protocol, cast
 from databases import Database
-import structlog
 from sqlalchemy import (
     MetaData,
     Table,
@@ -17,10 +16,7 @@ from sqlalchemy.sql.functions import now
 
 from serializer import PickleSerializer, Serializer
 from tinylfu import tinylfu
-from data_types import CacheKey
-
-
-logger = structlog.getLogger(__name__)
+from models import CacheKey
 
 
 @compiles(now, "sqlite")
@@ -48,10 +44,6 @@ async def create_cache_table(address: str, table: str) -> Table:
     async with engine.begin() as conn:
         await conn.run_sync(meta.create_all)
     return tb
-
-
-def log(msg: str, key: CacheKey):
-    logger.debug(msg, key=key.full_key, node=key.node)
 
 
 class Storage(Protocol):
@@ -110,10 +102,10 @@ class SQLStorage:
         query = self.table.select().where(self.table.c.key == key.full_key)
         result = await self.database.fetch_one(query)
         if result == None:
-            log("cache miss", key)
+            key.log("cache miss")
             return None
         if result["expire"] <= datetime.utcnow():
-            log("cache expired", key)
+            key.log("cache expired")
             return None
         if len(key.tags) > 0:
             if tag_storage == None:
@@ -122,7 +114,7 @@ class SQLStorage:
                 cast(datetime, result["updated_at"]), key.tags
             )
             if not valid:
-                log("cache tag expired", key)
+                key.log("cache tag expired")
                 return None
         return serializer.loads(cast(bytes, result["value"]))
 
@@ -141,12 +133,12 @@ class SQLStorage:
             record = await self.database.fetch_one(query)
             expire = datetime.utcnow() + ttl
             if record == None:
-                log("cache set", key)
+                key.log("cache set")
                 await self.database.execute(
                     self.table.insert().values(key=key.full_key, value=v, expire=expire)
                 )
             else:
-                log("cache update", key)
+                key.log("cache update")
                 await self.database.execute(
                     self.table.update(self.table.c.key == key.full_key).values(
                         value=v, expire=expire

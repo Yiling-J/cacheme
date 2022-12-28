@@ -1,106 +1,20 @@
 from __future__ import annotations
+from typing import Callable, TypeVar, ParamSpec, Any, Generic
+from asyncio import Task, create_task
+from functools import cached_property
+from utils import hash_string
 from dataclasses import dataclass
-from typing import Callable, TypeVar, ParamSpec, Any, Generic, Protocol, cast, Optional
-from asyncio import Event, Task, create_task
-from storage import Storage, CacheKey, log, get_tag_storage, set_tag_storage
-from serializer import Serializer
-from datetime import timedelta
+from interfaces import CacheNode, MemoNode
+import structlog
+import datetime
 
 
-from filter import BloomFilter
+logger = structlog.getLogger(__name__)
 
-
-S = TypeVar("S", bound=Optional[Serializer])
-C_co = TypeVar("C_co", covariant=True)
-LC = TypeVar("LC", bound=Optional[str])
-DK = TypeVar("DK", bound=Optional[BloomFilter])
-
-
-_storages: dict[str, Storage] = {}
-
-
-async def init_storages(storages: dict[str, Storage]):
-    global _storages
-    _storages = storages
-    for v in storages.values():
-        await v.connect()
-
-
-async def init_tag_storage(storage: Storage):
-    await storage.connect()
-    set_tag_storage(storage)
-
-
-class MemoNode(Protocol):
-    def key(self) -> str:
-        ...
-
-    def tags(self) -> list[str]:
-        ...
-
-    class Meta(Protocol[S, LC, DK]):
-        version: str
-        storage: str
-        ttl: timedelta
-        local_cache: LC
-        serializer: S
-        doorkeeper: DK
-
-
-class CacheNode(Protocol[C_co]):
-    def key(self) -> str:
-        ...
-
-    def fetch(self) -> C_co:
-        ...
-
-    def tags(self) -> list[str]:
-        ...
-
-    class Meta(Protocol[S, LC, DK]):
-        version: str
-        storage: str
-        ttl: timedelta
-        local_cache: LC
-        serializer: S
-        doorkeeper: DK
-
+C_co = TypeVar("C_co")
 
 T = TypeVar("T", bound=MemoNode)
 P = ParamSpec("P")
-
-
-async def get(node: CacheNode[C_co]) -> C_co:
-    storage = _storages[node.Meta.storage]
-    cache_key = CacheKey(
-        node=node.__class__.__name__,
-        prefix="cacheme",
-        key=node.key(),
-        version=node.Meta.version,
-        tags=node.tags(),
-    )
-    if node.Meta.local_cache != None:
-        local_storage = _storages[node.Meta.local_cache]
-        result = await local_storage.get(cache_key, None)
-        if result != None:
-            log("local cache hit", cache_key)
-            return result
-    result = await storage.get(cache_key, node.Meta.serializer)
-    if result == None:
-        log("cache miss", cache_key)
-        result = node.fetch()
-        if node.Meta.doorkeeper != None:
-            exist = node.Meta.doorkeeper.set(cache_key.hash)
-            if not exist:
-                return cast(C_co, result)
-        await storage.set(cache_key, result, node.Meta.ttl, node.Meta.serializer)
-    else:
-        log("cache hit", cache_key)
-    if node.Meta.local_cache != None:
-        local_storage = _storages[node.Meta.local_cache]
-        await local_storage.set(cache_key, result, node.Meta.ttl, None)
-        log("local cache set", cache_key)
-    return cast(C_co, result)
 
 
 def get_many(nodes: list[CacheNode[C_co]]) -> list[C_co]:
@@ -108,11 +22,6 @@ def get_many(nodes: list[CacheNode[C_co]]) -> list[C_co]:
     for node in nodes:
         results.append(node.fetch())
     return results
-
-
-async def invalid_tag(tag: str):
-    storage = get_tag_storage()
-    await storage.invalid_tag(tag)
 
 
 class Wrapper(Generic[P, T]):
@@ -142,3 +51,56 @@ class Memoize(Generic[T]):
     def __call__(self, fn: Callable[P, Any]) -> Wrapper[P, T]:
         self.func = fn
         return Wrapper(fn, self.node)
+
+
+@dataclass
+class CacheKey:
+    node: str
+    prefix: str
+    key: str
+    version: str
+    tags: list[str]
+
+    @property
+    def full_key(self) -> str:
+        return f"{self.prefix}:{self.key}:{self.version}"
+
+    @cached_property
+    def hash(self) -> int:
+        return hash_string(self.full_key)
+
+    def log(self, msg: str):
+        logger.debug(msg, key=self.full_key, node=self.node)
+
+
+class Item:
+    key: CacheKey
+    value: Any
+    list_id: int | None
+    expire: datetime.datetime
+
+    def __init__(
+        self,
+        key: CacheKey,
+        value: Any,
+        ttl: datetime.timedelta,
+        list_id: int | None = None,
+    ):
+        self.expire = datetime.datetime.now() + ttl
+        self.key = key
+        self.value = value
+        self.list_id = list_id
+
+
+class Element:
+    prev: Any
+    next: Any
+    list: Any
+    item: Item
+
+    def __init__(self, item: Item):
+        self.item = item
+
+    @property
+    def keyh(self) -> int:
+        return self.item.key.hash
