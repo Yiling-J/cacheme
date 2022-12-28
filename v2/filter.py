@@ -64,3 +64,4 @@ class BloomFilter:
     def reset(self):
         for i in range(len(self.bits)):
             self.bits[i] = 0
+        self.additions = 0

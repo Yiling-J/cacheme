@@ -15,26 +15,25 @@ def next_power_of_two(i: int) -> int:
 
 class CountMinSketch:
     def __init__(self, width: int):
-        counter_size = next_power_of_two(width * 3)
-        self.row_size = counter_size >> 2
-        self.row_mask = self.row_size - 1
-        self.table = (c_uint64 * (counter_size >> 4))()
+        self.row_counter_size = next_power_of_two(width * 3)
+        self.row_mask = self.row_counter_size - 1
+        self.table = (c_uint64 * (self.row_counter_size >> 2))()
         self.additions = 0
-        self.sample_size = 10 * counter_size
+        self.sample_size = 10 * self.row_counter_size
 
     def index_of(self, h: int, offset: int) -> Tuple[int, int]:
         h1 = h & 0xFFFFFFFF
         h1 += offset * (h >> 32)
         i = h1 & self.row_mask
-        index = i >> 4
+        index = int(offset * (self.row_counter_size / 16) + (i >> 4))
         offset = (i & 0xF) << 2
         return index, offset
 
-    def add(self, h: int):
-        index0, offset0 = self.index_of(h, 0)
-        index1, offset1 = self.index_of(h, 1)
-        index2, offset2 = self.index_of(h, 2)
-        index3, offset3 = self.index_of(h, 3)
+    def add(self, keyh: int):
+        index0, offset0 = self.index_of(keyh, 0)
+        index1, offset1 = self.index_of(keyh, 1)
+        index2, offset2 = self.index_of(keyh, 2)
+        index3, offset3 = self.index_of(keyh, 3)
 
         added = self.inc(index0, offset0)
         added |= self.inc(index1, offset1)
