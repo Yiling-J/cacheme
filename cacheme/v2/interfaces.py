@@ -1,4 +1,4 @@
-from typing import TypeVar, Optional, Protocol, Any
+from typing import TypeVar, Optional, Protocol, Any, List
 from cacheme.v2.filter import BloomFilter
 from datetime import timedelta
 
@@ -22,7 +22,7 @@ class MemoNode(Protocol):
     def key(self) -> str:
         ...
 
-    def tags(self) -> list[str]:
+    def tags(self) -> List[str]:
         ...
 
     class Meta(Protocol[S, LC, DK]):
@@ -41,7 +41,7 @@ class CacheNode(Protocol[C_co]):
     def load(self) -> C_co:
         ...
 
-    def tags(self) -> list[str]:
+    def tags(self) -> List[str]:
         ...
 
     class Meta(Protocol[S, LC, DK]):
