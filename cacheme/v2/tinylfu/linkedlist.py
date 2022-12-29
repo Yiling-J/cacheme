@@ -1,6 +1,7 @@
 import datetime
 
 from cacheme.v2.models import CacheKey, Item, Element
+from typing import Optional
 
 
 class LinkedList:
@@ -38,12 +39,12 @@ class LinkedList:
         e.prev.next = e
         e.next.prev = e
 
-    def front(self) -> Element | None:
+    def front(self) -> Optional[Element]:
         if self.len == 0:
             return None
         return self.root.next
 
-    def back(self) -> Element | None:
+    def back(self) -> Optional[Element]:
         if self.len == 0:
             return None
         return self.root.prev
