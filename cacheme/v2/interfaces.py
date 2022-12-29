@@ -1,4 +1,5 @@
-from typing import TypeVar, Optional, Protocol, Any, List
+from typing import Optional, List
+from typing_extensions import TypeVar, Protocol, Any
 from cacheme.v2.filter import BloomFilter
 from datetime import timedelta
 
