@@ -69,8 +69,9 @@ jobs:
       - uses: "actions/setup-python@v4"
         with:
           python-version: "${{ matrix.python-version }}"
+          cache: 'pip'
       - name: "Install dependencies"
-        run: "scripts/install"
+        run: "pip install -r requirements.txt"
       - name: "Run tests"
         env:
           CI: "TRUE"
