@@ -20,7 +20,7 @@ P = ParamSpec("P")
 def get_many(nodes: list[CacheNode[C_co]]) -> list[C_co]:
     results: list[C_co] = []
     for node in nodes:
-        results.append(node.fetch())
+        results.append(node.load())
     return results
 
 
@@ -104,3 +104,24 @@ class Element:
     @property
     def keyh(self) -> int:
         return self.item.key.hash
+
+
+_nodes = []
+
+
+class MetaNode(type):
+    def __new__(cls, name, bases, dct):
+        new = super().__new__(cls, name, bases, dct)
+        internal = getattr(new.Meta, "internal", False)
+        if internal == False:
+            print("new", new, new.__name__)
+            _nodes.append(cls)
+        return new
+
+    class Meta:
+        ...
+
+
+class Node(metaclass=MetaNode):
+    class Meta:
+        internal = True
