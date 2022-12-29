@@ -1,5 +1,5 @@
 import redis.asyncio as redis
-from typing import Optional, cast
+from typing import Optional, cast, List
 from typing_extensions import Any, Protocol
 from databases import Database
 from sqlalchemy import (
@@ -53,7 +53,9 @@ class Storage(Protocol):
     async def connect(self):
         ...
 
-    async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
+    async def get(
+        self, key: CacheKey, serializer: Optional[Serializer]
+    ) -> Optional[Any]:
         ...
 
     async def set(
@@ -66,7 +68,7 @@ class Storage(Protocol):
         ...
 
     async def validate_key_with_tags(
-        self, updated_at: datetime, tags: list[str]
+        self, updated_at: datetime, tags: List[str]
     ) -> bool:
         ...
 
@@ -74,7 +76,7 @@ class Storage(Protocol):
         ...
 
 
-tag_storage: Storage | None = None
+tag_storage: Optional[Storage] = None
 
 
 def get_tag_storage() -> Storage:
@@ -102,7 +104,9 @@ class SQLStorage:
             self.address, "cacheme_data", self.create_table
         )
 
-    async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
+    async def get(
+        self, key: CacheKey, serializer: Optional[Serializer]
+    ) -> Optional[Any]:
         if serializer == None:
             serializer = PickleSerializer()
         query = self.table.select().where(self.table.c.key == key.full_key)
@@ -168,7 +172,7 @@ class SQLStorage:
                 )
 
     async def validate_key_with_tags(
-        self, updated_at: datetime, tags: list[str]
+        self, updated_at: datetime, tags: List[str]
     ) -> bool:
         full_tags = [f"cacheme:internal:{tag}" for tag in tags]
         query = (
@@ -206,7 +210,7 @@ class TLFUStorage:
         return
 
     async def validate_key_with_tags(
-        self, updated_at: datetime, tags: list[str]
+        self, updated_at: datetime, tags: List[str]
     ) -> bool:
         raise NotImplementedError()
 
@@ -221,7 +225,9 @@ class RedisStorage:
     async def connect(self):
         self.client = await redis.from_url(self.address)
 
-    async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
+    async def get(
+        self, key: CacheKey, serializer: Optional[Serializer]
+    ) -> Optional[Any]:
         if serializer == None:
             serializer = PickleSerializer()
         result = await self.client.get(key.full_key)
