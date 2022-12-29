@@ -21,12 +21,12 @@ class LocalCache:
         print(len(self.cache))
         if key.full_key in self.cache:
             dt, result = self.cache[key.full_key]
-            if datetime.datetime.utcnow() - dt <= self.ttl:
+            if datetime.datetime.now(datetime.timezone.utc) - dt <= self.ttl:
                 return result
             return None
 
     def set(self, key: CacheKey, value: Any):
         self.cache.pop(key.full_key, None)
-        self.cache[key.full_key] = datetime.datetime.utcnow(), value
+        self.cache[key.full_key] = datetime.datetime.now(datetime.timezone.utc), value
         if len(self.cache) > self.maxsize:
             self.cache.popitem()

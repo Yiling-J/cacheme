@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Callable, Optional, Generic, List
+from typing import Callable, Optional, Generic, List, cast
 from typing_extensions import TypeVar, Any, ParamSpec
 from asyncio import Task, create_task
-from functools import cached_property
-from cacheme.v2.utils import hash_string
+from cacheme.v2.utils import hash_string, cached_property
 from dataclasses import dataclass
 from cacheme.v2.interfaces import CacheNode, MemoNode
 import structlog
@@ -87,7 +86,7 @@ class Item:
         ttl: datetime.timedelta,
         list_id: int | None = None,
     ):
-        self.expire = datetime.datetime.now() + ttl
+        self.expire = datetime.datetime.now(datetime.timezone.utc) + ttl
         self.key = key
         self.value = value
         self.list_id = list_id
@@ -104,7 +103,7 @@ class Element:
 
     @property
     def keyh(self) -> int:
-        return self.item.key.hash
+        return cast(int, self.item.key.hash)
 
 
 _nodes = []
