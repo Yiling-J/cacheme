@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Callable, Optional, TypeVar, ParamSpec, Any, Generic
+from typing import Callable, Optional, Generic
+from typing_extensions import TypeVar, Any, ParamSpec
 from asyncio import Task, create_task
 from functools import cached_property
 from cacheme.v2.utils import hash_string

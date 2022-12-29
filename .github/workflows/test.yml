@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
 
     services:
       mysql:
@@ -71,7 +71,7 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           cache: 'pip'
       - name: "Install dependencies"
-        run: "pip install -r requirements.txt"
+        run: "pip install -r requirements_dev.txt"
       - name: "Run tests"
         env:
           CI: "TRUE"
