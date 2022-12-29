@@ -250,4 +250,4 @@ class RedisStorage:
         if serializer == None:
             serializer = PickleSerializer()
         v = serializer.dumps({"value": value, "updated_at": datetime.now(timezone.utc)})
-        await self.client.setex(key.full_key, ttl.seconds, v)
+        await self.client.setex(key.full_key, int(ttl.total_seconds()), v)
