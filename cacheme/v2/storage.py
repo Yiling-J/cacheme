@@ -266,7 +266,7 @@ class MongoStorage:
         self.migrate = migrate
 
     async def connect(self):
-        client = await mongo.AsyncIOMotorClient(self.address)
+        client = mongo.AsyncIOMotorClient(self.address)
         self.table = client.cacheme.data
         if self.migrate:
             await self.table.create_index("key", unique=True)
