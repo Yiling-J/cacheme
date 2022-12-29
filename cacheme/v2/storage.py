@@ -1,5 +1,6 @@
 import redis.asyncio as redis
-from typing import Any, Optional, Protocol, cast
+from typing import Optional, cast
+from typing_extensions import Any, Protocol
 from databases import Database
 from sqlalchemy import (
     MetaData,

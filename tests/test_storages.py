@@ -17,7 +17,7 @@ from cacheme.v2.storage import *
         },
         {
             "s": RedisStorage(
-                "redis://localhost:6379",
+                "redis://redis:6379",
             ),
             "local": False,
         },
