@@ -1,10 +1,10 @@
 from cacheme.v2.tinylfu.linkedlist import LinkedList
 from cacheme.v2.models import Element
-from typing import Optional
+from typing import Optional, Dict
 
 
 class LRU:
-    def __init__(self, maxsize, cache: dict[str, Element]):
+    def __init__(self, maxsize, cache: Dict[str, Element]):
         self.maxsize = maxsize
         self.cache = cache
         self.ls = LinkedList()

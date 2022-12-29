@@ -3,7 +3,8 @@ import base64
 import pickle
 import json
 import lzma
-from typing import Any, Protocol, cast
+from typing import Any, cast
+from typing_extensions import Protocol
 import msgpack
 
 import pydantic
