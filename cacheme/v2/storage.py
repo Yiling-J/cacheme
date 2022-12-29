@@ -1,3 +1,4 @@
+import redis.asyncio as redis
 from typing import Any, Optional, Protocol, cast
 from databases import Database
 from sqlalchemy import (
@@ -9,7 +10,7 @@ from sqlalchemy import (
     LargeBinary,
     DateTime,
 )
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
@@ -108,7 +109,7 @@ class SQLStorage:
         if result == None:
             key.log("cache miss")
             return None
-        if result["expire"] <= datetime.utcnow():
+        if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
             key.log("cache expired")
             return None
         if len(key.tags) > 0:
@@ -135,7 +136,7 @@ class SQLStorage:
         query = self.table.select(self.table.c.key == key.full_key).with_for_update()
         async with self.database.transaction():
             record = await self.database.fetch_one(query)
-            expire = datetime.utcnow() + ttl
+            expire = datetime.now(timezone.utc) + ttl
             if record == None:
                 key.log("cache set")
                 await self.database.execute(
@@ -210,3 +211,42 @@ class TLFUStorage:
 
     async def invalid_tag(self, tag: str):
         raise NotImplementedError()
+
+
+class RedisStorage:
+    def __init__(self, address: str):
+        self.address = address
+
+    async def connect(self):
+        self.client = await redis.from_url(self.address)
+
+    async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
+        if serializer == None:
+            serializer = PickleSerializer()
+        result = await self.client.get(key.full_key)
+        if result == None:
+            key.log("cache miss")
+            return None
+        data = serializer.loads(cast(bytes, result))
+        if len(key.tags) > 0:
+            if tag_storage == None:
+                raise Exception("")
+            valid = await tag_storage.validate_key_with_tags(
+                cast(datetime, data["updated_at"]), key.tags
+            )
+            if not valid:
+                key.log("cache tag expired")
+                return None
+        return data["value"]
+
+    async def set(
+        self,
+        key: CacheKey,
+        value: Any,
+        ttl: timedelta,
+        serializer: Optional[Serializer],
+    ):
+        if serializer == None:
+            serializer = PickleSerializer()
+        v = serializer.dumps({"value": value, "updated_at": datetime.now(timezone.utc)})
+        await self.client.setex(key, ttl.seconds, v)

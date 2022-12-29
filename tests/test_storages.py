@@ -15,11 +15,17 @@ from cacheme.v2.storage import *
             ),
             "local": True,
         },
+        {
+            "s": RedisStorage(
+                "redis://localhost:6379",
+            ),
+            "local": False,
+        },
     ],
 )
 @pytest.mark.asyncio
 async def test_storages(storage):
-    if storage["local"] is False and os.environ["CI"] != True:
+    if storage["local"] is False and os.environ.get("CI") != "TRUE":
         return
     s = storage["s"]
     filename = ""
