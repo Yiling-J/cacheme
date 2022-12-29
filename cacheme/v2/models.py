@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Optional, Generic
+from typing import Callable, Optional, Generic, List
 from typing_extensions import TypeVar, Any, ParamSpec
 from asyncio import Task, create_task
 from functools import cached_property
@@ -18,8 +18,8 @@ T = TypeVar("T", bound=MemoNode)
 P = ParamSpec("P")
 
 
-def get_many(nodes: list[CacheNode[C_co]]) -> list[C_co]:
-    results: list[C_co] = []
+def get_many(nodes: List[CacheNode[C_co]]) -> List[C_co]:
+    results: List[C_co] = []
     for node in nodes:
         results.append(node.load())
     return results
@@ -60,7 +60,7 @@ class CacheKey:
     prefix: str
     key: str
     version: str
-    tags: list[str]
+    tags: List[str]
 
     @property
     def full_key(self) -> str:
@@ -77,7 +77,7 @@ class CacheKey:
 class Item:
     key: CacheKey
     value: Any
-    list_id: int | None
+    list_id: Optional[int]
     expire: datetime.datetime
 
     def __init__(
