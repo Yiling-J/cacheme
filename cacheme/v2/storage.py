@@ -283,9 +283,9 @@ class MongoStorage:
         if len(key.tags) > 0:
             if tag_storage == None:
                 raise Exception("")
-            valid = await tag_storage.validate_key_with_tags(
-                cast(datetime, result["updated_at"]), key.tags
-            )
+            dt = cast(datetime, result["updated_at"])
+            dt = dt.replace(tzinfo=timezone.utc)
+            valid = await tag_storage.validate_key_with_tags(dt, key.tags)
             if not valid:
                 key.log("cache tag expired")
                 return None
@@ -304,6 +304,6 @@ class MongoStorage:
         v = serializer.dumps(value)
         await self.table.update_one(
             {"key": key.full_key},
-            {"value": v, "updated_at": datetime.now(timezone.utc)},
+            {"$set": {"value": v, "updated_at": datetime.now(timezone.utc)}},
             True,
         )
