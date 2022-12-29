@@ -38,7 +38,7 @@ class CacheNode(Protocol[C_co]):
     def key(self) -> str:
         ...
 
-    def fetch(self) -> C_co:
+    def load(self) -> C_co:
         ...
 
     def tags(self) -> list[str]:

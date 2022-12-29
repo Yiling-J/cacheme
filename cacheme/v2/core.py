@@ -29,7 +29,7 @@ async def get(node: CacheNode[C_co]) -> C_co:
     result = await storage.get(cache_key, node.Meta.serializer)
     if result == None:
         cache_key.log("cache miss")
-        result = node.fetch()
+        result = node.load()
         if node.Meta.doorkeeper != None:
             exist = node.Meta.doorkeeper.set(cache_key.hash)
             if not exist:
