@@ -24,7 +24,7 @@ def sl_now(element, compiler, **kw):
     return "strftime('%Y-%m-%d %H:%M:%f', 'now')"
 
 
-async def create_cache_table(address: str, table: str) -> Table:
+async def get_cache_table(address: str, table: str, create: bool = False) -> Table:
     meta = MetaData()
     tb = Table(
         table,
@@ -40,9 +40,10 @@ async def create_cache_table(address: str, table: str) -> Table:
             server_onupdate=now(),
         ),
     )
-    engine = create_async_engine(address, echo=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(meta.create_all)
+    if create:
+        engine = create_async_engine(address, echo=True)
+        async with engine.begin() as conn:
+            await conn.run_sync(meta.create_all)
     return tb
 
 
@@ -87,14 +88,17 @@ def set_tag_storage(storage: Storage):
 
 
 class SQLStorage:
-    def __init__(self, address: str):
+    def __init__(self, address: str, create_table: bool = False):
         database = Database(address)
         self.database = database
         self.address = address
+        self.create_table = create_table
 
     async def connect(self):
         await self.database.connect()
-        self.table = await create_cache_table(self.address, "cacheme_data")
+        self.table = await get_cache_table(
+            self.address, "cacheme_data", self.create_table
+        )
 
     async def get(self, key: CacheKey, serializer: Optional[Serializer]) -> Any | None:
         if serializer == None:

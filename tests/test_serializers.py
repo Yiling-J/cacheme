@@ -2,6 +2,7 @@ import pytest
 from datetime import datetime, timedelta
 from cacheme.v2.serializer import *
 from dataclasses import dataclass
+from pydantic import BaseModel
 
 TUPLE_TO_LIST = 1
 JSON_ONLY = 2
@@ -30,6 +31,11 @@ class Bar:
     b: str
 
 
+class FooBar(BaseModel):
+    id: int
+    name = "foo bar"
+
+
 @pytest.mark.parametrize(
     "data",
     [
@@ -56,6 +62,7 @@ class Bar:
         },
         {"d": Foo(10), "s": [PICKLE]},
         {"d": Bar(a=1, b="12"), "s": [PICKLE, JSON, MSGPACK]},
+        {"d": FooBar(id=12), "s": [PICKLE, JSON, MSGPACK]},
     ],
 )
 @pytest.mark.parametrize(
