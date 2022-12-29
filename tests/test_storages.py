@@ -22,7 +22,7 @@ from cacheme.v2.storage import *
             "local": False,
         },
         {
-            "s": MongoStorage("mongodb://localhost:27017", migrate=True),
+            "s": MongoStorage("mongodb://test:password@localhost:27017", migrate=True),
             "local": False,
         },
     ],
