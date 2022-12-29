@@ -8,3 +8,4 @@ SQLAlchemy==1.4.41
 structlog==22.3.0
 xxhash==3.1.0
 typing_extensions==4.4.0
+motor==3.1.1

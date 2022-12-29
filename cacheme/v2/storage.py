@@ -1,4 +1,5 @@
 import redis.asyncio as redis
+import motor.motor_asyncio as mongo
 from typing import Optional, cast, List
 from typing_extensions import Any, Protocol
 from databases import Database
@@ -257,3 +258,52 @@ class RedisStorage:
             serializer = PickleSerializer()
         v = serializer.dumps({"value": value, "updated_at": datetime.now(timezone.utc)})
         await self.client.setex(key.full_key, int(ttl.total_seconds()), v)
+
+
+class MongoStorage:
+    def __init__(self, address: str, migrate: bool = False):
+        self.address = address
+        self.migrate = migrate
+
+    async def connect(self):
+        client = await mongo.AsyncIOMotorClient(self.address)
+        self.table = client.cacheme.data
+        if self.migrate:
+            await self.table.create_index("key", unique=True)
+
+    async def get(
+        self, key: CacheKey, serializer: Optional[Serializer]
+    ) -> Optional[Any]:
+        if serializer == None:
+            serializer = PickleSerializer()
+        result = await self.table.find_one({"key": key.full_key})
+        if result == None:
+            key.log("cache miss")
+            return None
+        if len(key.tags) > 0:
+            if tag_storage == None:
+                raise Exception("")
+            valid = await tag_storage.validate_key_with_tags(
+                cast(datetime, result["updated_at"]), key.tags
+            )
+            if not valid:
+                key.log("cache tag expired")
+                return None
+        data = serializer.loads(cast(bytes, result["value"]))
+        return data
+
+    async def set(
+        self,
+        key: CacheKey,
+        value: Any,
+        ttl: timedelta,
+        serializer: Optional[Serializer],
+    ):
+        if serializer == None:
+            serializer = PickleSerializer()
+        v = serializer.dumps(value)
+        await self.table.update_one(
+            {"key": key.full_key},
+            {"value": v, "updated_at": datetime.now(timezone.utc)},
+            True,
+        )

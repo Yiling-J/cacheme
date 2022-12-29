@@ -21,6 +21,10 @@ from cacheme.v2.storage import *
             ),
             "local": False,
         },
+        {
+            "s": MongoStorage("mongodb://localhost:27017", migrate=True),
+            "local": False,
+        },
     ],
 )
 @pytest.mark.asyncio
