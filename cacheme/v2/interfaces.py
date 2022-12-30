@@ -40,7 +40,7 @@ class CacheNode(Protocol[C_co]):
     def key(self) -> str:
         ...
 
-    def load(self) -> C_co:
+    async def load(self) -> C_co:
         ...
 
     def tags(self) -> List[str]:
