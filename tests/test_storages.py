@@ -25,7 +25,7 @@ from cacheme.v2.storage import *
         },
         {
             "s": SQLStorage(
-                f"postgresql+aiopg://username:password@127.0.0.1:5432/test",
+                f"postgresql+asyncpg://username:password@127.0.0.1:5432/test",
                 migrate=True,
             ),
             "local": False,
