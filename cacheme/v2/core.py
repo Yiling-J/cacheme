@@ -24,16 +24,33 @@ async def get(node: CacheNode[C_co]) -> C_co:
         tags=node.tags(),
     )
     result = None
-    created = False
     if node.Meta.local_cache != None:
         local_storage = _storages[node.Meta.local_cache]
         result = await local_storage.get(cache_key, None)
     if result == None:
         result = await storage.get(cache_key, node.Meta.serializer)
+    # get result from cache, check tags
+    if result != None and len(node.tags()) > 0:
+        tag_storage = get_tag_storage()
+        valid = await tag_storage.validate_tags(
+            result.updated_at,
+            [
+                CacheKey(
+                    node="__TAG__",
+                    prefix="cacheme",
+                    key=tag,
+                    version="",
+                    tags=[],
+                )
+                for tag in node.tags()
+            ],
+        )
+        if not valid:
+            await storage.remove(cache_key)
+            result = None
     if result == None:
         loaded = node.load()
         result = CachedData(data=result, updated_at=datetime.now(timezone.utc))
-        created = True
         if node.Meta.doorkeeper != None:
             exist = node.Meta.doorkeeper.set(cache_key.hash)
             if not exist:
@@ -42,9 +59,7 @@ async def get(node: CacheNode[C_co]) -> C_co:
         if node.Meta.local_cache != None:
             local_storage = _storages[node.Meta.local_cache]
             await local_storage.set(cache_key, loaded, node.Meta.ttl, None)
-    if created == False:
-        print("check tags")
-    return cast(C_co, result)
+    return cast(C_co, result.data)
 
 
 async def init_storages(storages: dict[str, Storage]):

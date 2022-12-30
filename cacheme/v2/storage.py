@@ -1,6 +1,6 @@
 import redis.asyncio as redis
 import motor.motor_asyncio as mongo
-from typing import Optional, cast
+from typing import Optional, cast, List
 from typing_extensions import Any, Protocol
 from databases import Database
 from sqlalchemy import MetaData, Table, Column, Integer, String, LargeBinary, DateTime
@@ -35,6 +35,12 @@ class Storage(Protocol):
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
+        ...
+
+    async def remove(self, key: CacheKey):
+        ...
+
+    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
         ...
 
 
@@ -134,6 +140,14 @@ class SQLStorage:
                     )
                 )
 
+    async def remove(self, key: CacheKey):
+        await self.database.execute(
+            self.table.delete().where(self.table.c.key == key.full_key)
+        )
+
+    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
+        ...
+
 
 class TLFUStorage:
     def __init__(self, size: int):
@@ -156,6 +170,13 @@ class TLFUStorage:
     ):
         self.cache.set(key, value, ttl)
         return
+
+    async def remove(self, key: CacheKey):
+        self.cache.remove(key)
+        ...
+
+    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
+        ...
 
 
 class RedisStorage:
@@ -188,6 +209,12 @@ class RedisStorage:
             serializer = PickleSerializer()
         v = serializer.dumps({"value": value, "updated_at": datetime.now(timezone.utc)})
         await self.client.setex(key.full_key, int(ttl.total_seconds()), v)
+
+    async def remove(self, key: CacheKey):
+        await self.client.delete(key.full_key)
+
+    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
+        ...
 
 
 class MongoStorage:
@@ -239,3 +266,9 @@ class MongoStorage:
             },
             True,
         )
+
+    async def remove(self, key: CacheKey):
+        await self.table.delete_one({"key": key.full_key})
+
+    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
+        ...

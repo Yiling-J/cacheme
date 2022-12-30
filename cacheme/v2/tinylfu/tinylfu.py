@@ -30,16 +30,20 @@ class Cache:
         if candidate_count > victim_count:
             self.slru.set(candidate.key.full_key, candidate)
 
-    def remove(self, element: Element):
+    def remove(self, key: CacheKey):
+        element = self.cache_dict.pop(key.full_key, None)
+        if element == None:
+            return
         if element.list != None:
             element.list.remove(element)
-        self.cache_dict.pop(element.item.key.full_key, None)
 
     def get(self, key: CacheKey) -> Optional[CachedData]:
         self.sketch.add(key.hash)
         e = self.cache_dict.get(key.full_key, None)
         if e != None:
+            key.log("hit")
             if e.item.expire == None or (e.item.expire > datetime.now(timezone.utc)):
                 return CachedData(data=e.item.value, updated_at=e.item.updated_at)
-            self.remove(e)
+            self.remove(e.item.key)
+        key.log("miss")
         return None
