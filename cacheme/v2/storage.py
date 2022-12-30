@@ -3,7 +3,7 @@ import motor.motor_asyncio as mongo
 from typing import Optional, cast, List
 from typing_extensions import Any, Protocol
 from databases import Database
-from sqlalchemy import MetaData, Table, Column, Integer, String, LargeBinary, TIMESTAMP
+from sqlalchemy import MetaData, Table, Column, Integer, String, LargeBinary, DateTime
 from datetime import timedelta, datetime, timezone
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
@@ -80,10 +80,10 @@ class SQLStorage:
             Column("id", Integer, primary_key=True),
             Column("key", String(512), unique=True),
             Column("value", LargeBinary),
-            Column("expire", TIMESTAMP(timezone=True), index=True),
+            Column("expire", DateTime(timezone=True), index=True),
             Column(
                 "updated_at",
-                TIMESTAMP(timezone=True),
+                DateTime(timezone=True),
                 server_default=now(),
                 server_onupdate=now(),
             ),
