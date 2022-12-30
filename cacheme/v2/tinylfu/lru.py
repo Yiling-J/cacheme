@@ -1,5 +1,5 @@
 from cacheme.v2.tinylfu.linkedlist import LinkedList
-from cacheme.v2.models import Element
+from cacheme.v2.models import Element, Item
 from typing import Optional, Dict
 
 
@@ -9,20 +9,17 @@ class LRU:
         self.cache = cache
         self.ls = LinkedList()
 
-    def set(self, key: str, value: Element):
-        item = self.cache.pop(key, None)
-        if item != None:
-            self.cache[key] = item
-            self.ls.move_to_front(item)
-            return
-        self.ls.push_front(value.item)
-        self.cache[key] = value
-        if len(self.ls) > self.maxsize:
-            last = self.ls.back()
-            if last == None:
-                return
-            self.ls.remove(last)
-            return last
+    def set(self, key: str, value: Item) -> Optional[Item]:
+        if len(self.ls) < self.maxsize:
+            new = self.ls.push_front(value)
+            self.cache[key] = new
+            return None
+        last = self.ls.back()
+        if last != None:
+            old = last.item
+            last.item = value
+            self.ls.move_to_front(last)
+            return old
 
 
 class SLRU:
@@ -34,19 +31,20 @@ class SLRU:
         self.protected_cap = int(maxsize * 0.8)
         self.probation_cap = maxsize - self.protected_cap
 
-    def set(self, key: str, value: Element):
-        value.item.list_id = 1
-        self.cache[key] = value
+    def set(self, key: str, value: Item) -> Optional[Item]:
+        value.list_id = 1
         if (len(self.probation) < self.probation_cap) or (
             len(self.probation) + len(self.protected) < self.maxsize
         ):
-            self.probation.push_front(value.item)
-            return
+            new = self.probation.push_front(value)
+            self.cache[key] = new
+            return None
         last = self.probation.back()
         if last != None:
-            last.item = value.item
+            old = last.item
+            last.item = value
             self.probation.move_to_front(last)
-            self.cache.pop(last.item.key.full_key, None)
+            return old
 
     def victim(self) -> Optional[Element]:
         if len(self.probation) + len(self.protected) < self.maxsize:

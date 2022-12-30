@@ -1,3 +1,4 @@
+from asyncio import sleep
 import os
 import pytest
 import random
@@ -51,5 +52,23 @@ async def test_storages(storage):
     )
     result = await s.get(key, serializer=PickleSerializer())
     assert result == {"foo": "bar"}
+
+    # expire test
+    key = CacheKey(
+        node="foo",
+        prefix="test",
+        key="foo_expire",
+        version="v1",
+        tags=[],
+    )
+    await s.set(
+        key=key,
+        value={"foo": "bar"},
+        ttl=timedelta(seconds=1),
+        serializer=PickleSerializer(),
+    )
+    await sleep(2)
+    result = await s.get(key, serializer=PickleSerializer())
+    assert result == None
     if filename != "":
         os.remove(filename)
