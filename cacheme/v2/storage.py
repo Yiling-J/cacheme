@@ -1,6 +1,6 @@
 import redis.asyncio as redis
 import motor.motor_asyncio as mongo
-from typing import Optional, cast, List
+from typing import Optional, cast
 from typing_extensions import Any, Protocol
 from databases import Database
 from sqlalchemy import MetaData, Table, Column, Integer, String, LargeBinary, DateTime
@@ -35,14 +35,6 @@ class Storage(Protocol):
         ttl: timedelta,
         serializer: Optional[Serializer],
     ):
-        ...
-
-    async def validate_key_with_tags(
-        self, updated_at: datetime, tags: List[str]
-    ) -> bool:
-        ...
-
-    async def invalid_tag(self, tag: str):
         ...
 
 
@@ -108,15 +100,6 @@ class SQLStorage:
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
             key.log("cache expired")
             return None
-        if len(key.tags) > 0:
-            if tag_storage == None:
-                raise Exception("")
-            valid = await tag_storage.validate_key_with_tags(
-                cast(datetime, result["updated_at"]), key.tags
-            )
-            if not valid:
-                key.log("cache tag expired")
-                return None
         return serializer.loads(cast(bytes, result["value"]))
 
     async def set(
@@ -146,37 +129,6 @@ class SQLStorage:
                     )
                 )
 
-    async def invalid_tag(self, tag: str):
-        full_tag = f"cacheme:internal:{tag}"
-        query = (
-            self.table.select(self.table.c.key == full_tag)
-            .values("id")
-            .with_for_update()
-        )
-        async with self.database.transaction():
-            record = await self.database.fetch_one(query)
-            if record == None:
-                await self.database.execute(self.table.insert().values(key=full_tag))
-            else:
-                await self.database.execute(
-                    self.table.update(self.table.c.key == full_tag).values(key=full_tag)
-                )
-
-    async def validate_key_with_tags(
-        self, updated_at: datetime, tags: List[str]
-    ) -> bool:
-        full_tags = [f"cacheme:internal:{tag}" for tag in tags]
-        query = (
-            self.table.select()
-            .where(self.table.c.key.in_(full_tags))
-            .values("updated_at")
-        )
-        records = await self.database.fetch_all(query)
-        for tag in records:
-            if tag["updated_at"] >= updated_at:
-                return False
-        return True
-
 
 class TLFUStorage:
     def __init__(self, size: int):
@@ -200,14 +152,6 @@ class TLFUStorage:
         self.cache.set(key, value, ttl)
         return
 
-    async def validate_key_with_tags(
-        self, updated_at: datetime, tags: List[str]
-    ) -> bool:
-        raise NotImplementedError()
-
-    async def invalid_tag(self, tag: str):
-        raise NotImplementedError()
-
 
 class RedisStorage:
     def __init__(self, address: str):
@@ -226,15 +170,6 @@ class RedisStorage:
             key.log("cache miss")
             return None
         data = serializer.loads(cast(bytes, result))
-        if len(key.tags) > 0:
-            if tag_storage == None:
-                raise Exception("")
-            valid = await tag_storage.validate_key_with_tags(
-                cast(datetime, data["updated_at"]), key.tags
-            )
-            if not valid:
-                key.log("cache tag expired")
-                return None
         return data["value"]
 
     async def set(
@@ -274,15 +209,6 @@ class MongoStorage:
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
             key.log("cache expired")
             return None
-        if len(key.tags) > 0:
-            if tag_storage == None:
-                raise Exception("")
-            dt = cast(datetime, result["updated_at"])
-            dt = dt.replace(tzinfo=timezone.utc)
-            valid = await tag_storage.validate_key_with_tags(dt, key.tags)
-            if not valid:
-                key.log("cache tag expired")
-                return None
         data = serializer.loads(cast(bytes, result["value"]))
         return data
 

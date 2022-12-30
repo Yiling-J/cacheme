@@ -1,5 +1,7 @@
 import xxhash
 from threading import RLock
+from typing import Any, Callable, Generic, Optional
+from typing_extensions import TypeVar, overload, Self
 
 
 # generate 64bits hash of  key string
@@ -8,11 +10,11 @@ def hash_string(s: str) -> int:
 
 
 _NOT_FOUND = object()
-
+_T = TypeVar("_T")
 
 # copy from 3.11 functools
-class cached_property:
-    def __init__(self, func):
+class cached_property(Generic[_T]):
+    def __init__(self, func: Callable[[Any], _T]):
         self.func = func
         self.attrname = None
         self.__doc__ = func.__doc__
@@ -26,6 +28,14 @@ class cached_property:
                 "Cannot assign the same cached_property to two different names "
                 f"({self.attrname!r} and {name!r})."
             )
+
+    @overload
+    def __get__(self, instance: None, owner: Optional[Any]) -> Self:
+        ...
+
+    @overload
+    def __get__(self, instance: object, owner: Optional[Any]) -> _T:
+        ...
 
     def __get__(self, instance, owner=None):
         if instance is None:
