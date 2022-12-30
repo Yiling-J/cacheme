@@ -19,29 +19,6 @@ def sl_now(element, compiler, **kw):
     return "strftime('%Y-%m-%d %H:%M:%f', 'now')"
 
 
-async def get_cache_table(address: str, table: str, create: bool = False) -> Table:
-    meta = MetaData()
-    tb = Table(
-        table,
-        meta,
-        Column("id", Integer, primary_key=True),
-        Column("key", String(1024), unique=True),
-        Column("value", LargeBinary),
-        Column("expire", TIMESTAMP(timezone=True), index=True),
-        Column(
-            "updated_at",
-            TIMESTAMP(timezone=True),
-            server_default=now(),
-            server_onupdate=now(),
-        ),
-    )
-    if create:
-        engine = create_async_engine(address, echo=True)
-        async with engine.begin() as conn:
-            await conn.run_sync(meta.create_all)
-    return tb
-
-
 class Storage(Protocol):
     async def connect(self):
         ...
@@ -101,7 +78,7 @@ class SQLStorage:
             "cacheme_data",
             meta,
             Column("id", Integer, primary_key=True),
-            Column("key", String, unique=True),
+            Column("key", String(512), unique=True),
             Column("value", LargeBinary),
             Column("expire", TIMESTAMP(timezone=True), index=True),
             Column(
