@@ -93,17 +93,38 @@ def set_tag_storage(storage: Storage):
 
 
 class SQLStorage:
-    def __init__(self, address: str, create_table: bool = False):
+    def __init__(self, address: str, migrate: bool = False):
         database = Database(address)
         self.database = database
         self.address = address
-        self.create_table = create_table
+        self.migrate = migrate
 
     async def connect(self):
         await self.database.connect()
-        self.table = await get_cache_table(
-            self.address, "cacheme_data", self.create_table
+        self.table = await self.get_cache_table()
+
+    async def get_cache_table(self) -> Table:
+        meta = MetaData()
+        tb = Table(
+            "cacheme_data",
+            meta,
+            Column("id", Integer, primary_key=True),
+            Column("key", String, unique=True),
+            Column("value", LargeBinary),
+            Column("expire", DateTime, index=True),
+            Column(
+                "updated_at",
+                DateTime,
+                server_default=now(),
+                server_onupdate=now(),
+            ),
         )
+
+        if self.migrate:
+            engine = create_async_engine(self.address, echo=True)
+            async with engine.begin() as conn:
+                await conn.run_sync(meta.create_all)
+        return tb
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
@@ -270,6 +291,7 @@ class MongoStorage:
         self.table = client.cacheme.data
         if self.migrate:
             await self.table.create_index("key", unique=True)
+            await self.table.create_index("expire")
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
@@ -279,6 +301,9 @@ class MongoStorage:
         result = await self.table.find_one({"key": key.full_key})
         if result == None:
             key.log("cache miss")
+            return None
+        if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+            key.log("cache expired")
             return None
         if len(key.tags) > 0:
             if tag_storage == None:
@@ -302,8 +327,15 @@ class MongoStorage:
         if serializer == None:
             serializer = PickleSerializer()
         v = serializer.dumps(value)
+        expire = datetime.now(timezone.utc) + ttl
         await self.table.update_one(
             {"key": key.full_key},
-            {"$set": {"value": v, "updated_at": datetime.now(timezone.utc)}},
+            {
+                "$set": {
+                    "value": v,
+                    "updated_at": datetime.now(timezone.utc),
+                    "expire": expire,
+                }
+            },
             True,
         )

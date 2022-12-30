@@ -11,7 +11,7 @@ from cacheme.v2.storage import *
         {
             "s": SQLStorage(
                 f"sqlite+aiosqlite:///test{random.randint(0, 50000)}",
-                create_table=True,
+                migrate=True,
             ),
             "local": True,
         },
