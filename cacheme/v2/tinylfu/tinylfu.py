@@ -16,7 +16,7 @@ class Cache:
         self.slru = SLRU(slru_size, self.cache_dict)
         self.sketch = CountMinSketch(size)
 
-    def set(self, key: CacheKey, value, ttl: timedelta):
+    def set(self, key: CacheKey, value, ttl: Optional[timedelta]):
         item = Item(key, value, ttl)
         candidate = self.lru.set(key.full_key, item)
         if candidate == None:
@@ -39,7 +39,7 @@ class Cache:
         self.sketch.add(key.hash)
         e = self.cache_dict.get(key.full_key, None)
         if e != None:
-            if e.item.expire > datetime.now(timezone.utc):
+            if e.item.expire == None or (e.item.expire > datetime.now(timezone.utc)):
                 return CachedData(data=e.item.value, updated_at=e.item.updated_at)
             self.remove(e)
         return None

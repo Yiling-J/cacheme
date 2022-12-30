@@ -68,6 +68,4 @@ async def invalid_tag(tag: str):
         version="",
         tags=[],
     )
-    await storage.set(
-        cache_key, None, ttl=timedelta(days=1000), serializer=MsgPackSerializer()
-    )
+    await storage.set(cache_key, None, ttl=None, serializer=MsgPackSerializer())

@@ -32,7 +32,7 @@ class Storage(Protocol):
         self,
         key: CacheKey,
         value: Any,
-        ttl: timedelta,
+        ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         ...
@@ -109,7 +109,7 @@ class SQLStorage:
         self,
         key: CacheKey,
         value: Any,
-        ttl: timedelta,
+        ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         if serializer == None:
@@ -118,7 +118,9 @@ class SQLStorage:
         query = self.table.select(self.table.c.key == key.full_key).with_for_update()
         async with self.database.transaction():
             record = await self.database.fetch_one(query)
-            expire = datetime.now(timezone.utc) + ttl
+            expire = None
+            if ttl != None:
+                expire = datetime.now(timezone.utc) + ttl
             if record == None:
                 key.log("cache set")
                 await self.database.execute(
@@ -149,7 +151,7 @@ class TLFUStorage:
         self,
         key: CacheKey,
         value: Any,
-        ttl: timedelta,
+        ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         self.cache.set(key, value, ttl)

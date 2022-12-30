@@ -82,18 +82,19 @@ class Item:
     key: CacheKey
     value: Any
     list_id: Optional[int]
-    expire: datetime.datetime
+    expire: Optional[datetime.datetime] = None
     updated_at: datetime.datetime
 
     def __init__(
         self,
         key: CacheKey,
         value: Any,
-        ttl: datetime.timedelta,
+        ttl: Optional[datetime.timedelta],
         list_id: int | None = None,
     ):
         self.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        self.expire = datetime.datetime.now(datetime.timezone.utc) + ttl
+        if ttl != None:
+            self.expire = datetime.datetime.now(datetime.timezone.utc) + ttl
         self.key = key
         self.value = value
         self.list_id = list_id
