@@ -17,6 +17,20 @@ from cacheme.v2.storage import *
             "local": True,
         },
         {
+            "s": SQLStorage(
+                "mysql+aiomysql://username:password@localhost:3306/test",
+                migrate=True,
+            ),
+            "local": False,
+        },
+        {
+            "s": SQLStorage(
+                f"postgresql+aiopg://username:password@127.0.0.1:5432/test",
+                migrate=True,
+            ),
+            "local": False,
+        },
+        {
             "s": RedisStorage(
                 "redis://localhost:6379",
             ),
