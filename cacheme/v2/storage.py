@@ -3,15 +3,7 @@ import motor.motor_asyncio as mongo
 from typing import Optional, cast, List
 from typing_extensions import Any, Protocol
 from databases import Database
-from sqlalchemy import (
-    MetaData,
-    Table,
-    Column,
-    Integer,
-    String,
-    LargeBinary,
-    DateTime,
-)
+from sqlalchemy import MetaData, Table, Column, Integer, String, LargeBinary, TIMESTAMP
 from datetime import timedelta, datetime, timezone
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.compiler import compiles
@@ -35,10 +27,10 @@ async def get_cache_table(address: str, table: str, create: bool = False) -> Tab
         Column("id", Integer, primary_key=True),
         Column("key", String(1024), unique=True),
         Column("value", LargeBinary),
-        Column("expire", DateTime(timezone=True), index=True),
+        Column("expire", TIMESTAMP(timezone=True), index=True),
         Column(
             "updated_at",
-            DateTime(timezone=True),
+            TIMESTAMP(timezone=True),
             server_default=now(),
             server_onupdate=now(),
         ),
@@ -111,10 +103,10 @@ class SQLStorage:
             Column("id", Integer, primary_key=True),
             Column("key", String, unique=True),
             Column("value", LargeBinary),
-            Column("expire", DateTime, index=True),
+            Column("expire", TIMESTAMP(timezone=True), index=True),
             Column(
                 "updated_at",
-                DateTime,
+                TIMESTAMP(timezone=True),
                 server_default=now(),
                 server_onupdate=now(),
             ),
