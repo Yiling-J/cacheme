@@ -65,7 +65,7 @@ async def test_storages(storage):
         serializer=PickleSerializer(),
     )
     result = await s.get(key, serializer=PickleSerializer())
-    assert result == {"foo": "bar"}
+    assert result.data == {"foo": "bar"}
 
     # expire test
     key = CacheKey(

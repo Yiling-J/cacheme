@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 from cacheme.v2.tinylfu.lru import LRU, SLRU
 from cacheme.v2.tinylfu.sketch import CountMinSketch
 
-from cacheme.v2.models import CacheKey, Element, Item
+from cacheme.v2.models import CacheKey, Element, Item, CachedData
 
 
 class Cache:
@@ -22,7 +23,7 @@ class Cache:
             return None
         victim = self.slru.victim()
         if victim == None:
-            self.slru.set(key.full_key, item)
+            self.slru.set(candidate.key.full_key, candidate)
             return
         candidate_count = self.sketch.estimate(candidate.key.hash)
         victim_count = self.sketch.estimate(victim.item.key.hash)
@@ -34,11 +35,11 @@ class Cache:
             element.list.remove(element)
         self.cache_dict.pop(element.item.key.full_key, None)
 
-    def get(self, key: CacheKey):
+    def get(self, key: CacheKey) -> Optional[CachedData]:
         self.sketch.add(key.hash)
         e = self.cache_dict.get(key.full_key, None)
         if e != None:
             if e.item.expire > datetime.now(timezone.utc):
-                return e.item.value
+                return CachedData(data=e.item.value, updated_at=e.item.updated_at)
             self.remove(e)
         return None

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Callable, Optional, Generic, List, cast
-from typing_extensions import TypeVar, Any, ParamSpec
+from typing_extensions import TypeVar, Any, ParamSpec, NamedTuple
 from asyncio import Task, create_task
 from cacheme.v2.utils import hash_string, cached_property
 from dataclasses import dataclass
@@ -73,11 +73,17 @@ class CacheKey:
         logger.debug(msg, key=self.full_key, node=self.node)
 
 
+class CachedData(NamedTuple):
+    data: Any
+    updated_at: datetime.datetime
+
+
 class Item:
     key: CacheKey
     value: Any
     list_id: Optional[int]
     expire: datetime.datetime
+    updated_at: datetime.datetime
 
     def __init__(
         self,
@@ -86,6 +92,7 @@ class Item:
         ttl: datetime.timedelta,
         list_id: int | None = None,
     ):
+        self.updated_at = datetime.datetime.now(datetime.timezone.utc)
         self.expire = datetime.datetime.now(datetime.timezone.utc) + ttl
         self.key = key
         self.value = value

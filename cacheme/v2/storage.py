@@ -11,7 +11,7 @@ from sqlalchemy.sql.functions import now
 
 from cacheme.v2.serializer import PickleSerializer, Serializer
 from cacheme.v2.tinylfu import tinylfu
-from cacheme.v2.models import CacheKey
+from cacheme.v2.models import CacheKey, CachedData
 
 
 @compiles(now, "sqlite")
@@ -25,7 +25,7 @@ class Storage(Protocol):
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
-    ) -> Optional[Any]:
+    ) -> Optional[CachedData]:
         ...
 
     async def set(
@@ -89,7 +89,7 @@ class SQLStorage:
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
-    ) -> Optional[Any]:
+    ) -> Optional[CachedData]:
         if serializer == None:
             serializer = PickleSerializer()
         query = self.table.select().where(self.table.c.key == key.full_key)
@@ -100,7 +100,10 @@ class SQLStorage:
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
             key.log("cache expired")
             return None
-        return serializer.loads(cast(bytes, result["value"]))
+        return CachedData(
+            data=serializer.loads(cast(bytes, result["value"])),
+            updated_at=result["updated_at"],
+        )
 
     async def set(
         self,
@@ -139,7 +142,7 @@ class TLFUStorage:
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
-    ) -> Optional[Any]:
+    ) -> Optional[CachedData]:
         return self.cache.get(key)
 
     async def set(
@@ -162,7 +165,7 @@ class RedisStorage:
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
-    ) -> Optional[Any]:
+    ) -> Optional[CachedData]:
         if serializer == None:
             serializer = PickleSerializer()
         result = await self.client.get(key.full_key)
@@ -170,7 +173,7 @@ class RedisStorage:
             key.log("cache miss")
             return None
         data = serializer.loads(cast(bytes, result))
-        return data["value"]
+        return CachedData(data=data["value"], updated_at=data["updated_at"])
 
     async def set(
         self,
@@ -199,7 +202,7 @@ class MongoStorage:
 
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
-    ) -> Optional[Any]:
+    ) -> Optional[CachedData]:
         if serializer == None:
             serializer = PickleSerializer()
         result = await self.table.find_one({"key": key.full_key})
@@ -210,7 +213,7 @@ class MongoStorage:
             key.log("cache expired")
             return None
         data = serializer.loads(cast(bytes, result["value"]))
-        return data
+        return CachedData(data=data, updated_at=result["updated_at"])
 
     async def set(
         self,
