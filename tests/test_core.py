@@ -98,7 +98,7 @@ class FooNode2(Node):
     def key(self) -> str:
         return f"{self.user_id}:{self.foo_id}:{self.level}"
 
-    def tags(self) -> list[str]:
+    def tags(self) -> List[str]:
         return []
 
     class Meta:
