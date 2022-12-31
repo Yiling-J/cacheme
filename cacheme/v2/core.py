@@ -23,7 +23,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-_storages: dict[str, Storage] = {}
+_storages: Dict[str, Storage] = {}
 
 
 class Locker:
