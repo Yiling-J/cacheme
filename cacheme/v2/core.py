@@ -10,6 +10,7 @@ from typing import (
     Dict,
     Any,
     overload,
+    Type,
 )
 from typing_extensions import TypeVar, ParamSpec, Self
 from cacheme.v2.interfaces import CacheNode, MemoNode
@@ -124,7 +125,7 @@ async def invalid_tag(tag: str):
 
 
 class Wrapper(Generic[P, T, R]):
-    def __init__(self, fn: Callable[P, R], node: type[T]):
+    def __init__(self, fn: Callable[P, R], node: Type[T]):
         self.func = fn
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
