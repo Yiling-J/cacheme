@@ -79,7 +79,6 @@ class MetaNode(type):
         new = super().__new__(cls, name, bases, dct)
         internal = getattr(new.Meta, "internal", False)
         if internal == False:
-            print("new", new, new.__name__)
             _nodes.append(cls)
         return new
 
