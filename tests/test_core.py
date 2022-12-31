@@ -5,8 +5,12 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 from cacheme.v2.models import Node
 from cacheme.v2.serializer import MsgPackSerializer
-from cacheme.v2.core import Memoize, init_storages
+from cacheme.v2.core import Memoize, get, init_storages
 from cacheme.v2.storage import TLFUStorage
+
+
+fn1_counter = 0
+fn2_counter = 0
 
 
 @dataclass
@@ -18,12 +22,10 @@ class FooNode(Node):
     def key(self) -> str:
         return f"{self.user_id}:{self.foo_id}:{self.level}"
 
-    async def load(self) -> Dict[str, Any]:
-        return {
-            "a": self.user_id,
-            "b": self.foo_id,
-            "c": self.level,
-        }
+    async def load(self) -> str:
+        global fn1_counter
+        fn1_counter += 1
+        return f"{self.user_id}-{self.foo_id}-{self.level}"
 
     def tags(self) -> List[str]:
         return []
@@ -35,10 +37,6 @@ class FooNode(Node):
         local_cache = None
         serializer = MsgPackSerializer()
         doorkeeper = None
-
-
-fn1_counter = 0
-fn2_counter = 0
 
 
 @Memoize(FooNode)
@@ -89,6 +87,19 @@ async def test_memoize():
     assert fn1_counter == 1
 
 
+@pytest.mark.asyncio
+async def test_get():
+    global fn1_counter
+    await init_storages({"local": TLFUStorage(50)})
+    fn1_counter = 0
+    result = await get(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 1
+    assert result == "a-1-10"
+    result = await get(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 1
+    assert result == "a-1-10"
+
+
 @dataclass
 class FooNode2(Node):
     user_id: str
@@ -135,3 +146,17 @@ async def test_memoize_cocurrency():
     for r in results:
         assert r == "1/2/apple"
     assert fn3_counter == 1
+
+
+@pytest.mark.asyncio
+async def test_get_cocurrency():
+    global fn1_counter
+    fn1_counter = 0
+    await init_storages({"local": TLFUStorage(50)})
+    results = await gather(
+        *[get(FooNode(user_id="b", foo_id="a", level=10)) for i in range(50)]
+    )
+    assert len(results) == 50
+    for r in results:
+        assert r == "b-a-10"
+    assert fn1_counter == 1
