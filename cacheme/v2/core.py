@@ -99,7 +99,7 @@ async def get(node: CacheNode[C_co]) -> C_co:
     return cast(C_co, result.data)
 
 
-async def init_storages(storages: dict[str, Storage]):
+async def init_storages(storages: Dict[str, Storage]):
     global _storages
     _storages = storages
     for v in storages.values():
