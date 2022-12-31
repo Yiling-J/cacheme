@@ -2,7 +2,7 @@ from asyncio import create_task, gather, sleep
 from types import MethodType
 import pytest
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List
 from cacheme.v2.models import Node
 from cacheme.v2.serializer import MsgPackSerializer
 from cacheme.v2.core import Memoize, init_storages
@@ -18,14 +18,14 @@ class FooNode(Node):
     def key(self) -> str:
         return f"{self.user_id}:{self.foo_id}:{self.level}"
 
-    async def load(self) -> dict[str, Any]:
+    async def load(self) -> Dict[str, Any]:
         return {
             "a": self.user_id,
             "b": self.foo_id,
             "c": self.level,
         }
 
-    def tags(self) -> list[str]:
+    def tags(self) -> List[str]:
         return []
 
     class Meta:
