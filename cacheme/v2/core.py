@@ -158,7 +158,7 @@ class Wrapper(Generic[P, T, R]):
 
 
 class Memoize(Generic[T]):
-    def __init__(self, node: type[T]):
+    def __init__(self, node: Type[T]):
         version = node.Meta.version
         self.node = node
 
