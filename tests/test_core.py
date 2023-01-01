@@ -30,13 +30,10 @@ class FooNode(Node):
     def tags(self) -> List[str]:
         return []
 
-    class Meta:
+    class Meta(Node.Meta):
         version = "v1"
         storage = "local"
-        ttl = None
-        local_cache = None
         serializer = MsgPackSerializer()
-        doorkeeper = None
 
 
 @Memoize(FooNode)
@@ -112,13 +109,10 @@ class FooNode2(Node):
     def tags(self) -> List[str]:
         return []
 
-    class Meta:
+    class Meta(Node.Meta):
         version = "v1"
         storage = "local"
-        ttl = None
-        local_cache = None
         serializer = MsgPackSerializer()
-        doorkeeper = None
 
 
 fn3_counter = 0

@@ -34,6 +34,7 @@ class MemoNode(Protocol):
         local_cache: LC
         serializer: S
         doorkeeper: DK
+        record_stats: bool
 
 
 class CacheNode(Protocol[C_co]):
@@ -53,3 +54,4 @@ class CacheNode(Protocol[C_co]):
         local_cache: LC
         serializer: S
         doorkeeper: DK
+        record_stats: bool

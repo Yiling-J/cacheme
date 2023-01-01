@@ -77,7 +77,7 @@ _nodes = []
 class MetaNode(type):
     def __new__(cls, name, bases, dct):
         new = super().__new__(cls, name, bases, dct)
-        internal = getattr(new.Meta, "internal", False)
+        internal = getattr(new, "internal", False)
         if internal == False:
             _nodes.append(cls)
         return new
@@ -87,5 +87,10 @@ class MetaNode(type):
 
 
 class Node(metaclass=MetaNode):
+    internal = True
+
     class Meta:
-        internal = True
+        ttl = None
+        local_cache = None
+        doorkeeper = None
+        record_stats = False
