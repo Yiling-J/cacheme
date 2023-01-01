@@ -16,9 +16,11 @@ class LRU:
             return None
         last = self.ls.back()
         if last != None:
+            self.cache.pop(last.item.key.full_key)
             old = last.item
             last.item = value
             self.ls.move_to_front(last)
+            self.cache[key] = last
             return old
 
 
@@ -41,9 +43,11 @@ class SLRU:
             return None
         last = self.probation.back()
         if last != None:
+            self.cache.pop(last.item.key.full_key)
             old = last.item
             last.item = value
             self.probation.move_to_front(last)
+            self.cache[key] = last
             return old
 
     def victim(self) -> Optional[Element]:

@@ -27,9 +27,6 @@ class CacheKey:
     def hash(self) -> int:
         return hash_string(self.full_key)
 
-    def log(self, msg: str):
-        logger.debug(msg, key=self.full_key, node=self.node)
-
 
 class CachedData(NamedTuple):
     data: Any

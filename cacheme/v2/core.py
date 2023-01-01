@@ -59,7 +59,7 @@ async def get(node: CacheNode[C_co]) -> C_co:
     if result is None:
         result = await storage.get(cache_key, node.Meta.serializer)
     # get result from cache, check tags
-    if result != None and len(node.tags()) > 0:
+    if result is not None and len(node.tags()) > 0:
         tag_storage = get_tag_storage()
         valid = await tag_storage.validate_tags(
             result.updated_at,

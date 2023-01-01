@@ -16,6 +16,7 @@ def next_power_of_two(i: int) -> int:
 class CountMinSketch:
     def __init__(self, width: int):
         self.row_counter_size = next_power_of_two(width * 3)
+        self.row_i64_size = int(self.row_counter_size / 16)
         self.row_mask = self.row_counter_size - 1
         self.table = (c_uint64 * (self.row_counter_size >> 2))()
         self.additions = 0
@@ -25,7 +26,7 @@ class CountMinSketch:
         h1 = h & 0xFFFFFFFF
         h1 += offset * (h >> 32)
         i = h1 & self.row_mask
-        index = int(offset * (self.row_counter_size / 16) + (i >> 4))
+        index = offset * self.row_i64_size + (i >> 4)
         offset = (i & 0xF) << 2
         return index, offset
 

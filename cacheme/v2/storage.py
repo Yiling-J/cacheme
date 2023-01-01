@@ -101,10 +101,8 @@ class SQLStorage:
         query = self.table.select().where(self.table.c.key == key.full_key)
         result = await self.database.fetch_one(query)
         if result is None:
-            key.log("cache miss")
             return None
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
-            key.log("cache expired")
             return None
         return CachedData(
             data=serializer.loads(cast(bytes, result["value"])),
@@ -128,12 +126,10 @@ class SQLStorage:
             if ttl != None:
                 expire = datetime.now(timezone.utc) + ttl
             if record is None:
-                key.log("cache set")
                 await self.database.execute(
                     self.table.insert().values(key=key.full_key, value=v, expire=expire)
                 )
             else:
-                key.log("cache update")
                 await self.database.execute(
                     self.table.update(self.table.c.key == key.full_key).values(
                         value=v, expire=expire
@@ -195,7 +191,6 @@ class RedisStorage:
             serializer = PickleSerializer()
         result = await self.client.get(key.full_key)
         if result is None:
-            key.log("cache miss")
             return None
         data = serializer.loads(cast(bytes, result))
         return CachedData(data=data["value"], updated_at=data["updated_at"])
@@ -238,10 +233,8 @@ class MongoStorage:
             serializer = PickleSerializer()
         result = await self.table.find_one({"key": key.full_key})
         if result is None:
-            key.log("cache miss")
             return None
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
-            key.log("cache expired")
             return None
         data = serializer.loads(cast(bytes, result["value"]))
         return CachedData(data=data, updated_at=result["updated_at"])
