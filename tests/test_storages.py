@@ -83,6 +83,6 @@ async def test_storages(storage):
     )
     await sleep(2)
     result = await s.get(key, serializer=PickleSerializer())
-    assert result == None
+    assert result is None
     if filename != "":
         os.remove(filename)

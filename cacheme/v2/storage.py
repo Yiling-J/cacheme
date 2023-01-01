@@ -49,7 +49,7 @@ tag_storage: Optional[Storage] = None
 
 def get_tag_storage() -> Storage:
     global tag_storage
-    if tag_storage == None:
+    if tag_storage is None:
         raise Exception()
     return tag_storage
 
@@ -96,11 +96,11 @@ class SQLStorage:
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        if serializer == None:
+        if serializer is None:
             serializer = PickleSerializer()
         query = self.table.select().where(self.table.c.key == key.full_key)
         result = await self.database.fetch_one(query)
-        if result == None:
+        if result is None:
             key.log("cache miss")
             return None
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
@@ -118,7 +118,7 @@ class SQLStorage:
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
-        if serializer == None:
+        if serializer is None:
             serializer = PickleSerializer()
         v = serializer.dumps(value)
         query = self.table.select(self.table.c.key == key.full_key).with_for_update()
@@ -127,7 +127,7 @@ class SQLStorage:
             expire = None
             if ttl != None:
                 expire = datetime.now(timezone.utc) + ttl
-            if record == None:
+            if record is None:
                 key.log("cache set")
                 await self.database.execute(
                     self.table.insert().values(key=key.full_key, value=v, expire=expire)
@@ -168,7 +168,9 @@ class TLFUStorage:
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
-        self.cache.set(key, value, ttl)
+        evicated = self.cache.set(key, value, ttl)
+        if evicated and key.metrics is not None:
+            key.metrics.eviction_count += 1
         return
 
     async def remove(self, key: CacheKey):
@@ -189,10 +191,10 @@ class RedisStorage:
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        if serializer == None:
+        if serializer is None:
             serializer = PickleSerializer()
         result = await self.client.get(key.full_key)
-        if result == None:
+        if result is None:
             key.log("cache miss")
             return None
         data = serializer.loads(cast(bytes, result))
@@ -205,7 +207,7 @@ class RedisStorage:
         ttl: timedelta,
         serializer: Optional[Serializer],
     ):
-        if serializer == None:
+        if serializer is None:
             serializer = PickleSerializer()
         v = serializer.dumps({"value": value, "updated_at": datetime.now(timezone.utc)})
         await self.client.setex(key.full_key, int(ttl.total_seconds()), v)
@@ -232,10 +234,10 @@ class MongoStorage:
     async def get(
         self, key: CacheKey, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        if serializer == None:
+        if serializer is None:
             serializer = PickleSerializer()
         result = await self.table.find_one({"key": key.full_key})
-        if result == None:
+        if result is None:
             key.log("cache miss")
             return None
         if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
@@ -251,7 +253,7 @@ class MongoStorage:
         ttl: timedelta,
         serializer: Optional[Serializer],
     ):
-        if serializer == None:
+        if serializer is None:
             serializer = PickleSerializer()
         v = serializer.dumps(value)
         expire = datetime.now(timezone.utc) + ttl

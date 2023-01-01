@@ -16,33 +16,36 @@ class Cache:
         self.slru = SLRU(slru_size, self.cache_dict)
         self.sketch = CountMinSketch(size)
 
-    def set(self, key: CacheKey, value, ttl: Optional[timedelta]):
+    def set(self, key: CacheKey, value, ttl: Optional[timedelta]) -> bool:
         item = Item(key, value, ttl)
         candidate = self.lru.set(key.full_key, item)
-        if candidate == None:
-            return None
+        evicated = False
+        if candidate is None:
+            return evicated
         victim = self.slru.victim()
-        if victim == None:
+        if victim is None:
             self.slru.set(candidate.key.full_key, candidate)
-            return
+            return evicated
         candidate_count = self.sketch.estimate(candidate.key.hash)
         victim_count = self.sketch.estimate(victim.item.key.hash)
         if candidate_count > victim_count:
             self.slru.set(candidate.key.full_key, candidate)
+            evicated = True
+        return evicated
 
     def remove(self, key: CacheKey):
         element = self.cache_dict.pop(key.full_key, None)
-        if element == None:
+        if element is None:
             return
-        if element.list != None:
+        if element.list is not None:
             element.list.remove(element)
 
     def get(self, key: CacheKey) -> Optional[CachedData]:
         self.sketch.add(key.hash)
         e = self.cache_dict.get(key.full_key, None)
-        if e != None:
+        if e is not None:
             key.log("hit")
-            if e.item.expire == None or (e.item.expire > datetime.now(timezone.utc)):
+            if e.item.expire is None or (e.item.expire > datetime.now(timezone.utc)):
                 return CachedData(data=e.item.value, updated_at=e.item.updated_at)
             self.remove(e.item.key)
         key.log("miss")

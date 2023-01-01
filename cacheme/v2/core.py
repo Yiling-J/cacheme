@@ -1,8 +1,9 @@
 import types
+from time import time_ns
 from datetime import timezone, datetime
 from cacheme.v2.serializer import MsgPackSerializer
 from cacheme.v2.storage import Storage
-from cacheme.v2.models import CacheKey, CachedData
+from cacheme.v2.models import CacheKey, CachedData, Metrics
 from typing import (
     cast,
     Callable,
@@ -42,18 +43,20 @@ _lockers: Dict[str, Locker] = {}
 # local storage(if enable) -> storage -> cache miss, load from source
 async def get(node: CacheNode[C_co]) -> C_co:
     storage = _storages[node.Meta.storage]
+    metrics = node.Meta.metrics
     cache_key = CacheKey(
         node=node.__class__.__name__,
         prefix="cacheme",
         key=node.key(),
         version=node.Meta.version,
         tags=node.tags(),
+        metrics=metrics,
     )
     result = None
-    if node.Meta.local_cache != None:
+    if node.Meta.local_cache is not None:
         local_storage = _storages[node.Meta.local_cache]
         result = await local_storage.get(cache_key, None)
-    if result == None:
+    if result is None:
         result = await storage.get(cache_key, node.Meta.serializer)
     # get result from cache, check tags
     if result != None and len(node.tags()) > 0:
@@ -74,21 +77,30 @@ async def get(node: CacheNode[C_co]) -> C_co:
         if not valid:
             await storage.remove(cache_key)
             result = None
-    if result == None:
+    if result is None:
+        metrics.miss_count += 1
         locker = _lockers.setdefault(cache_key.full_key, Locker())
         async with locker.lock:
-            if locker.value == None:
-                loaded = await node.load()
+            if locker.value is None:
+                now = time_ns()
+                try:
+                    loaded = await node.load()
+                except Exception as e:
+                    metrics.load_failure_count += 1
+                    metrics.total_load_time += time_ns() - now
+                    raise (e)
                 locker.value = loaded
+                metrics.load_success_count += 1
+                metrics.total_load_time += time_ns() - now
                 result = CachedData(data=loaded, updated_at=datetime.now(timezone.utc))
-                if node.Meta.doorkeeper != None:
+                if node.Meta.doorkeeper is not None:
                     exist = node.Meta.doorkeeper.set(cache_key.hash)
                     if not exist:
                         return cast(C_co, result)
                 await storage.set(
                     cache_key, loaded, node.Meta.ttl, node.Meta.serializer
                 )
-                if node.Meta.local_cache != None:
+                if node.Meta.local_cache is not None:
                     local_storage = _storages[node.Meta.local_cache]
                     await local_storage.set(cache_key, loaded, node.Meta.ttl, None)
                 _lockers.pop(cache_key.full_key, None)
@@ -96,6 +108,8 @@ async def get(node: CacheNode[C_co]) -> C_co:
                 result = CachedData(
                     data=locker.value, updated_at=datetime.now(timezone.utc)
                 )
+    else:
+        metrics.hit_count += 1
 
     return cast(C_co, result.data)
 

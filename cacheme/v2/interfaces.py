@@ -3,6 +3,8 @@ from typing_extensions import TypeVar, Protocol, Any
 from cacheme.v2.filter import BloomFilter
 from datetime import timedelta
 
+from cacheme.v2.models import Metrics
+
 C_co = TypeVar("C_co")
 
 
@@ -34,7 +36,7 @@ class MemoNode(Protocol):
         local_cache: LC
         serializer: S
         doorkeeper: DK
-        record_stats: bool
+        metrics: Metrics
 
 
 class CacheNode(Protocol[C_co]):
@@ -54,4 +56,4 @@ class CacheNode(Protocol[C_co]):
         local_cache: LC
         serializer: S
         doorkeeper: DK
-        record_stats: bool
+        metrics: Metrics

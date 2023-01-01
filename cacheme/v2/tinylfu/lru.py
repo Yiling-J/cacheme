@@ -52,7 +52,7 @@ class SLRU:
         return self.probation.back()
 
     def access(self, element: Element):
-        if element.item.list_id == None:
+        if element.item.list_id is None:
             return
         if element.item.list_id == 2:
             self.protected.move_to_front(element)
@@ -62,7 +62,7 @@ class SLRU:
         self.protected.move_to_front(element)
         if len(self.protected) > self.protected_cap:
             el = self.protected.back()
-            if el != None:
+            if el is not None:
                 self.protected.remove(el)
                 el.item.list_id = 1
                 self.probation.push_front(el.item)

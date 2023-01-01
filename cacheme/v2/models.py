@@ -17,6 +17,7 @@ class CacheKey:
     key: str
     version: str
     tags: List[str]
+    metrics: Optional[Metrics] = None
 
     @property
     def full_key(self) -> str:
@@ -71,13 +72,31 @@ class Element:
         return cast(int, self.item.key.hash)
 
 
+# - When a cache lookup encounters an existing cache entry hit_count is incremented
+# - After successfully loading an entry miss_count and load_success_count are
+# incremented, and the total loading time, in nanoseconds, is added to total_load_time
+# - When an exception is thrown while loading an entry,
+# miss_count and load_failure_count are incremented, and the total loading
+# time, in nanoseconds, is added to total_load_time
+# - (local cache only)When an entry is evicted from the cache, eviction_count is incremented
+class Metrics:
+    hit_count: int = 0
+    miss_count: int = 0
+    load_success_count: int = 0
+    load_failure_count: int = 0
+    eviction_count: int = 0
+    total_load_time: int = 0
+
+
 _nodes = []
 
 
 class MetaNode(type):
+    __metrics = None
+
     def __new__(cls, name, bases, dct):
         new = super().__new__(cls, name, bases, dct)
-        internal = getattr(new, "internal", False)
+        internal = getattr(new.Meta, "internal", False)
         if internal == False:
             _nodes.append(cls)
         return new
@@ -87,10 +106,9 @@ class MetaNode(type):
 
 
 class Node(metaclass=MetaNode):
-    internal = True
-
     class Meta:
+        internal = True
         ttl = None
         local_cache = None
         doorkeeper = None
-        record_stats = False
+        metrics = Metrics()
