@@ -102,7 +102,9 @@ class SQLStorage:
         result = await self.database.fetch_one(query)
         if result is None:
             return None
-        if result["expire"].replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+        if result["expire"] is not None and result["expire"].replace(
+            tzinfo=timezone.utc
+        ) <= datetime.now(timezone.utc):
             return None
         return CachedData(
             data=serializer.loads(cast(bytes, result["value"])),
