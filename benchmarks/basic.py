@@ -55,9 +55,9 @@ async def simple_get(i: int):
     assert result["uid"] == i
 
 
-async def setup_storage(requests: int, storage: str):
+async def setup_storage():
     storages = {
-        "local": TLFUStorage(requests // 10),
+        "local": TLFUStorage(1000),
         "sqlite": SQLiteStorage(
             f"sqlite:///test{random.randint(0, 50000)}",
             initialize=True,
@@ -69,10 +69,10 @@ async def setup_storage(requests: int, storage: str):
         "redis": RedisStorage("redis://localhost:6379"),
         "mongo": MongoStorage("mongodb://test:password@localhost:27017"),
     }
-    await init_storages({"test": storages[storage]})
+    await init_storages(storages)
 
 
-def update_node(serializer: str, compressed: bool, payload_size: str):
+def update_node(serializer: str, storage: str, compressed: bool, payload_size: str):
     global payload
     serializers = {
         "pickle": PickleSerializer(),
@@ -90,6 +90,7 @@ def update_node(serializer: str, compressed: bool, payload_size: str):
         s = serializers[serializer]
     FooNode.Meta.serializer = s
     FooNode.Meta.metrics = Metrics()
+    FooNode.Meta.storage = storage
     if payload_size == "large":
         with open("benchmarks/large.json") as f:
             content = f.read()
@@ -111,8 +112,7 @@ async def bench_zipf(
     payload_size: str = "small",
 ):
     z = Zipf(1.0001, 10, requests // 10)
-    update_node(serializer, compressed, payload_size)
-    await setup_storage(requests, storage)
+    update_node(serializer, storage, compressed, payload_size)
     now = time.time_ns()
     await asyncio.gather(*[simple_get(z.get()) for i in range(requests)])
     result = {
@@ -131,6 +131,7 @@ async def bench_zipf(
 
 
 async def bench_all():
+    await setup_storage()
     print("========== READ+WRITE ==========")
     await bench_zipf(10000, "local", "msgpack", False)
     await bench_zipf(10000, "redis", "msgpack", False)
