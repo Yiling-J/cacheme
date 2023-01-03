@@ -1,12 +1,11 @@
-from asyncio import create_task, gather, sleep
-from types import MethodType
+from asyncio import gather, sleep
 import pytest
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import List
 from cacheme.v2.models import Node
 from cacheme.v2.serializer import MsgPackSerializer
 from cacheme.v2.core import Memoize, get, init_storages
-from cacheme.v2.storage import TLFUStorage
+from cacheme.v2.storages.local import TLFUStorage
 
 
 fn1_counter = 0

@@ -2,7 +2,7 @@ import types
 from time import time_ns
 from datetime import timezone, datetime
 from cacheme.v2.serializer import MsgPackSerializer
-from cacheme.v2.storage import Storage
+from cacheme.v2.storages.interfaces import Storage
 from cacheme.v2.models import CacheKey, CachedData, Metrics
 from typing import (
     cast,
@@ -15,7 +15,7 @@ from typing import (
 )
 from typing_extensions import TypeVar, ParamSpec, Self
 from cacheme.v2.interfaces import CacheNode, MemoNode
-from cacheme.v2.storage import get_tag_storage, set_tag_storage
+from cacheme.v2.storages.base import get_tag_storage, set_tag_storage
 from asyncio import Lock
 
 

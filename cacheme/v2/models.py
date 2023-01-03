@@ -31,6 +31,7 @@ class CacheKey:
 class CachedData(NamedTuple):
     data: Any
     updated_at: datetime.datetime
+    expire: Optional[datetime.datetime] = None
 
 
 class Item:
