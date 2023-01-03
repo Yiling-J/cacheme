@@ -77,3 +77,5 @@ jobs:
         env:
           CI: "TRUE"
         run: "pytest"
+      - name: "Run benchmarks"
+        run: "python -m benchmarks.basic"
