@@ -103,12 +103,12 @@ async def bench_zipf(requests: int, storage: str, serializer: str, compressed: b
 
 
 async def bench_all():
-    await bench_zipf(100000, "local", "msgpack", False)
-    await bench_zipf(100000, "sqlite", "msgpack", False)
-    await bench_zipf(100000, "redis", "msgpack", False)
-    await bench_zipf(100000, "mongo", "msgpack", False)
-    await bench_zipf(100000, "postgres", "msgpack", False)
-    await bench_zipf(100000, "mysql", "msgpack", False)
+    await bench_zipf(10000, "local", "msgpack", False)
+    await bench_zipf(10000, "sqlite", "msgpack", False)
+    await bench_zipf(10000, "redis", "msgpack", False)
+    await bench_zipf(10000, "mongo", "msgpack", False)
+    await bench_zipf(10000, "postgres", "msgpack", False)
+    await bench_zipf(10000, "mysql", "msgpack", False)
 
 
 asyncio.run(bench_all())
