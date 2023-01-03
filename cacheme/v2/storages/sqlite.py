@@ -32,7 +32,7 @@ class SQLiteStorage(SQLStorage):
 
     async def execute_ddl(self, ddl):
         async with aiosqlite.connect(self.db, isolation_level=None) as conn:
-            await conn.execute(str(ddl))
+            await conn.execute(ddl)
 
     async def get_by_key(self, key: str) -> Any:
         async with aiosqlite.connect(self.db, isolation_level=None) as conn:

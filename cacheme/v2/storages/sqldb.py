@@ -53,9 +53,12 @@ class SQLStorage(BaseStorage):
             ),
         )
         engine = create_mock_engine(self.address, None)
-        ddl = {"create_table": CreateTable(tb).compile(engine), "create_indexes": []}
+        ddl = {
+            "create_table": str(CreateTable(tb).compile(engine)),
+            "create_indexes": [],
+        }
         for index in tb.indexes:
-            ddl["create_indexes"].append(CreateIndex(index).compile(engine))
+            ddl["create_indexes"].append(str(CreateIndex(index).compile(engine)))
         return ddl
 
     async def execute_ddl(self, ddl: str):
