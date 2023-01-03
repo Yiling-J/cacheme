@@ -7,10 +7,10 @@ from typing import Optional, Any
 class PostgresStorage(SQLStorage):
     def __init__(self, address: str, initialize: bool = False, pool_size: int = 50):
         super().__init__(address, initialize=initialize)
-        self.pool = asyncpg.create_pool(dsn=address, max_size=pool_size)
+        self.pool_size = pool_size
 
     async def _connect(self):
-        await self.pool
+        self.pool = await asyncpg.create_pool(dsn=self.address, max_size=self.pool_size)
 
     async def execute_ddl(self, ddl):
         async with self.pool.acquire() as conn:

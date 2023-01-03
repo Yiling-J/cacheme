@@ -20,6 +20,16 @@ def sl_now(element, compiler, **kw):
     return "strftime('%Y-%m-%d %H:%M:%f', 'now')"
 
 
+@compiles(DateTime, "mysql")
+def compile_datetime_mysql(type_, compiler, **kw):
+    return "DATETIME(6)"
+
+
+@compiles(now, "mysql")
+def sl_now(element, compiler, **kw):
+    return "now(6)"
+
+
 class SQLStorage(BaseStorage):
     def __init__(self, address: str, initialize: bool):
         super().__init__(address=address)

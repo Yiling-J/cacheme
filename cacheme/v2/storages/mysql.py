@@ -29,10 +29,9 @@ class MySQLStorage(SQLStorage):
 
     async def get_by_key(self, key: str) -> Any:
         async with self.pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                return await cur.fetchone(
-                    "select * from cacheme_data where key=%s", (key,)
-                )
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute("select * from cacheme_data where `key`=%s", (key,))
+                return await cur.fetchone()
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
         expire = None
@@ -41,7 +40,7 @@ class MySQLStorage(SQLStorage):
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    "insert into cacheme_data(key, value, expire) values(%s,%s,%s) ON DUPLICATE KEY UPDATE value=VALUES(value), expire=VALUES(expire)",
+                    "insert into cacheme_data(`key`, value, expire) values(%s,%s,%s) ON DUPLICATE KEY UPDATE value=VALUES(value), expire=VALUES(expire)",
                     (
                         key,
                         value,
