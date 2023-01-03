@@ -15,7 +15,7 @@ from cacheme.v2.serializer import (
     CompressedJSONSerializer,
     CompressedMsgPackSerializer,
 )
-from cacheme.v2.core import get, init_storages
+from cacheme.v2.core import get, init_storages, _storages
 from cacheme.v2.storages.local import TLFUStorage
 from cacheme.v2.storages.sqlite import SQLiteStorage
 from cacheme.v2.storages.postgres import PostgresStorage
@@ -142,6 +142,7 @@ async def bench_all():
 
     print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
+    _storages["local"] = TLFUStorage(1000)
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
