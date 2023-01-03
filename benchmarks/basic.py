@@ -49,7 +49,7 @@ async def simple_get(i: int):
 
 async def setup_storage(requests: int, storage: str):
     storages = {
-        "local": TLFUStorage(requests // 100),
+        "local": TLFUStorage(requests // 10),
         "sqlite": SQLiteStorage(
             f"sqlite:///test{random.randint(0, 50000)}",
             initialize=True,
@@ -100,6 +100,7 @@ async def bench_zipf(requests: int, storage: str, serializer: str, compressed: b
         result["serializer"] = None
     print(result)
     print(FooNode.Meta.metrics.__dict__)
+    print("-" * 50)
 
 
 async def bench_all():
