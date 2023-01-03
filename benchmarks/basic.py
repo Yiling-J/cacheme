@@ -110,7 +110,7 @@ async def bench_zipf(
     compressed: bool,
     payload_size: str = "small",
 ):
-    z = Zipf(1.0001, 10, requests)
+    z = Zipf(1.0001, 10, requests // 10)
     update_node(serializer, compressed, payload_size)
     await setup_storage(requests, storage)
     now = time.time_ns()
@@ -131,12 +131,23 @@ async def bench_zipf(
 
 
 async def bench_all():
+    print("========== READ+WRITE ==========")
     await bench_zipf(10000, "local", "msgpack", False)
     await bench_zipf(10000, "redis", "msgpack", False)
     await bench_zipf(10000, "mongo", "msgpack", False)
     await bench_zipf(10000, "postgres", "msgpack", False)
     await bench_zipf(10000, "mysql", "msgpack", False)
 
+    print("========== READ+WRITE LARGE ==========")
+    FooNode.Meta.version = "v2"
+    await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
+    await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
+    await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
+    await bench_zipf(10000, "postgres", "msgpack", False, payload_size="large")
+    await bench_zipf(10000, "mysql", "msgpack", False, payload_size="large")
+
+    # read only
+    print("========== READ LARGE ==========")
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
