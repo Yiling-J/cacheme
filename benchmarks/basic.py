@@ -94,7 +94,8 @@ def update_node(serializer: str, storage: str, compressed: bool, payload_size: s
     if payload_size == "large":
         with open("benchmarks/large.json") as f:
             content = f.read()
-        payload = lambda uid: {"uid": uid, "data": json.loads(content)}
+            content_json = json.loads(content)
+        payload = lambda uid: {"uid": uid, "data": content_json}
     else:
         payload = lambda uid: {
             "uid": uid,
