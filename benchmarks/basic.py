@@ -9,10 +9,14 @@ from benchmarks.zipf import Zipf
 from cacheme.core import _storages, get, init_storages
 from cacheme.interfaces import Serializer
 from cacheme.models import Metrics, Node
-from cacheme.serializer import (CompressedJSONSerializer,
-                                CompressedMsgPackSerializer,
-                                CompressedPickleSerializer, JSONSerializer,
-                                MsgPackSerializer, PickleSerializer)
+from cacheme.serializer import (
+    CompressedJSONSerializer,
+    CompressedMsgPackSerializer,
+    CompressedPickleSerializer,
+    JSONSerializer,
+    MsgPackSerializer,
+    PickleSerializer,
+)
 from cacheme.storages.local import TLFUStorage
 from cacheme.storages.mongo import MongoStorage
 from cacheme.storages.mysql import MySQLStorage
@@ -58,6 +62,7 @@ async def setup_storage():
         "sqlite": SQLiteStorage(
             f"sqlite:///test{random.randint(0, 50000)}",
             initialize=True,
+            pool_size=5,
         ),
         "mysql": MySQLStorage("mysql://username:password@localhost:3306/test"),
         "postgres": PostgresStorage(
