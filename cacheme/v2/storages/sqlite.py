@@ -1,7 +1,9 @@
+import asyncio
 import aiosqlite
+import sqlite3
 from cacheme.v2.storages.sqldb import SQLStorage
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Any, cast
+from typing import Optional, Any, Tuple, cast
 from sqlalchemy.engine import make_url
 from cacheme.v2.models import CachedData
 from cacheme.v2.serializer import Serializer
@@ -12,6 +14,8 @@ class SQLiteStorage(SQLStorage):
         super().__init__(address, initialize=initialize)
         dsn = make_url(self.address)
         self.db = dsn.database or ""
+        self.sem = asyncio.BoundedSemaphore(20)
+        self.pool = []
 
     async def _connect(self):
         pass
@@ -34,24 +38,72 @@ class SQLiteStorage(SQLStorage):
         async with aiosqlite.connect(self.db, isolation_level=None) as conn:
             await conn.execute(ddl)
 
+    def sync_get_by_key(
+        self, key: str, conn: Optional[sqlite3.Connection]
+    ) -> Tuple[sqlite3.Connection, Any]:
+        cur = None
+        if conn is None:
+            conn = sqlite3.connect(
+                self.db, isolation_level=None, timeout=30, check_same_thread=False
+            )
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("pragma journal_mode=wal")
+        if cur is None:
+            cur = conn.cursor()
+        cur.execute("select * from cacheme_data where key=?", (key,))
+        data = cur.fetchone()
+        cur.close()
+        return conn, data
+
+    def sync_set_data(
+        self,
+        key: str,
+        value: Any,
+        expire: Optional[datetime],
+        conn: Optional[sqlite3.Connection],
+    ) -> sqlite3.Connection:
+        cur = None
+        if conn is None:
+            conn = sqlite3.connect(
+                self.db, isolation_level=None, timeout=30, check_same_thread=False
+            )
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("pragma journal_mode=wal")
+        if cur is None:
+            cur = conn.cursor()
+        cur.execute(
+            "insert into cacheme_data(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
+            (
+                key,
+                value,
+                expire,
+            ),
+        )
+        cur.close()
+        return conn
+
     async def get_by_key(self, key: str) -> Any:
-        async with aiosqlite.connect(self.db, isolation_level=None) as conn:
-            conn.row_factory = aiosqlite.Row
-            async with conn.execute(
-                "select * from cacheme_data where key=?", (key,)
-            ) as cursor:
-                return await cursor.fetchone()
+        await self.sem.acquire()
+        if len(self.pool) > 0:
+            conn = self.pool.pop(0)
+        else:
+            conn = None
+        conn, data = await asyncio.to_thread(self.sync_get_by_key, key, conn)
+        self.pool.append(conn)
+        self.sem.release()
+        return data
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
         expire = None
         if ttl != None:
             expire = datetime.now(timezone.utc) + ttl
-        async with aiosqlite.connect(self.db, isolation_level=None) as conn:
-            await conn.execute(
-                "insert into cacheme_data(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
-                (
-                    key,
-                    value,
-                    expire,
-                ),
-            )
+        await self.sem.acquire()
+        if len(self.pool) > 0:
+            conn = self.pool.pop(0)
+        else:
+            conn = None
+        conn = await asyncio.to_thread(self.sync_set_data, key, value, expire, conn)
+        self.pool.append(conn)
+        self.sem.release()

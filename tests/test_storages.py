@@ -97,3 +97,5 @@ async def test_storages(storage):
     assert result is None
     if filename != "":
         os.remove(filename)
+        os.remove(f"{filename}-shm")
+        os.remove(f"{filename}-wal")
