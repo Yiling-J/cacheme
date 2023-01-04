@@ -22,7 +22,7 @@ class PostgresStorage(SQLStorage):
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
         expire = None
-        if ttl != None:
+        if ttl is not None:
             expire = datetime.now(timezone.utc) + ttl
         async with self.pool.acquire() as conn:
             await conn.execute(

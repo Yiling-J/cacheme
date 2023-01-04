@@ -22,7 +22,9 @@ class RedisStorage(BaseStorage):
     async def get_by_key(self, key: str) -> Any:
         return await self.client.get(key)
 
-    def serialize(self, raw: Any, serializer: Serializer) -> Optional[CachedData]:
+    def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
+        if serializer is None:
+            raise Exception("serializer is None")
         data = serializer.loads(cast(bytes, raw))
         return CachedData(
             data=data["value"], updated_at=data["updated_at"], expire=None
@@ -36,7 +38,7 @@ class RedisStorage(BaseStorage):
         await self.client.delete(key)
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
-        if ttl != None:
+        if ttl is not None:
             await self.client.setex(key, int(ttl.total_seconds()), value)
         else:
             await self.client.set(key, value)

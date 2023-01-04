@@ -3,7 +3,7 @@ from time import time_ns
 from datetime import timezone, datetime
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages.interfaces import Storage
-from cacheme.models import CacheKey, CachedData, Metrics
+from cacheme.models import CacheKey, CachedData
 from typing import (
     cast,
     Callable,
@@ -12,15 +12,16 @@ from typing import (
     Any,
     overload,
     Type,
+    TypeVar,
+    Awaitable,
 )
-from typing_extensions import TypeVar, ParamSpec, Self
+from typing_extensions import ParamSpec, Self
 from cacheme.interfaces import CacheNode, MemoNode
 from cacheme.storages.base import get_tag_storage, set_tag_storage
 from asyncio import Lock
 
 
 C_co = TypeVar("C_co", covariant=True)
-T = TypeVar("T", bound=MemoNode)
 P = ParamSpec("P")
 R = TypeVar("R")
 
@@ -138,22 +139,22 @@ async def invalid_tag(tag: str):
     await storage.set(cache_key, None, ttl=None, serializer=MsgPackSerializer())
 
 
-class Wrapper(Generic[P, T, R]):
-    def __init__(self, fn: Callable[P, R], node: Type[T]):
+class Wrapper(Generic[P, R]):
+    def __init__(self, fn: Callable[P, Awaitable[R]], node: Type[MemoNode]):
         self.func = fn
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         node = self.key_func(*args, **kwargs)
-        node = cast(CacheNode[Any], node)
+        node = cast(CacheNode, node)
 
         # inline load function
         async def load() -> Any:
             return await self.func(*args, **kwargs)
 
-        node.load = load
+        node.load = load  # type: ignore
         return await get(node)
 
-    def to_node(self, fn: Callable[P, T]) -> Self:
+    def to_node(self, fn: Callable[P, MemoNode]) -> Self:  # type: ignore
         self.key_func = fn
         return self
 
@@ -162,7 +163,7 @@ class Wrapper(Generic[P, T, R]):
         ...
 
     @overload
-    def __get__(self, instance, owner) -> Self:
+    def __get__(self, instance, owner) -> Self:  # type: ignore
         ...
 
     def __get__(self, instance, owner):
@@ -171,10 +172,10 @@ class Wrapper(Generic[P, T, R]):
         return cast(Callable[..., R], types.MethodType(self, instance))
 
 
-class Memoize(Generic[T]):
-    def __init__(self, node: Type[T]):
+class Memoize:
+    def __init__(self, node: Type[MemoNode]):
         version = node.Meta.version
         self.node = node
 
-    def __call__(self, fn: Callable[P, R]) -> Wrapper[P, T, R]:
+    def __call__(self, fn: Callable[P, Awaitable[R]]) -> Wrapper[P, R]:
         return Wrapper(fn, self.node)

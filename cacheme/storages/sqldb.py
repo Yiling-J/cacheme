@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     create_mock_engine,
 )
+from typing import cast, List
 from sqlalchemy.schema import CreateTable, CreateIndex
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
@@ -25,7 +26,7 @@ def compile_datetime_mysql(type_, compiler, **kw):
     return "DATETIME(6)"
 
 
-@compiles(now, "mysql")
+@compiles(now, "mysql")  # type: ignore
 def sl_now(element, compiler, **kw):
     return "now(6)"
 
@@ -68,8 +69,10 @@ class SQLStorage(BaseStorage):
             "create_indexes": [],
         }
         for index in tb.indexes:
-            ddl["create_indexes"].append(str(CreateIndex(index).compile(engine)))
+            cast(List, ddl["create_indexes"]).append(
+                str(CreateIndex(index).compile(engine))
+            )
         return ddl
 
     async def execute_ddl(self, ddl: str):
-        raise NotImplemented()
+        raise NotImplementedError()

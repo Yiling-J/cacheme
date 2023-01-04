@@ -3,7 +3,7 @@ import asyncio
 import sqlite3
 from cacheme.storages.sqldb import SQLStorage
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Any, Tuple, cast
+from typing import Optional, Any, Tuple, cast, List
 from sqlalchemy.engine import make_url
 from cacheme.models import CachedData
 from cacheme.serializer import Serializer
@@ -15,7 +15,7 @@ class SQLiteStorage(SQLStorage):
         dsn = make_url(self.address)
         self.db = dsn.database or ""
         self.sem = asyncio.BoundedSemaphore(pool_size)
-        self.pool = []
+        self.pool: List[sqlite3.Connection] = []
 
     async def _connect(self):
         pass
@@ -97,13 +97,13 @@ class SQLiteStorage(SQLStorage):
             conn, data = await loop.run_in_executor(
                 None, self.sync_get_by_key, key, conn
             )
-        self.pool.append(conn)
+        self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()
         return data
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
         expire = None
-        if ttl != None:
+        if ttl is not None:
             expire = datetime.now(timezone.utc) + ttl
         await self.sem.acquire()
         if len(self.pool) > 0:
@@ -117,5 +117,5 @@ class SQLiteStorage(SQLStorage):
             conn = await loop.run_in_executor(
                 None, self.sync_set_data, key, value, expire, conn
             )
-        self.pool.append(conn)
+        self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()

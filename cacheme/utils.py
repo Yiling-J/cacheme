@@ -1,7 +1,7 @@
 import xxhash
 from threading import RLock
-from typing import Any, Callable, Generic, Optional
-from typing_extensions import TypeVar, overload, Self
+from typing import Any, Callable, Generic, Optional, TypeVar
+from typing_extensions import overload, Self
 
 
 # generate 64bits hash of  key string
@@ -30,7 +30,7 @@ class cached_property(Generic[_T]):
             )
 
     @overload
-    def __get__(self, instance: None, owner: Optional[Any]) -> Self:
+    def __get__(self, instance: None, owner: Optional[Any]) -> Self:  # type: ignore
         ...
 
     @overload

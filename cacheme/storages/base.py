@@ -12,16 +12,16 @@ class BaseStorage:
         self.address = address
 
     async def connect(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     async def get_by_key(self, key: str) -> Any:
-        raise NotImplemented()
+        raise NotImplementedError()
 
     async def remove_by_key(self, key: str):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
         data = raw["value"]
@@ -66,7 +66,7 @@ class BaseStorage:
         await self.remove_by_key(key.full_key)
 
     async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
-        ...
+        raise NotImplementedError()
 
 
 tag_storage: Optional[Storage] = None

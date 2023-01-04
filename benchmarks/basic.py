@@ -5,7 +5,9 @@ import json
 from dataclasses import dataclass
 from typing import Dict, List
 
+
 from benchmarks.zipf import Zipf
+from cacheme.interfaces import Serializer
 from cacheme.models import Node, Metrics
 from cacheme.serializer import (
     MsgPackSerializer,
@@ -74,12 +76,12 @@ async def setup_storage():
 
 def update_node(serializer: str, storage: str, compressed: bool, payload_size: str):
     global payload
-    serializers = {
+    serializers: Dict[str, Serializer] = {
         "pickle": PickleSerializer(),
         "json": JSONSerializer(),
         "msgpack": MsgPackSerializer(),
     }
-    compressed_serializer = {
+    compressed_serializer: Dict[str, Serializer] = {
         "pickle": CompressedPickleSerializer(),
         "json": CompressedJSONSerializer(),
         "msgpack": CompressedMsgPackSerializer(),
@@ -88,7 +90,7 @@ def update_node(serializer: str, storage: str, compressed: bool, payload_size: s
         s = compressed_serializer[serializer]
     else:
         s = serializers[serializer]
-    FooNode.Meta.serializer = s
+    FooNode.Meta.serializer = s  # type: ignore
     FooNode.Meta.metrics = Metrics()
     FooNode.Meta.storage = storage
     if payload_size == "large":

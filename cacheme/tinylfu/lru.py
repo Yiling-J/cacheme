@@ -15,13 +15,14 @@ class LRU:
             self.cache[key] = new
             return None
         last = self.ls.back()
-        if last != None:
+        if last is not None:
             self.cache.pop(last.item.key.full_key)
             old = last.item
             last.item = value
             self.ls.move_to_front(last)
             self.cache[key] = last
             return old
+        return None
 
 
 class SLRU:
@@ -49,6 +50,7 @@ class SLRU:
             self.probation.move_to_front(last)
             self.cache[key] = last
             return old
+        return None
 
     def victim(self) -> Optional[Element]:
         if len(self.probation) + len(self.protected) < self.maxsize:
