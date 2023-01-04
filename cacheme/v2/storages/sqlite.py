@@ -10,11 +10,11 @@ from cacheme.v2.serializer import Serializer
 
 
 class SQLiteStorage(SQLStorage):
-    def __init__(self, address: str, initialize: bool = False):
+    def __init__(self, address: str, initialize: bool = False, pool_size: int = 10):
         super().__init__(address, initialize=initialize)
         dsn = make_url(self.address)
         self.db = dsn.database or ""
-        self.sem = asyncio.BoundedSemaphore(20)
+        self.sem = asyncio.BoundedSemaphore(pool_size)
         self.pool = []
 
     async def _connect(self):
