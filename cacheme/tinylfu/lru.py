@@ -1,6 +1,7 @@
-from cacheme.tinylfu.linkedlist import LinkedList
+from typing import Dict, Optional
+
 from cacheme.models import Element, Item
-from typing import Optional, Dict
+from cacheme.tinylfu.linkedlist import LinkedList
 
 
 class LRU:

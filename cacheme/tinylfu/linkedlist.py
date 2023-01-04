@@ -1,7 +1,7 @@
 import datetime
-
-from cacheme.models import CacheKey, Item, Element
 from typing import Optional, cast
+
+from cacheme.models import CacheKey, Element, Item
 
 
 class LinkedList:

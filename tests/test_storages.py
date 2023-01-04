@@ -1,15 +1,17 @@
+import os
+import random
 from asyncio import sleep
 from datetime import timedelta
-import os
+
 import pytest
-import random
+
 from cacheme.models import CacheKey
 from cacheme.serializer import PickleSerializer
-from cacheme.storages.redis import RedisStorage
-from cacheme.storages.postgres import PostgresStorage
 from cacheme.storages.local import TLFUStorage
 from cacheme.storages.mongo import MongoStorage
 from cacheme.storages.mysql import MySQLStorage
+from cacheme.storages.postgres import PostgresStorage
+from cacheme.storages.redis import RedisStorage
 from cacheme.storages.sqlite import SQLiteStorage
 
 

@@ -1,29 +1,24 @@
-import time
 import asyncio
-import random
 import json
+import random
+import time
 from dataclasses import dataclass
 from typing import Dict, List
 
-
 from benchmarks.zipf import Zipf
+from cacheme.core import _storages, get, init_storages
 from cacheme.interfaces import Serializer
-from cacheme.models import Node, Metrics
-from cacheme.serializer import (
-    MsgPackSerializer,
-    PickleSerializer,
-    JSONSerializer,
-    CompressedPickleSerializer,
-    CompressedJSONSerializer,
-    CompressedMsgPackSerializer,
-)
-from cacheme.core import get, init_storages, _storages
+from cacheme.models import Metrics, Node
+from cacheme.serializer import (CompressedJSONSerializer,
+                                CompressedMsgPackSerializer,
+                                CompressedPickleSerializer, JSONSerializer,
+                                MsgPackSerializer, PickleSerializer)
 from cacheme.storages.local import TLFUStorage
-from cacheme.storages.sqlite import SQLiteStorage
+from cacheme.storages.mongo import MongoStorage
+from cacheme.storages.mysql import MySQLStorage
 from cacheme.storages.postgres import PostgresStorage
 from cacheme.storages.redis import RedisStorage
-from cacheme.storages.mysql import MySQLStorage
-from cacheme.storages.mongo import MongoStorage
+from cacheme.storages.sqlite import SQLiteStorage
 
 payload = lambda uid: {
     "uid": uid,

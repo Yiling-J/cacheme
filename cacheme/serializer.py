@@ -1,14 +1,14 @@
-import importlib
 import base64
-import pickle
+import importlib
 import json
 import lzma
+import pickle
 from typing import Any, cast
-from typing_extensions import Protocol
-import msgpack
 
+import msgpack
 import pydantic
 from pydantic.json import pydantic_encoder
+from typing_extensions import Protocol
 
 
 class Serializer(Protocol):

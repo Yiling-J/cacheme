@@ -1,7 +1,8 @@
-import xxhash
 from threading import RLock
 from typing import Any, Callable, Generic, Optional, TypeVar
-from typing_extensions import overload, Self
+
+import xxhash
+from typing_extensions import Self, overload
 
 
 # generate 64bits hash of  key string

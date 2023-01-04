@@ -1,10 +1,13 @@
 from __future__ import annotations
-from typing import Optional, List, cast
-from typing_extensions import Any, NamedTuple
-from cacheme.utils import hash_string, cached_property
-from dataclasses import dataclass
-from cacheme.interfaces import Metrics, MetaBase
+
 import datetime
+from dataclasses import dataclass
+from typing import List, Optional, cast
+
+from typing_extensions import Any, NamedTuple
+
+from cacheme.interfaces import MetaBase, Metrics
+from cacheme.utils import cached_property, hash_string
 
 
 @dataclass

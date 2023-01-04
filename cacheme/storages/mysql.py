@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
+
 import aiomysql
-from cacheme.storages.sqldb import SQLStorage
 from sqlalchemy.engine import make_url
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Any
+
+from cacheme.storages.sqldb import SQLStorage
 
 
 class MySQLStorage(SQLStorage):

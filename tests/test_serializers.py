@@ -1,8 +1,10 @@
-import pytest
-from datetime import datetime, timedelta
-from cacheme.serializer import *
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+import pytest
 from pydantic import BaseModel
+
+from cacheme.serializer import *
 
 TUPLE_TO_LIST = 1
 JSON_ONLY = 2

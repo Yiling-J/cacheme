@@ -1,16 +1,9 @@
-from sqlalchemy import (
-    MetaData,
-    Table,
-    Column,
-    Integer,
-    String,
-    LargeBinary,
-    DateTime,
-    create_mock_engine,
-)
-from typing import cast, List
-from sqlalchemy.schema import CreateTable, CreateIndex
+from typing import List, cast
+
+from sqlalchemy import (Column, DateTime, Integer, LargeBinary, MetaData,
+                        String, Table, create_mock_engine)
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.schema import CreateIndex, CreateTable
 from sqlalchemy.sql.functions import now
 
 from cacheme.storages.base import BaseStorage

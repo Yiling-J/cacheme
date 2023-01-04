@@ -1,6 +1,7 @@
 from datetime import timedelta
+
+from cacheme.models import CacheKey, Item
 from cacheme.tinylfu.linkedlist import LinkedList
-from cacheme.models import Item, CacheKey
 
 
 def assert_list(order: str, l: LinkedList):

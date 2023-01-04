@@ -1,8 +1,10 @@
-from typing import Optional, List
+from datetime import datetime, timedelta
+from typing import List, Optional
+
 from typing_extensions import Any, Protocol
-from cacheme.models import CacheKey, CachedData
+
+from cacheme.models import CachedData, CacheKey
 from cacheme.serializer import Serializer
-from datetime import timedelta, datetime
 
 
 class Storage(Protocol):
