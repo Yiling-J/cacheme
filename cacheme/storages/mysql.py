@@ -1,5 +1,5 @@
 import aiomysql
-from cacheme.v2.storages.sqldb import SQLStorage
+from cacheme.storages.sqldb import SQLStorage
 from sqlalchemy.engine import make_url
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Any

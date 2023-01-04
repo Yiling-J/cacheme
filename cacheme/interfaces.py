@@ -1,9 +1,9 @@
 from typing import Optional, List
 from typing_extensions import TypeVar, Protocol, Any
-from cacheme.v2.filter import BloomFilter
+from cacheme.filter import BloomFilter
 from datetime import timedelta
 
-from cacheme.v2.models import Metrics
+from cacheme.models import Metrics
 
 C_co = TypeVar("C_co")
 

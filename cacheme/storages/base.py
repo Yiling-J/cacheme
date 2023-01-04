@@ -2,9 +2,9 @@ from typing import Optional, cast, List
 from typing_extensions import Any
 from datetime import timedelta, datetime, timezone
 
-from cacheme.v2.serializer import Serializer
-from cacheme.v2.models import CacheKey, CachedData
-from cacheme.v2.storages.interfaces import Storage
+from cacheme.serializer import Serializer
+from cacheme.models import CacheKey, CachedData
+from cacheme.storages.interfaces import Storage
 
 
 class BaseStorage:

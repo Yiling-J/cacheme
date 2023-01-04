@@ -1,7 +1,7 @@
-from cacheme.v2.models import CacheKey, CachedData
-from cacheme.v2.serializer import Serializer
-from cacheme.v2.storages.base import BaseStorage
-from cacheme.v2.tinylfu import tinylfu
+from cacheme.models import CacheKey, CachedData
+from cacheme.serializer import Serializer
+from cacheme.storages.base import BaseStorage
+from cacheme.tinylfu import tinylfu
 from typing import Optional, Any
 from datetime import timedelta
 

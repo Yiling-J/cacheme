@@ -1,4 +1,4 @@
-from cacheme.v2.filter import BloomFilter
+from cacheme.filter import BloomFilter
 
 
 def test_bloom():

@@ -12,7 +12,7 @@ from sqlalchemy.schema import CreateTable, CreateIndex
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import now
 
-from cacheme.v2.storages.base import BaseStorage
+from cacheme.storages.base import BaseStorage
 
 
 @compiles(now, "sqlite")

@@ -1,8 +1,8 @@
 import redis.asyncio as redis
 
-from cacheme.v2.storages.base import BaseStorage
-from cacheme.v2.models import CachedData
-from cacheme.v2.serializer import Serializer
+from cacheme.storages.base import BaseStorage
+from cacheme.models import CachedData
+from cacheme.serializer import Serializer
 from typing import Optional, Any, cast
 from datetime import timedelta, timezone, datetime
 from redis.asyncio.connection import BlockingConnectionPool

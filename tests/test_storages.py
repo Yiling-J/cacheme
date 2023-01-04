@@ -3,14 +3,14 @@ from datetime import timedelta
 import os
 import pytest
 import random
-from cacheme.v2.models import CacheKey
-from cacheme.v2.serializer import PickleSerializer
-from cacheme.v2.storages.redis import RedisStorage
-from cacheme.v2.storages.postgres import PostgresStorage
-from cacheme.v2.storages.local import TLFUStorage
-from cacheme.v2.storages.mongo import MongoStorage
-from cacheme.v2.storages.mysql import MySQLStorage
-from cacheme.v2.storages.sqlite import SQLiteStorage
+from cacheme.models import CacheKey
+from cacheme.serializer import PickleSerializer
+from cacheme.storages.redis import RedisStorage
+from cacheme.storages.postgres import PostgresStorage
+from cacheme.storages.local import TLFUStorage
+from cacheme.storages.mongo import MongoStorage
+from cacheme.storages.mysql import MySQLStorage
+from cacheme.storages.sqlite import SQLiteStorage
 
 
 @pytest.mark.parametrize(

@@ -2,10 +2,10 @@ from asyncio import gather, sleep
 import pytest
 from dataclasses import dataclass
 from typing import List
-from cacheme.v2.models import Node
-from cacheme.v2.serializer import MsgPackSerializer
-from cacheme.v2.core import Memoize, get, init_storages
-from cacheme.v2.storages.local import TLFUStorage
+from cacheme.models import Node
+from cacheme.serializer import MsgPackSerializer
+from cacheme.core import Memoize, get, init_storages
+from cacheme.storages.local import TLFUStorage
 
 
 fn1_counter = 0

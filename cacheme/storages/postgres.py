@@ -1,4 +1,4 @@
-from cacheme.v2.storages.sqldb import SQLStorage
+from cacheme.storages.sqldb import SQLStorage
 from asyncpg.connection import asyncpg
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Any

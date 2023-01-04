@@ -1,9 +1,9 @@
 import types
 from time import time_ns
 from datetime import timezone, datetime
-from cacheme.v2.serializer import MsgPackSerializer
-from cacheme.v2.storages.interfaces import Storage
-from cacheme.v2.models import CacheKey, CachedData, Metrics
+from cacheme.serializer import MsgPackSerializer
+from cacheme.storages.interfaces import Storage
+from cacheme.models import CacheKey, CachedData, Metrics
 from typing import (
     cast,
     Callable,
@@ -14,8 +14,8 @@ from typing import (
     Type,
 )
 from typing_extensions import TypeVar, ParamSpec, Self
-from cacheme.v2.interfaces import CacheNode, MemoNode
-from cacheme.v2.storages.base import get_tag_storage, set_tag_storage
+from cacheme.interfaces import CacheNode, MemoNode
+from cacheme.storages.base import get_tag_storage, set_tag_storage
 from asyncio import Lock
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional, List, cast
 from typing_extensions import Any, NamedTuple
-from cacheme.v2.utils import hash_string, cached_property
+from cacheme.utils import hash_string, cached_property
 from dataclasses import dataclass
 import datetime
 

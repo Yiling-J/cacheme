@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from cacheme.v2.tinylfu.lru import LRU, SLRU
-from cacheme.v2.tinylfu.sketch import CountMinSketch
+from cacheme.tinylfu.lru import LRU, SLRU
+from cacheme.tinylfu.sketch import CountMinSketch
 
-from cacheme.v2.models import CacheKey, Element, Item, CachedData
+from cacheme.models import CacheKey, Element, Item, CachedData
 
 
 class Cache:

@@ -1,7 +1,7 @@
 import motor.motor_asyncio as mongo
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Any
-from cacheme.v2.storages.base import BaseStorage
+from cacheme.storages.base import BaseStorage
 
 
 class MongoStorage(BaseStorage):

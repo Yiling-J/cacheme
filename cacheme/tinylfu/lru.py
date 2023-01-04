@@ -1,5 +1,5 @@
-from cacheme.v2.tinylfu.linkedlist import LinkedList
-from cacheme.v2.models import Element, Item
+from cacheme.tinylfu.linkedlist import LinkedList
+from cacheme.models import Element, Item
 from typing import Optional, Dict
 
 

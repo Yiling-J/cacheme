@@ -1,5 +1,5 @@
-from cacheme.v2.tinylfu.sketch import CountMinSketch
-from cacheme.v2.utils import hash_string
+from cacheme.tinylfu.sketch import CountMinSketch
+from cacheme.utils import hash_string
 
 
 def test_sketch():

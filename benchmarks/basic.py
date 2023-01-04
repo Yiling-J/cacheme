@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from benchmarks.zipf import Zipf
-from cacheme.v2.models import Node, Metrics
-from cacheme.v2.serializer import (
+from cacheme.models import Node, Metrics
+from cacheme.serializer import (
     MsgPackSerializer,
     PickleSerializer,
     JSONSerializer,
@@ -15,13 +15,13 @@ from cacheme.v2.serializer import (
     CompressedJSONSerializer,
     CompressedMsgPackSerializer,
 )
-from cacheme.v2.core import get, init_storages, _storages
-from cacheme.v2.storages.local import TLFUStorage
-from cacheme.v2.storages.sqlite import SQLiteStorage
-from cacheme.v2.storages.postgres import PostgresStorage
-from cacheme.v2.storages.redis import RedisStorage
-from cacheme.v2.storages.mysql import MySQLStorage
-from cacheme.v2.storages.mongo import MongoStorage
+from cacheme.core import get, init_storages, _storages
+from cacheme.storages.local import TLFUStorage
+from cacheme.storages.sqlite import SQLiteStorage
+from cacheme.storages.postgres import PostgresStorage
+from cacheme.storages.redis import RedisStorage
+from cacheme.storages.mysql import MySQLStorage
+from cacheme.storages.mongo import MongoStorage
 
 payload = lambda uid: {
     "uid": uid,

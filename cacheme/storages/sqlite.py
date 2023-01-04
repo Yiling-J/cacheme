@@ -1,12 +1,12 @@
 import sys
 import asyncio
 import sqlite3
-from cacheme.v2.storages.sqldb import SQLStorage
+from cacheme.storages.sqldb import SQLStorage
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Any, Tuple, cast
 from sqlalchemy.engine import make_url
-from cacheme.v2.models import CachedData
-from cacheme.v2.serializer import Serializer
+from cacheme.models import CachedData
+from cacheme.serializer import Serializer
 
 
 class SQLiteStorage(SQLStorage):

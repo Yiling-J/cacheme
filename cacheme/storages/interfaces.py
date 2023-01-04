@@ -1,7 +1,7 @@
 from typing import Optional, List
 from typing_extensions import Any, Protocol
-from cacheme.v2.models import CacheKey, CachedData
-from cacheme.v2.serializer import Serializer
+from cacheme.models import CacheKey, CachedData
+from cacheme.serializer import Serializer
 from datetime import timedelta, datetime
 
 

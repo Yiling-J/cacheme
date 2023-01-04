@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
-from cacheme.v2.serializer import *
+from cacheme.serializer import *
 from dataclasses import dataclass
 from pydantic import BaseModel
 

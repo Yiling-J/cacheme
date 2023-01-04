@@ -1,6 +1,6 @@
 import datetime
 
-from cacheme.v2.models import CacheKey, Item, Element
+from cacheme.models import CacheKey, Item, Element
 from typing import Optional
 
 
