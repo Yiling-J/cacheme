@@ -90,7 +90,7 @@ class SQLiteStorage(SQLStorage):
             conn = self.pool.pop(0)
         else:
             conn = None
-        if sys.version_info > (3, 8):
+        if sys.version_info >= (3, 9):
             conn, data = await asyncio.to_thread(self.sync_get_by_key, key, conn)
         else:
             loop = asyncio.get_running_loop()
@@ -110,7 +110,7 @@ class SQLiteStorage(SQLStorage):
             conn = self.pool.pop(0)
         else:
             conn = None
-        if sys.version_info > (3, 8):
+        if sys.version_info >= (3, 9):
             conn = await asyncio.to_thread(self.sync_set_data, key, value, expire, conn)
         else:
             loop = asyncio.get_running_loop()
