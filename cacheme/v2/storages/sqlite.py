@@ -1,5 +1,5 @@
+import sys
 import asyncio
-import aiosqlite
 import sqlite3
 from cacheme.v2.storages.sqldb import SQLStorage
 from datetime import datetime, timezone, timedelta
@@ -35,8 +35,8 @@ class SQLiteStorage(SQLStorage):
         )
 
     async def execute_ddl(self, ddl):
-        async with aiosqlite.connect(self.db, isolation_level=None) as conn:
-            await conn.execute(ddl)
+        with sqlite3.connect(self.db, isolation_level=None) as conn:
+            conn.execute(ddl)
 
     def sync_get_by_key(
         self, key: str, conn: Optional[sqlite3.Connection]
@@ -90,7 +90,13 @@ class SQLiteStorage(SQLStorage):
             conn = self.pool.pop(0)
         else:
             conn = None
-        conn, data = await asyncio.to_thread(self.sync_get_by_key, key, conn)
+        if sys.version_info > (3, 8):
+            conn, data = await asyncio.to_thread(self.sync_get_by_key, key, conn)
+        else:
+            loop = asyncio.get_running_loop()
+            conn, data = await loop.run_in_executor(
+                None, self.sync_get_by_key, key, conn
+            )
         self.pool.append(conn)
         self.sem.release()
         return data
@@ -104,6 +110,12 @@ class SQLiteStorage(SQLStorage):
             conn = self.pool.pop(0)
         else:
             conn = None
-        conn = await asyncio.to_thread(self.sync_set_data, key, value, expire, conn)
+        if sys.version_info > (3, 8):
+            conn = await asyncio.to_thread(self.sync_set_data, key, value, expire, conn)
+        else:
+            loop = asyncio.get_running_loop()
+            conn = await loop.run_in_executor(
+                None, self.sync_set_data, key, value, expire, conn
+            )
         self.pool.append(conn)
         self.sem.release()
