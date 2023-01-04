@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Dict
 
 from cacheme.models import CachedData, CacheKey, Element, Item
 from cacheme.tinylfu.lru import LRU, SLRU
@@ -11,7 +11,7 @@ class Cache:
         admission_ratio = 0.01
         lru_size = int(size * admission_ratio) or 1
         slru_size = size - lru_size
-        self.cache_dict: dict[str, Element] = {}
+        self.cache_dict: Dict[str, Element] = {}
         self.lru = LRU(lru_size, self.cache_dict)
         self.slru = SLRU(slru_size, self.cache_dict)
         self.sketch = CountMinSketch(size)
