@@ -45,7 +45,7 @@ class Item:
         list_id: int | None = None,
     ):
         self.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        if ttl != None:
+        if ttl is not None:
             self.expire = datetime.datetime.now(datetime.timezone.utc) + ttl
         self.key = key
         self.value = value
