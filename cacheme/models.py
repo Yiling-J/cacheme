@@ -88,3 +88,6 @@ class MetaNode(type):
 class Node(metaclass=MetaNode):
     class Meta(MetaBase.Meta):
         metrics = Metrics()
+        ttl = None
+        local_cache = None
+        doorkeeper = None
