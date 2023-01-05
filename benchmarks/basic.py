@@ -138,7 +138,7 @@ async def bench_all():
 
     print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
-    _storages["local"] = Storage(url="tlfu", size=1000)
+    _storages["local"] = Storage(url="tlfu://", size=1000)
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")

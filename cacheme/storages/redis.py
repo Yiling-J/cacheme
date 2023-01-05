@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, cast
 
 import redis.asyncio as redis
+import redis.asyncio.cluster as redis_cluster
 from redis.asyncio.connection import BlockingConnectionPool
 
 from cacheme.models import CachedData
@@ -10,15 +11,26 @@ from cacheme.storages.base import BaseStorage
 
 
 class RedisStorage(BaseStorage):
-    def __init__(self, address: str, pool_size: int = 50):
+    def __init__(
+        self, address: str, pool_size: int = 100, cluster: bool = False, **options
+    ):
         super().__init__(address=address)
         self.pool_size = pool_size
+        self.cluster = cluster
+        self.options = options
 
     async def connect(self):
-        self.client = await redis.from_url(self.address)
-        self.client.connection_pool = BlockingConnectionPool.from_url(
-            self.address, max_connections=self.pool_size, timeout=None
-        )
+        if self.cluster:
+            self.client = redis_cluster.RedisCluster.from_url(
+                self.address,
+                max_connections=10 * self.pool_size,
+                **self.options,
+            )
+        else:
+            self.client = await redis.from_url(self.address, **self.options)
+            self.client.connection_pool = BlockingConnectionPool.from_url(
+                self.address, max_connections=self.pool_size, timeout=None
+            )
 
     async def get_by_key(self, key: str) -> Any:
         return await self.client.get(key)
