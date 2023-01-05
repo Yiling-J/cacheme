@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from cacheme.models import CacheKey, Item
+from cacheme.models import Item
 from cacheme.tinylfu.linkedlist import LinkedList
 
 
@@ -9,7 +9,7 @@ def assert_list(order: str, l: LinkedList):
     r = []
     while True:
         if el != l.root:
-            r.append(el.item.key.key)
+            r.append(el.item.key)
         el = el.next
         if el == l.root:
             break
@@ -23,7 +23,7 @@ def test_linkedlist():
     for i in ["A", "B", "C", "D", "E"]:
         l.push_back(
             Item(
-                key=CacheKey(node="", prefix="", key=i, version="", tags=[]),
+                key=i,
                 value="",
                 ttl=timedelta(days=10),
             )
@@ -39,7 +39,7 @@ def test_linkedlist():
     l.insert_after(
         front,
         Item(
-            key=CacheKey(node="", prefix="", key="F", version="", tags=[]),
+            key="F",
             value="",
             ttl=timedelta(days=10),
         ),
@@ -48,7 +48,7 @@ def test_linkedlist():
     # G-E-F-A-B-C-D
     l.push_front(
         Item(
-            key=CacheKey(node="", prefix="", key="G", version="", tags=[]),
+            key="G",
             value="",
             ttl=timedelta(days=10),
         ),

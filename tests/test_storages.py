@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 import random
 from asyncio import sleep
@@ -5,7 +6,7 @@ from datetime import timedelta
 
 import pytest
 
-from cacheme.models import CacheKey
+from cacheme.models import Node
 from cacheme.serializer import PickleSerializer
 from cacheme.storages.local import TLFUStorage
 from cacheme.storages.mongo import MongoStorage
@@ -13,6 +14,18 @@ from cacheme.storages.mysql import MySQLStorage
 from cacheme.storages.postgres import PostgresStorage
 from cacheme.storages.redis import RedisStorage
 from cacheme.storages.sqlite import SQLiteStorage
+
+
+@dataclass
+class FooNode(Node):
+    id: str
+
+    def key(self) -> str:
+        return f"{self.id}"
+
+    class Meta(Node.Meta):
+        version = "v1"
+        storage = "local"
 
 
 @pytest.mark.parametrize(
@@ -63,39 +76,27 @@ async def test_storages(storage):
     if isinstance(s, SQLiteStorage):
         filename = s.address.split("///")[-1]
     await s.connect()
-    key = CacheKey(
-        node="foo",
-        prefix="test",
-        key="foo",
-        version="v1",
-        tags=[],
-    )
+    node = FooNode(id="foo")
     await s.set(
-        key=key,
+        node=node,
         value={"foo": "bar"},
         ttl=timedelta(days=10),
         serializer=PickleSerializer(),
     )
-    result = await s.get(key, serializer=PickleSerializer())
+    result = await s.get(node, serializer=PickleSerializer())
     assert result is not None
     assert result.data == {"foo": "bar"}
 
     # expire test
-    key = CacheKey(
-        node="foo",
-        prefix="test",
-        key="foo_expire",
-        version="v1",
-        tags=[],
-    )
+    node = FooNode(id="foo_expire")
     await s.set(
-        key=key,
+        node=node,
         value={"foo": "bar"},
         ttl=timedelta(seconds=1),
         serializer=PickleSerializer(),
     )
     await sleep(2)
-    result = await s.get(key, serializer=PickleSerializer())
+    result = await s.get(node, serializer=PickleSerializer())
     assert result is None
     if filename != "":
         os.remove(filename)

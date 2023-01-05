@@ -1,31 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from dataclasses import dataclass
-from typing import List, Optional, cast
+from typing import List, Optional
 
 from typing_extensions import Any, NamedTuple
 
 from cacheme.interfaces import MetaBase, Metrics
 from cacheme.utils import cached_property, hash_string
-
-
-@dataclass
-class CacheKey:
-    node: str
-    prefix: str
-    key: str
-    version: str
-    tags: List[str]
-    metrics: Optional[Metrics] = None
-
-    @property
-    def full_key(self) -> str:
-        return f"{self.prefix}:{self.key}:{self.version}"
-
-    @cached_property
-    def hash(self) -> int:
-        return hash_string(self.full_key)
 
 
 class CachedData(NamedTuple):
@@ -35,7 +16,7 @@ class CachedData(NamedTuple):
 
 
 class Item:
-    key: CacheKey
+    key: str
     value: Any
     list_id: Optional[int]
     expire: Optional[datetime.datetime] = None
@@ -43,7 +24,7 @@ class Item:
 
     def __init__(
         self,
-        key: CacheKey,
+        key: str,
         value: Any,
         ttl: Optional[datetime.timedelta],
         list_id: int | None = None,
@@ -54,6 +35,10 @@ class Item:
         self.key = key
         self.value = value
         self.list_id = list_id
+
+    @cached_property
+    def keyh(self) -> int:
+        return hash_string(self.key)
 
 
 class Element:
@@ -67,7 +52,7 @@ class Element:
 
     @property
     def keyh(self) -> int:
-        return cast(int, self.item.key.hash)
+        return self.item.keyh
 
 
 _nodes = []
@@ -86,8 +71,32 @@ class MetaNode(type):
 
 
 class Node(metaclass=MetaNode):
+    def key(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    def _full_key(self) -> str:
+        return f"cacheme:{self.key()}:{self.Meta.version}"
+
+    @cached_property
+    def _keyh(self) -> int:
+        return hash_string(self._full_key)
+
+    def tags(self) -> List[str]:
+        raise NotImplementedError()
+
     class Meta(MetaBase.Meta):
         metrics = Metrics()
         ttl = None
         local_cache = None
         doorkeeper = None
+        version = ""
+
+
+class TagNode(Node):
+    def __init__(self, tag: str):
+        self.tag = tag
+
+    @property
+    def _full_key(self) -> str:
+        return f"cacheme:tags:{self.tag}"

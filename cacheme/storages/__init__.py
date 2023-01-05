@@ -1,8 +1,9 @@
 import importlib
 from typing import Any, Optional, List
 from urllib.parse import urlparse
+from cacheme.interfaces import BaseNode
 from cacheme.storages.base import BaseStorage
-from cacheme.models import CachedData, CacheKey
+from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 from datetime import timedelta, datetime
 
@@ -36,23 +37,23 @@ class Storage:
         await self._storage.connect()
 
     async def get(
-        self, key: CacheKey, serializer: Optional[Serializer]
+        self, node: BaseNode, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        return await self._storage.get(key, serializer)
+        return await self._storage.get(node, serializer)
 
     async def set(
         self,
-        key: CacheKey,
+        node: BaseNode,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
-        return await self._storage.set(key, value, ttl, serializer)
+        return await self._storage.set(node, value, ttl, serializer)
 
-    async def remove(self, key: CacheKey):
-        return await self._storage.remove(key)
+    async def remove(self, node: BaseNode):
+        return await self._storage.remove(node)
 
-    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
+    async def validate_tags(self, updated_at: datetime, tags: List[str]) -> bool:
         return await self._storage.validate_tags(updated_at, tags)
 
 

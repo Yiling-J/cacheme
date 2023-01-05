@@ -17,7 +17,7 @@ from typing import (
 from typing_extensions import ParamSpec, Self
 
 from cacheme.interfaces import CacheNode, MemoNode
-from cacheme.models import CachedData, CacheKey
+from cacheme.models import CachedData, TagNode
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import get_tag_storage, set_tag_storage
 from cacheme.storages import Storage
@@ -46,42 +46,25 @@ _lockers: Dict[str, Locker] = {}
 async def get(node: CacheNode[C_co]) -> C_co:
     storage = _storages[node.Meta.storage]
     metrics = node.Meta.metrics
-    cache_key = CacheKey(
-        node=node.__class__.__name__,
-        prefix="cacheme",
-        key=node.key(),
-        version=node.Meta.version,
-        tags=node.tags(),
-        metrics=metrics,
-    )
     result = None
     if node.Meta.local_cache is not None:
         local_storage = _storages[node.Meta.local_cache]
-        result = await local_storage.get(cache_key, None)
+        result = await local_storage.get(node, None)
     if result is None:
-        result = await storage.get(cache_key, node.Meta.serializer)
+        result = await storage.get(node, node.Meta.serializer)
     # get result from cache, check tags
     if result is not None and len(node.tags()) > 0:
         tag_storage = get_tag_storage()
         valid = await tag_storage.validate_tags(
             result.updated_at,
-            [
-                CacheKey(
-                    node="__TAG__",
-                    prefix="cacheme",
-                    key=tag,
-                    version="",
-                    tags=[],
-                )
-                for tag in node.tags()
-            ],
+            node.tags(),
         )
         if not valid:
-            await storage.remove(cache_key)
+            await storage.remove(node)
             result = None
     if result is None:
         metrics.miss_count += 1
-        locker = _lockers.setdefault(cache_key.full_key, Locker())
+        locker = _lockers.setdefault(node._full_key, Locker())
         async with locker.lock:
             if locker.value is None:
                 now = time_ns()
@@ -96,16 +79,14 @@ async def get(node: CacheNode[C_co]) -> C_co:
                 metrics.total_load_time += time_ns() - now
                 result = CachedData(data=loaded, updated_at=datetime.now(timezone.utc))
                 if node.Meta.doorkeeper is not None:
-                    exist = node.Meta.doorkeeper.set(cache_key.hash)
+                    exist = node.Meta.doorkeeper.set(node._keyh)
                     if not exist:
                         return cast(C_co, result)
-                await storage.set(
-                    cache_key, loaded, node.Meta.ttl, node.Meta.serializer
-                )
+                await storage.set(node, loaded, node.Meta.ttl, node.Meta.serializer)
                 if node.Meta.local_cache is not None:
                     local_storage = _storages[node.Meta.local_cache]
-                    await local_storage.set(cache_key, loaded, node.Meta.ttl, None)
-                _lockers.pop(cache_key.full_key, None)
+                    await local_storage.set(node, loaded, node.Meta.ttl, None)
+                _lockers.pop(node._full_key, None)
             else:
                 result = CachedData(
                     data=locker.value, updated_at=datetime.now(timezone.utc)
@@ -130,14 +111,7 @@ async def init_tag_storage(storage: Storage):
 
 async def invalid_tag(tag: str):
     storage = get_tag_storage()
-    cache_key = CacheKey(
-        node="__TAG__",
-        prefix="cacheme",
-        key=tag,
-        version="",
-        tags=[],
-    )
-    await storage.set(cache_key, None, ttl=None, serializer=MsgPackSerializer())
+    await storage.set(TagNode(tag), None, ttl=None, serializer=MsgPackSerializer())
 
 
 class Wrapper(Generic[P, R]):

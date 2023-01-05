@@ -1,7 +1,8 @@
 from datetime import timedelta
 from typing import Any, Optional
+from cacheme.interfaces import BaseNode
 
-from cacheme.models import CachedData, CacheKey
+from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
 from cacheme.tinylfu import tinylfu
@@ -15,21 +16,21 @@ class TLFUStorage(BaseStorage):
         return
 
     async def get(
-        self, key: CacheKey, serializer: Optional[Serializer]
+        self, node: BaseNode, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        return self.cache.get(key)
+        return self.cache.get(node._full_key)
 
     async def set(
         self,
-        key: CacheKey,
+        node: BaseNode,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
-        evicated = self.cache.set(key, value, ttl)
-        if evicated and key.metrics is not None:
-            key.metrics.eviction_count += 1
+        evicated = self.cache.set(node._full_key, value, ttl)
+        if evicated and node.Meta.metrics is not None:
+            node.Meta.metrics.eviction_count += 1
         return
 
-    async def remove(self, key: CacheKey):
-        self.cache.remove(key)
+    async def remove(self, node: BaseNode):
+        self.cache.remove(node._full_key)

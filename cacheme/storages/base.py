@@ -2,8 +2,9 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, cast
 
 from typing_extensions import Any
+from cacheme.interfaces import BaseNode
 
-from cacheme.models import CachedData, CacheKey
+from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 
 
@@ -34,9 +35,9 @@ class BaseStorage:
         )
 
     async def get(
-        self, key: CacheKey, serializer: Optional[Serializer]
+        self, node: BaseNode, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        result = await self.get_by_key(key.full_key)
+        result = await self.get_by_key(node._full_key)
         if result is None:
             return None
         data = self.serialize(result, serializer)
@@ -54,16 +55,16 @@ class BaseStorage:
 
     async def set(
         self,
-        key: CacheKey,
+        node: BaseNode,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         v = self.deserialize(value, serializer)
-        await self.set_by_key(key.full_key, v, ttl)
+        await self.set_by_key(node._full_key, v, ttl)
 
-    async def remove(self, key: CacheKey):
-        await self.remove_by_key(key.full_key)
+    async def remove(self, node: BaseNode):
+        await self.remove_by_key(node._full_key)
 
-    async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
+    async def validate_tags(self, updated_at: datetime, nodes: List[str]) -> bool:
         raise NotImplementedError()

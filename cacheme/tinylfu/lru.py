@@ -17,7 +17,7 @@ class LRU:
             return None
         last = self.ls.back()
         if last is not None:
-            self.cache.pop(last.item.key.full_key)
+            self.cache.pop(last.item.key)
             old = last.item
             last.item = value
             self.ls.move_to_front(last)
@@ -45,7 +45,7 @@ class SLRU:
             return None
         last = self.probation.back()
         if last != None:
-            self.cache.pop(last.item.key.full_key)
+            self.cache.pop(last.item.key)
             old = last.item
             last.item = value
             self.probation.move_to_front(last)

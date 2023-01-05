@@ -4,6 +4,7 @@ from typing import ClassVar, List, Optional, TypeVar
 from typing_extensions import Any, Protocol
 
 from cacheme.filter import BloomFilter
+from cacheme.utils import cached_property
 
 C_co = TypeVar("C_co", covariant=True)
 
@@ -42,7 +43,17 @@ class MetaBase(Protocol):
         metrics: ClassVar[Metrics]
 
 
-class MemoNode(MetaBase, Protocol):
+class BaseNode(MetaBase, Protocol):
+    @property
+    def _full_key(self) -> str:
+        ...
+
+    @cached_property
+    def _keyh(self) -> int:
+        ...
+
+
+class MemoNode(BaseNode, Protocol):
     def key(self) -> str:
         ...
 
@@ -50,7 +61,7 @@ class MemoNode(MetaBase, Protocol):
         ...
 
 
-class CacheNode(MetaBase, Protocol[C_co]):
+class CacheNode(BaseNode, Protocol[C_co]):
     def key(self) -> str:
         ...
 

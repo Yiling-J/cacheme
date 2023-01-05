@@ -1,14 +1,14 @@
 import datetime
 from typing import Optional, cast
 
-from cacheme.models import CacheKey, Element, Item
+from cacheme.models import Element, Item
 
 
 class LinkedList:
     def __init__(self):
         self.root = Element(
             Item(
-                key=CacheKey(node="", prefix="", key="root", version="0", tags=[]),
+                key="root",
                 value=0,
                 ttl=datetime.timedelta(days=600),
             )
