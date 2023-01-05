@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import json
 import random
@@ -142,8 +141,7 @@ async def bench_all():
     await bench_zipf(10000, "mongo", "msgpack", False)
     await bench_zipf(10000, "postgres", "msgpack", False)
     await bench_zipf(10000, "mysql", "msgpack", False)
-    if sys.version_info > (3, 9):
-        await bench_zipf(1000000, "sqlite", "msgpack", False)
+    # await bench_zipf(1000000, "sqlite", "msgpack", False)
 
     print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
@@ -153,8 +151,7 @@ async def bench_all():
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "postgres", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mysql", "msgpack", False, payload_size="large")
-    if sys.version_info > (3, 9):
-        await bench_zipf(10000, "sqlite", "msgpack", False, payload_size="large")
+    # await bench_zipf(10000, "sqlite", "msgpack", False, payload_size="large")
 
     # read only
     print("========== READ LARGE ==========")
@@ -163,8 +160,7 @@ async def bench_all():
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "postgres", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mysql", "msgpack", False, payload_size="large")
-    if sys.version_info > (3, 9):
-        await bench_zipf(10000, "sqlite", "msgpack", False, payload_size="large")
+    # await bench_zipf(10000, "sqlite", "msgpack", False, payload_size="large")
     return
 
 

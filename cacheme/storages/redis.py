@@ -17,7 +17,7 @@ class RedisStorage(BaseStorage):
     async def connect(self):
         self.client = await redis.from_url(self.address)
         self.client.connection_pool = BlockingConnectionPool.from_url(
-            self.address, max_connections=self.pool_size
+            self.address, max_connections=self.pool_size, timeout=None
         )
 
     async def get_by_key(self, key: str) -> Any:

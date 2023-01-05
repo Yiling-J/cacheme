@@ -3,7 +3,8 @@ import importlib
 import json
 import lzma
 import pickle
-from typing import Any, cast
+from types import ModuleType
+from typing import Any, cast, Dict
 
 import msgpack
 import pydantic
@@ -23,9 +24,16 @@ def to_qualified_name(obj: Any) -> str:
     return obj.__module__ + "." + obj.__qualname__
 
 
+__import_cache: Dict[str, Any] = {}
+
+
 def from_qualified_name(name: str) -> Any:
+    module = __import_cache.get(name, None)
+    if module is not None:
+        return module
     try:
         module = importlib.import_module(name)
+        __import_cache[name] = module
         return module
     except ImportError:
         # If no subitem was included raise the import error
@@ -35,7 +43,9 @@ def from_qualified_name(name: str) -> Any:
     # Otherwise, we'll try to load it as an attribute of a module
     mod_name, attr_name = name.rsplit(".", 1)
     module = importlib.import_module(mod_name)
-    return getattr(module, attr_name)
+    imported = getattr(module, attr_name)
+    __import_cache[name] = imported
+    return imported
 
 
 def object_encoder(obj: Any) -> Any:
