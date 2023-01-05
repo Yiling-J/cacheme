@@ -5,7 +5,6 @@ from typing_extensions import Any
 
 from cacheme.models import CachedData, CacheKey
 from cacheme.serializer import Serializer
-from cacheme.storages.interfaces import Storage
 
 
 class BaseStorage:
@@ -68,18 +67,3 @@ class BaseStorage:
 
     async def validate_tags(self, updated_at: datetime, tags: List[CacheKey]) -> bool:
         raise NotImplementedError()
-
-
-tag_storage: Optional[Storage] = None
-
-
-def get_tag_storage() -> Storage:
-    global tag_storage
-    if tag_storage is None:
-        raise Exception()
-    return tag_storage
-
-
-def set_tag_storage(storage: Storage):
-    global tag_storage
-    tag_storage = storage

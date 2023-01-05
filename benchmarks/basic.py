@@ -17,12 +17,7 @@ from cacheme.serializer import (
     MsgPackSerializer,
     PickleSerializer,
 )
-from cacheme.storages.local import TLFUStorage
-from cacheme.storages.mongo import MongoStorage
-from cacheme.storages.mysql import MySQLStorage
-from cacheme.storages.postgres import PostgresStorage
-from cacheme.storages.redis import RedisStorage
-from cacheme.storages.sqlite import SQLiteStorage
+from cacheme.storages import Storage
 
 payload = lambda uid: {
     "uid": uid,
@@ -58,18 +53,16 @@ async def simple_get(i: int):
 
 async def setup_storage():
     storages = {
-        "local": TLFUStorage(1000),
-        "sqlite": SQLiteStorage(
+        "local": Storage(url="tlfu://", size=1000),
+        "sqlite": Storage(
             f"sqlite:///test{random.randint(0, 50000)}",
             initialize=True,
             pool_size=10,
         ),
-        "mysql": MySQLStorage("mysql://username:password@localhost:3306/test"),
-        "postgres": PostgresStorage(
-            "postgresql://username:password@127.0.0.1:5432/test"
-        ),
-        "redis": RedisStorage("redis://localhost:6379"),
-        "mongo": MongoStorage("mongodb://test:password@localhost:27017"),
+        "mysql": Storage("mysql://username:password@localhost:3306/test"),
+        "postgres": Storage("postgresql://username:password@127.0.0.1:5432/test"),
+        "redis": Storage("redis://localhost:6379"),
+        "mongo": Storage("mongodb://test:password@localhost:27017"),
     }
     await init_storages(storages)
 
@@ -145,7 +138,7 @@ async def bench_all():
 
     print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
-    _storages["local"] = TLFUStorage(1000)
+    _storages["local"] = Storage(url="tlfu", size=1000)
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")

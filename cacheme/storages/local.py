@@ -8,7 +8,7 @@ from cacheme.tinylfu import tinylfu
 
 
 class TLFUStorage(BaseStorage):
-    def __init__(self, size: int):
+    def __init__(self, size: int, **options):
         self.cache = tinylfu.Cache(size)
 
     async def connect(self):

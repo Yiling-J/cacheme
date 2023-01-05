@@ -7,7 +7,7 @@ import pytest
 from cacheme.core import Memoize, get, init_storages
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
-from cacheme.storages.local import TLFUStorage
+from cacheme.storages import Storage
 
 fn1_counter = 0
 fn2_counter = 0
@@ -62,7 +62,7 @@ class Bar:
 
 @pytest.mark.asyncio
 async def test_memoize():
-    await init_storages({"local": TLFUStorage(50)})
+    await init_storages({"local": Storage(url="tlfu://", size=50)})
     assert fn1_counter == 0
     result = await fn1(1, "2")
     assert result == "1/2/apple"
@@ -87,7 +87,7 @@ async def test_memoize():
 @pytest.mark.asyncio
 async def test_get():
     global fn1_counter
-    await init_storages({"local": TLFUStorage(50)})
+    await init_storages({"local": Storage(url="tlfu://", size=50)})
     fn1_counter = 0
     result = await get(FooNode(user_id="a", foo_id="1", level=10))
     assert fn1_counter == 1
@@ -133,7 +133,7 @@ def _(a: int, b: str) -> FooNode2:
 
 @pytest.mark.asyncio
 async def test_memoize_cocurrency():
-    await init_storages({"local": TLFUStorage(50)})
+    await init_storages({"local": Storage(url="tlfu://", size=50)})
     assert fn3_counter == 0
     results = await gather(*[fn3(a=1, b="2") for i in range(50)])
     assert len(results) == 50
@@ -146,7 +146,7 @@ async def test_memoize_cocurrency():
 async def test_get_cocurrency():
     global fn1_counter
     fn1_counter = 0
-    await init_storages({"local": TLFUStorage(50)})
+    await init_storages({"local": Storage(url="tlfu://", size=50)})
     results = await gather(
         *[get(FooNode(user_id="b", foo_id="a", level=10)) for i in range(50)]
     )
