@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from benchmarks.zipf import Zipf
-from cacheme.core import _storages, get, get_all, init_storages
+from cacheme.core import _storages, get, init_storages
 from cacheme.interfaces import Serializer
 from cacheme.models import Metrics, Node
 from cacheme.serializer import (
@@ -18,7 +18,6 @@ from cacheme.serializer import (
     PickleSerializer,
 )
 from cacheme.storages import Storage
-from tests.test_core import FooNode2
 
 payload = lambda uid: {
     "uid": uid,
@@ -49,10 +48,6 @@ class FooNode(Node):
 
 async def simple_get(i: int):
     result = await get(FooNode(uid=i))
-    nodes = [FooNode(uid=1), FooNode(uid=2)]
-    results = await get_all(nodes)
-    print(results)
-
     assert result["uid"] == i
 
 
