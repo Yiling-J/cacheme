@@ -1,11 +1,12 @@
 from datetime import timedelta
-from typing import ClassVar, List, Optional, TypeVar
+from typing import ClassVar, List, Optional, Sequence, Tuple, TypeVar, Dict
 
 from typing_extensions import Any, Protocol
 
 from cacheme.filter import BloomFilter
 from cacheme.utils import cached_property
 
+C = TypeVar("C")
 C_co = TypeVar("C_co", covariant=True)
 
 # - When a cache lookup encounters an existing cache entry hit_count is incremented
@@ -69,4 +70,10 @@ class CacheNode(BaseNode, Protocol[C_co]):
         ...
 
     async def load(self) -> C_co:
+        ...
+
+    @classmethod
+    async def load_all(
+        cls, nodes: Sequence["CacheNode[C]"]
+    ) -> Sequence[Tuple["CacheNode", C]]:
         ...

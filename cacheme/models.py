@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from typing_extensions import Any, NamedTuple
 
-from cacheme.interfaces import MetaBase, Metrics
+from cacheme.interfaces import BaseNode, CacheNode, MetaBase, Metrics
 from cacheme.utils import cached_property, hash_string
 
 
@@ -84,6 +84,17 @@ class Node(metaclass=MetaNode):
 
     def tags(self) -> List[str]:
         raise NotImplementedError()
+
+    async def load(self):
+        raise NotImplementedError()
+
+    @classmethod
+    async def load_all(cls, nodes: Sequence[CacheNode]) -> Any:
+        data = []
+        for node in nodes:
+            v = await node.load()
+            data.append((node, v))
+        return data
 
     class Meta(MetaBase.Meta):
         metrics = Metrics()

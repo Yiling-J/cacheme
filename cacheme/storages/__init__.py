@@ -1,5 +1,5 @@
 import importlib
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Sequence, Tuple
 from urllib.parse import urlparse
 from cacheme.interfaces import BaseNode
 from cacheme.storages.base import BaseStorage
@@ -41,6 +41,11 @@ class Storage:
     ) -> Optional[CachedData]:
         return await self._storage.get(node, serializer)
 
+    async def get_all(
+        self, nodes: Sequence[BaseNode], serializer: Optional[Serializer]
+    ) -> Sequence[Tuple[BaseNode, CachedData]]:
+        return await self._storage.get_all(nodes, serializer)
+
     async def set(
         self,
         node: BaseNode,
@@ -55,6 +60,14 @@ class Storage:
 
     async def validate_tags(self, updated_at: datetime, tags: List[str]) -> bool:
         return await self._storage.validate_tags(updated_at, tags)
+
+    async def set_all(
+        self,
+        data: Sequence[Tuple[BaseNode, Any]],
+        ttl: Optional[timedelta],
+        serializer: Optional[Serializer],
+    ):
+        return await self._storage.set_all(data, ttl, serializer)
 
 
 tag_storage: Optional[Storage] = None

@@ -4,7 +4,7 @@ from typing import List
 
 import pytest
 
-from cacheme.core import Memoize, get, init_storages
+from cacheme.core import Memoize, get, get_all, init_storages
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
@@ -95,6 +95,33 @@ async def test_get():
     result = await get(FooNode(user_id="a", foo_id="1", level=10))
     assert fn1_counter == 1
     assert result == "a-1-10"
+
+
+@pytest.mark.asyncio
+async def test_get_all():
+    global fn1_counter
+    await init_storages({"local": Storage(url="tlfu://", size=50)})
+    fn1_counter = 0
+    nodes = [
+        FooNode(user_id="c", foo_id="2", level=1),
+        FooNode(user_id="a", foo_id="1", level=1),
+        FooNode(user_id="b", foo_id="3", level=1),
+    ]
+    results = await get_all(nodes)
+    assert fn1_counter == 3
+    assert results == ("c-2-1", "a-1-1", "b-3-1")
+
+    results = await get_all(nodes)
+    assert fn1_counter == 3
+    assert results == ("c-2-1", "a-1-1", "b-3-1")
+    nodes = [
+        FooNode(user_id="c", foo_id="2", level=1),
+        FooNode(user_id="a", foo_id="1", level=1),
+        FooNode(user_id="b", foo_id="4", level=1),
+    ]
+    results = await get_all(nodes)
+    assert fn1_counter == 4
+    assert results == ("c-2-1", "a-1-1", "b-4-1")
 
 
 @dataclass
