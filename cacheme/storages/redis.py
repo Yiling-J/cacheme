@@ -2,10 +2,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, cast
 
 import redis.asyncio as redis
+from cacheme.interfaces import CachedData
 import redis.asyncio.cluster as redis_cluster
 from redis.asyncio.connection import BlockingConnectionPool
 
-from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
 

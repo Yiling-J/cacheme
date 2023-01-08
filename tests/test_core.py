@@ -4,7 +4,8 @@ from typing import List
 
 import pytest
 
-from cacheme.core import Memoize, get, get_all, init_storages
+from cacheme.core import Memoize, get, get_all
+from cacheme.data import init_storages
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage

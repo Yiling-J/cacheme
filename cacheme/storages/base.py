@@ -2,9 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Sequence, Tuple, cast, Dict
 
 from typing_extensions import Any
-from cacheme.interfaces import BaseNode
+from cacheme.interfaces import Cachable, CachedData
 
-from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 
 
@@ -41,9 +40,9 @@ class BaseStorage:
         )
 
     async def get(
-        self, node: BaseNode, serializer: Optional[Serializer]
+        self, node: Cachable, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        result = await self.get_by_key(node._full_key)
+        result = await self.get_by_key(node.full_key())
         if result is None:
             return None
         data = self.serialize(result, serializer)
@@ -61,28 +60,28 @@ class BaseStorage:
 
     async def set(
         self,
-        node: BaseNode,
+        node: Cachable,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         v = self.deserialize(value, serializer)
-        await self.set_by_key(node._full_key, v, ttl)
+        await self.set_by_key(node.full_key(), v, ttl)
 
-    async def remove(self, node: BaseNode):
-        await self.remove_by_key(node._full_key)
+    async def remove(self, node: Cachable):
+        await self.remove_by_key(node.full_key())
 
     async def validate_tags(self, updated_at: datetime, nodes: List[str]) -> bool:
         raise NotImplementedError()
 
     async def get_all(
-        self, nodes: Sequence[BaseNode], serializer: Optional[Serializer]
-    ) -> Sequence[Tuple[BaseNode, CachedData]]:
+        self, nodes: Sequence[Cachable], serializer: Optional[Serializer]
+    ) -> Sequence[Tuple[Cachable, CachedData]]:
         results = []
         mapping = {}
         keys = []
         for node in nodes:
-            key = node._full_key
+            key = node.full_key()
             keys.append(key)
             mapping[key] = node
         gets = await self.get_by_keys(keys)
@@ -100,12 +99,12 @@ class BaseStorage:
 
     async def set_all(
         self,
-        data: Sequence[Tuple[BaseNode, Any]],
+        data: Sequence[Tuple[Cachable, Any]],
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         update = {}
         for node, value in data:
-            update[node._full_key] = self.deserialize(value, serializer)
+            update[node.full_key()] = self.deserialize(value, serializer)
 
         await self.set_by_keys(update, ttl)

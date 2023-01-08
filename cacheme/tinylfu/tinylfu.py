@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
+from cacheme.interfaces import CachedData
 
-from cacheme.models import CachedData, Element, Item
+from cacheme.models import Element, Item
 from cacheme.tinylfu.lru import LRU, SLRU
 from cacheme.tinylfu.sketch import CountMinSketch
 from cacheme.utils import hash_string

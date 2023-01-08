@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from benchmarks.zipf import Zipf
-from cacheme.core import _storages, get, init_storages
+from cacheme.core import get
+from cacheme.data import _storages
+from cacheme.data import init_storages
 from cacheme.interfaces import Serializer
+from cacheme.interfaces import Storage as StorageP
 from cacheme.models import Metrics, Node
 from cacheme.serializer import (
     CompressedJSONSerializer,
@@ -52,7 +55,7 @@ async def simple_get(i: int):
 
 
 async def setup_storage():
-    storages = {
+    storages: Dict[str, StorageP] = {
         "local": Storage(url="tlfu://", size=1000),
         "sqlite": Storage(
             f"sqlite:///test{random.randint(0, 50000)}",
@@ -64,6 +67,7 @@ async def setup_storage():
         "redis": Storage("redis://localhost:6379"),
         "mongo": Storage("mongodb://test:password@localhost:27017"),
     }
+
     await init_storages(storages)
 
 

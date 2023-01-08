@@ -1,8 +1,7 @@
 from datetime import timedelta
-from typing import Any, Optional, Dict, Sequence, Tuple
-from cacheme.interfaces import BaseNode
+from typing import Any, Optional, Sequence, Tuple
+from cacheme.interfaces import Cachable, CachedData
 
-from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
 from cacheme.tinylfu import tinylfu
@@ -16,33 +15,34 @@ class TLFUStorage(BaseStorage):
         return
 
     async def get(
-        self, node: BaseNode, serializer: Optional[Serializer]
+        self, node: Cachable, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
         return self._sync_get(node, serializer)
 
     def _sync_get(
-        self, node: BaseNode, serializer: Optional[Serializer]
+        self, node: Cachable, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        return self.cache.get(node._full_key)
+        return self.cache.get(node.full_key())
 
     async def set(
         self,
-        node: BaseNode,
+        node: Cachable,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
-        evicated = self.cache.set(node._full_key, value, ttl)
-        if evicated and node.Meta.metrics is not None:
-            node.Meta.metrics.eviction_count += 1
+        evicated = self.cache.set(node.full_key(), value, ttl)
+        metrics = node.get_metrics()
+        if evicated and metrics is not None:
+            metrics.eviction_count += 1
         return
 
-    async def remove(self, node: BaseNode):
-        self.cache.remove(node._full_key)
+    async def remove(self, node: Cachable):
+        self.cache.remove(node.full_key())
 
     async def get_all(
-        self, nodes: Sequence[BaseNode], serializer: Optional[Serializer]
-    ) -> Sequence[Tuple[BaseNode, CachedData]]:
+        self, nodes: Sequence[Cachable], serializer: Optional[Serializer]
+    ) -> Sequence[Tuple[Cachable, CachedData]]:
         data = []
         for node in nodes:
             v = self._sync_get(node, serializer)
@@ -52,7 +52,7 @@ class TLFUStorage(BaseStorage):
 
     async def set_all(
         self,
-        data: Sequence[Tuple[BaseNode, Any]],
+        data: Sequence[Tuple[Cachable, Any]],
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):

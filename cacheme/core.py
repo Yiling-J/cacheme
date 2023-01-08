@@ -8,11 +8,9 @@ from typing import (
     Callable,
     Dict,
     Generic,
-    List,
     Optional,
     OrderedDict,
     Sequence,
-    Set,
     Type,
     TypeVar,
     cast,
@@ -22,20 +20,16 @@ from typing import (
 
 from typing_extensions import ParamSpec, Self
 
-from cacheme.interfaces import BaseNode, CacheNode, MemoNode
-from cacheme.models import CachedData, TagNode
+from cacheme.interfaces import Cachable, Memoizable, CachedData
+from cacheme.models import TagNode
 from cacheme.serializer import MsgPackSerializer
-from cacheme.storages import get_tag_storage, set_tag_storage
-from cacheme.storages import Storage
+from cacheme.data import get_tag_storage
 
 
 C = TypeVar("C")
 C_co = TypeVar("C_co", covariant=True)
 P = ParamSpec("P")
 R = TypeVar("R")
-
-
-_storages: Dict[str, Storage] = {}
 
 
 class Locker:
@@ -51,15 +45,15 @@ _lockers: Dict[str, Locker] = {}
 
 
 # local storage(if enable) -> storage -> cache miss, load from source
-async def get(node: CacheNode[C_co]) -> C_co:
-    storage = _storages[node.Meta.storage]
-    metrics = node.Meta.metrics
+async def get(node: Cachable[C_co]) -> C_co:
+    storage = node.get_stroage()
+    metrics = node.get_metrics()
     result = None
-    if node.Meta.local_cache is not None:
-        local_storage = _storages[node.Meta.local_cache]
+    local_storage = node.get_local_cache()
+    if local_storage is not None:
         result = await local_storage.get(node, None)
     if result is None:
-        result = await storage.get(node, node.Meta.serializer)
+        result = await storage.get(node, node.get_seriaizer())
     # get result from cache, check tags
     if result is not None and len(node.tags()) > 0:
         tag_storage = get_tag_storage()
@@ -72,7 +66,7 @@ async def get(node: CacheNode[C_co]) -> C_co:
             result = None
     if result is None:
         metrics.miss_count += 1
-        locker = _lockers.setdefault(node._full_key, Locker())
+        locker = _lockers.setdefault(node.full_key(), Locker())
         async with locker.lock:
             if locker.value is None:
                 now = time_ns()
@@ -86,15 +80,15 @@ async def get(node: CacheNode[C_co]) -> C_co:
                 metrics.load_success_count += 1
                 metrics.total_load_time += time_ns() - now
                 result = CachedData(data=loaded, updated_at=datetime.now(timezone.utc))
-                if node.Meta.doorkeeper is not None:
-                    exist = node.Meta.doorkeeper.set(node._keyh)
+                doorkeeper = node.get_doorkeeper()
+                if doorkeeper is not None:
+                    exist = doorkeeper.set(node.key_hash())
                     if not exist:
                         return cast(C_co, result)
-                await storage.set(node, loaded, node.Meta.ttl, node.Meta.serializer)
-                if node.Meta.local_cache is not None:
-                    local_storage = _storages[node.Meta.local_cache]
-                    await local_storage.set(node, loaded, node.Meta.ttl, None)
-                _lockers.pop(node._full_key, None)
+                await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
+                if local_storage is not None:
+                    await local_storage.set(node, loaded, node.get_ttl(), None)
+                _lockers.pop(node.full_key(), None)
             else:
                 result = CachedData(
                     data=locker.value, updated_at=datetime.now(timezone.utc)
@@ -105,30 +99,18 @@ async def get(node: CacheNode[C_co]) -> C_co:
     return cast(C_co, result.data)
 
 
-async def init_storages(storages: Dict[str, Storage]):
-    global _storages
-    _storages = storages
-    for v in storages.values():
-        await v.connect()
-
-
-async def init_tag_storage(storage: Storage):
-    await storage.connect()
-    set_tag_storage(storage)
-
-
 async def invalid_tag(tag: str):
     storage = get_tag_storage()
     await storage.set(TagNode(tag), None, ttl=None, serializer=MsgPackSerializer())
 
 
 class Wrapper(Generic[P, R]):
-    def __init__(self, fn: Callable[P, Awaitable[R]], node: Type[MemoNode]):
+    def __init__(self, fn: Callable[P, Awaitable[R]], node: Type[Memoizable]):
         self.func = fn
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         node = self.key_func(*args, **kwargs)
-        node = cast(CacheNode, node)
+        node = cast(Cachable, node)
 
         # inline load function
         async def load() -> Any:
@@ -137,7 +119,7 @@ class Wrapper(Generic[P, R]):
         node.load = load  # type: ignore
         return await get(node)
 
-    def to_node(self, fn: Callable[P, MemoNode]) -> Self:  # type: ignore
+    def to_node(self, fn: Callable[P, Memoizable]) -> Self:  # type: ignore
         self.key_func = fn
         return self
 
@@ -156,8 +138,7 @@ class Wrapper(Generic[P, R]):
 
 
 class Memoize:
-    def __init__(self, node: Type[MemoNode]):
-        version = node.Meta.version
+    def __init__(self, node: Type[Memoizable]):
         self.node = node
 
     def __call__(self, fn: Callable[P, Awaitable[R]]) -> Wrapper[P, R]:
@@ -165,23 +146,23 @@ class Memoize:
 
 
 class NodeSet:
-    def __init__(self, nodes: Sequence[BaseNode]):
-        self.hashmap: Dict[int, BaseNode] = {}
+    def __init__(self, nodes: Sequence[Cachable]):
+        self.hashmap: Dict[int, Cachable] = {}
         for node in nodes:
-            self.hashmap[node._keyh] = node
+            self.hashmap[node.key_hash()] = node
 
-    def remove(self, node: BaseNode):
-        self.hashmap.pop(node._keyh, None)
+    def remove(self, node: Cachable):
+        self.hashmap.pop(node.key_hash(), None)
 
     @property
-    def list(self) -> Sequence[BaseNode]:
+    def list(self) -> Sequence[Cachable]:
         return tuple(self.hashmap.values())
 
     def __len__(self):
         return len(self.hashmap)
 
 
-async def get_all(nodes: Sequence[CacheNode[C]]) -> Sequence[C]:
+async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
     if len(nodes) == 0:
         return tuple()
     node_cls = nodes[0].__class__
@@ -191,24 +172,26 @@ async def get_all(nodes: Sequence[CacheNode[C]]) -> Sequence[C]:
             raise Exception(
                 f"node class mismatch: expect [{node_cls}], get [{node.__class__}]"
             )
-        s[node._keyh] = None
+        s[node.key_hash()] = None
     pending_nodes = NodeSet(nodes)
-    storage = _storages[node_cls.Meta.storage]
-    metrics = node_cls.Meta.metrics
-    if node_cls.Meta.local_cache is not None:
-        local_storage = _storages[node_cls.Meta.local_cache]
-        cached = await local_storage.get_all(nodes, node_cls.Meta.serializer)
+    storage = nodes[0].get_stroage()
+    metrics = nodes[0].get_metrics()
+    local_storage = nodes[0].get_local_cache()
+    serializer = nodes[0].get_seriaizer()
+    ttl = nodes[0].get_ttl()
+    if local_storage is not None:
+        cached = await local_storage.get_all(nodes, serializer)
         for k, v in cached:
             pending_nodes.remove(k)
-            s[k._keyh] = cast(C, v.data)
-    cached = await storage.get_all(pending_nodes.list, node_cls.Meta.serializer)
+            s[k.key_hash()] = cast(C, v.data)
+    cached = await storage.get_all(pending_nodes.list, serializer)
     for k, v in cached:
         pending_nodes.remove(k)
-        s[k._keyh] = cast(C, v.data)
+        s[k.key_hash()] = cast(C, v.data)
     metrics.miss_count += len(pending_nodes)
     now = time_ns()
     try:
-        ns = cast(Sequence[CacheNode], pending_nodes.list)
+        ns = cast(Sequence[Cachable], pending_nodes.list)
         loaded = await node_cls.load_all(ns)
     except Exception as e:
         metrics.load_failure_count += len(pending_nodes)
@@ -216,10 +199,9 @@ async def get_all(nodes: Sequence[CacheNode[C]]) -> Sequence[C]:
         raise (e)
     metrics.load_success_count += len(pending_nodes)
     metrics.total_load_time += time_ns() - now
-    if node_cls.Meta.local_cache is not None:
-        local_storage = _storages[node_cls.Meta.local_cache]
-        await local_storage.set_all(loaded, node_cls.Meta.ttl, node_cls.Meta.serializer)
-    await storage.set_all(loaded, node_cls.Meta.ttl, node_cls.Meta.serializer)
+    if local_storage is not None:
+        await local_storage.set_all(loaded, ttl, serializer)
+    await storage.set_all(loaded, ttl, serializer)
     for node, value in loaded:
-        s[node._keyh] = cast(C, value)
+        s[node.key_hash()] = cast(C, value)
     return cast(Sequence[C], tuple(s.values()))

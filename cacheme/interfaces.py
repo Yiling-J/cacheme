@@ -1,10 +1,9 @@
-from datetime import timedelta
-from typing import ClassVar, List, Optional, Sequence, Tuple, TypeVar, Dict
+from datetime import timedelta, datetime
+from typing import List, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from typing_extensions import Any, Protocol
 
 from cacheme.filter import BloomFilter
-from cacheme.utils import cached_property
 
 C = TypeVar("C")
 C_co = TypeVar("C_co", covariant=True)
@@ -25,6 +24,50 @@ class Metrics:
     total_load_time: int = 0
 
 
+class CachedData(NamedTuple):
+    data: Any
+    updated_at: datetime
+    expire: Optional[datetime] = None
+
+
+class Storage(Protocol):
+    async def connect(self):
+        ...
+
+    async def get(
+        self, node: "Cachable", serializer: Optional["Serializer"]
+    ) -> Optional[CachedData]:
+        ...
+
+    async def get_all(
+        self, nodes: Sequence["Cachable"], serializer: Optional["Serializer"]
+    ) -> Sequence[Tuple["Cachable", CachedData]]:
+        ...
+
+    async def set(
+        self,
+        node: "Cachable",
+        value: Any,
+        ttl: Optional[timedelta],
+        serializer: Optional["Serializer"],
+    ):
+        ...
+
+    async def remove(self, node: "Cachable"):
+        ...
+
+    async def validate_tags(self, updated_at: datetime, tags: List[str]) -> bool:
+        ...
+
+    async def set_all(
+        self,
+        data: Sequence[Tuple["Cachable", Any]],
+        ttl: Optional[timedelta],
+        serializer: Optional["Serializer"],
+    ):
+        ...
+
+
 class Serializer(Protocol):
     def dumps(self, obj: Any) -> bytes:
         ...
@@ -33,37 +76,37 @@ class Serializer(Protocol):
         ...
 
 
-class MetaBase(Protocol):
-    class Meta(Protocol):
-        version: ClassVar[str]
-        storage: ClassVar[str]
-        ttl: ClassVar[Optional[timedelta]]
-        local_cache: ClassVar[Optional[str]]
-        serializer: ClassVar[Optional[Serializer]]
-        doorkeeper: ClassVar[Optional[BloomFilter]]
-        metrics: ClassVar[Metrics]
-
-
-class BaseNode(MetaBase, Protocol):
-    @property
-    def _full_key(self) -> str:
+class MetaData(Protocol):
+    def get_version(self) -> str:
         ...
 
-    @cached_property
-    def _keyh(self) -> int:
+    def get_stroage(self) -> Storage:
+        ...
+
+    def get_ttl(self) -> Optional[timedelta]:
+        ...
+
+    def get_local_cache(self) -> Optional[Storage]:
+        ...
+
+    def get_seriaizer(self) -> Optional[Serializer]:
+        ...
+
+    def get_doorkeeper(self) -> Optional[BloomFilter]:
+        ...
+
+    def get_metrics(self) -> Metrics:
         ...
 
 
-class MemoNode(BaseNode, Protocol):
+class Cachable(MetaData, Protocol[C_co]):
     def key(self) -> str:
         ...
 
-    def tags(self) -> List[str]:
+    def full_key(self) -> str:
         ...
 
-
-class CacheNode(BaseNode, Protocol[C_co]):
-    def key(self) -> str:
+    def key_hash(self) -> int:
         ...
 
     def tags(self) -> List[str]:
@@ -74,6 +117,26 @@ class CacheNode(BaseNode, Protocol[C_co]):
 
     @classmethod
     async def load_all(
-        cls, nodes: Sequence["CacheNode[C]"]
-    ) -> Sequence[Tuple["CacheNode", C]]:
+        cls, nodes: Sequence["Cachable[C]"]
+    ) -> Sequence[Tuple["Cachable", C]]:
+        ...
+
+
+class Memoizable(MetaData, Protocol):
+    def key(self) -> str:
+        ...
+
+    def full_key(self) -> str:
+        ...
+
+    def key_hash(self) -> int:
+        ...
+
+    def tags(self) -> List[str]:
+        ...
+
+    @classmethod
+    async def load_all(
+        cls, nodes: Sequence["Cachable[C]"]
+    ) -> Sequence[Tuple["Cachable", C]]:
         ...

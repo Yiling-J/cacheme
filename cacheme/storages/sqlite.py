@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple, cast
 
 from sqlalchemy.engine import make_url
+from cacheme.interfaces import CachedData
 
-from cacheme.models import CachedData
 from cacheme.serializer import Serializer
 from cacheme.storages.sqldb import SQLStorage
 
