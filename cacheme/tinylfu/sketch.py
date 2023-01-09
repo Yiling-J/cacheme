@@ -1,4 +1,3 @@
-from ctypes import c_uint64
 from typing import Tuple
 
 
@@ -18,7 +17,7 @@ class CountMinSketch:
         self.row_counter_size = next_power_of_two(width * 3)
         self.row_i64_size = int(self.row_counter_size / 16)
         self.row_mask = self.row_counter_size - 1
-        self.table = (c_uint64 * (self.row_counter_size >> 2))()
+        self.table = [0] * (self.row_counter_size >> 2)
         self.additions = 0
         self.sample_size = 10 * self.row_counter_size
 

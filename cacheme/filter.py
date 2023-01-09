@@ -1,5 +1,4 @@
 import math
-from ctypes import c_uint64
 
 
 def next_power_of_two(i: int) -> int:
@@ -24,7 +23,7 @@ class BloomFilter:
         self.bits_mask = bits - 1
         self.slice_count = int(ln2 * bits / insertions)
         int64_size = int((bits + 63) / 64)
-        self.bits = (c_uint64 * int64_size)()
+        self.bits = [0] * int64_size
         self.additions = 0
 
     def put(self, keyh: int) -> bool:
