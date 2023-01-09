@@ -54,7 +54,7 @@ class MySQLStorage(SQLStorage):
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
-                    ", ".join("?" for _ in keys)
+                    ", ".join("%s" for _ in keys)
                 )
                 await cur.execute(sql, keys)
                 result = cur.fetchall()
