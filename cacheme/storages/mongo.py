@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
 
 import motor.motor_asyncio as mongo
 
@@ -40,3 +40,7 @@ class MongoStorage(BaseStorage):
 
     async def remove_by_key(self, key: str):
         await self.table.delete_one({"key": key})
+
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+        results = await self.table.find({"key": {"$in": keys}}).to_list()
+        return {r["key"]: r for r in results}

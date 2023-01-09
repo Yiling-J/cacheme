@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
 
 import aiomysql
 from sqlalchemy.engine import make_url
@@ -49,3 +49,13 @@ class MySQLStorage(SQLStorage):
                         expire,
                     ),
                 )
+
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
+                    ", ".join("?" for _ in keys)
+                )
+                await cur.execute(sql, keys)
+                result = cur.fetchall()
+        return {i["key"]: i for i in result}

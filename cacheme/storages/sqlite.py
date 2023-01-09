@@ -2,7 +2,7 @@ import asyncio
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, List, Optional, Tuple, cast, Dict
 
 from sqlalchemy.engine import make_url
 from cacheme.interfaces import CachedData
@@ -57,6 +57,27 @@ class SQLiteStorage(SQLStorage):
         data = cur.fetchone()
         cur.close()
         return conn, data
+
+    def sync_get_by_keys(
+        self, keys: List[str], conn: Optional[sqlite3.Connection]
+    ) -> Tuple[sqlite3.Connection, Dict[str, Any]]:
+        cur = None
+        if conn is None:
+            conn = sqlite3.connect(
+                self.db, isolation_level=None, timeout=30, check_same_thread=False
+            )
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("pragma journal_mode=wal")
+        if cur is None:
+            cur = conn.cursor()
+        sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
+            ", ".join("?" for _ in keys)
+        )
+        cur.execute(sql, keys)
+        data = cur.fetchall()
+        cur.close()
+        return conn, {i["key"]: i for i in data}
 
     def sync_set_data(
         self,
@@ -121,3 +142,20 @@ class SQLiteStorage(SQLStorage):
             )
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()
+
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+        await self.sem.acquire()
+        if len(self.pool) > 0:
+            conn = self.pool.pop(0)
+        else:
+            conn = None
+        if sys.version_info >= (3, 9):
+            conn, data = await asyncio.to_thread(self.sync_get_by_keys, keys, conn)
+        else:
+            loop = asyncio.get_running_loop()
+            conn, data = await loop.run_in_executor(
+                None, self.sync_get_by_keys, keys, conn
+            )
+        self.pool.append(cast(sqlite3.Connection, conn))
+        self.sem.release()
+        return data
