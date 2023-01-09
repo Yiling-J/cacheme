@@ -61,6 +61,5 @@ class BloomFilter:
         return bool((val & mask) >> offset)
 
     def reset(self):
-        for i in range(len(self.bits)):
-            self.bits[i] = 0
+        self.bits = [0] * len(self.bits)
         self.additions = 0

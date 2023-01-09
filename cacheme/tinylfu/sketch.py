@@ -53,9 +53,7 @@ class CountMinSketch:
         return False
 
     def reset(self):
-        for i, counter in enumerate(self.table):
-            if counter != 0:
-                self.table[i] = (counter >> 1) & 0x7777777777777777
+        self.table = [((counter >> 1) & 0x7777777777777777) for counter in self.table]
         self.additions = self.additions >> 1
 
     def __get_count(self, keyh: int, depth: int) -> int:
