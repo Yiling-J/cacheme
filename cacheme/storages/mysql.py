@@ -58,5 +58,4 @@ class MySQLStorage(SQLStorage):
                 )
                 await cur.execute(sql, keys)
                 result = await cur.fetchall()
-        print("debug", result)
         return {i["key"]: i for i in result}
