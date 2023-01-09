@@ -57,6 +57,6 @@ class MySQLStorage(SQLStorage):
                     ", ".join("%s" for _ in keys)
                 )
                 await cur.execute(sql, keys)
-                result = cur.fetchall()
+                result = await cur.fetchall()
         print("debug", result)
         return {i["key"]: i for i in result}
