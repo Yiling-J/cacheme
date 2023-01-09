@@ -77,6 +77,8 @@ class BaseStorage:
     async def get_all(
         self, nodes: Sequence[Cachable], serializer: Optional[Serializer]
     ) -> Sequence[Tuple[Cachable, CachedData]]:
+        if len(nodes) == 0:
+            return []
         results = []
         mapping = {}
         keys = []
