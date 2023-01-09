@@ -53,7 +53,7 @@ class MySQLStorage(SQLStorage):
     async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         async with self.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
+                sql = "SELECT * FROM cacheme_data WHERE `key` in ({0})".format(
                     ", ".join("%s" for _ in keys)
                 )
                 await cur.execute(sql, keys)
