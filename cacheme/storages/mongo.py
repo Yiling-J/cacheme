@@ -41,6 +41,13 @@ class MongoStorage(BaseStorage):
     async def remove_by_key(self, key: str):
         await self.table.delete_one({"key": key})
 
-    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
-        results = await self.table.find({"key": {"$in": keys}}).to_list(None)
+    async def get_by_keys(
+        self, keys: List[str], fields: List[str] = []
+    ) -> Dict[str, Any]:
+        if len(fields) > 0:
+            results = await self.table.find(
+                {"key": {"$in": keys}}, {k: 1 for k in fields}
+            ).sel.to_list(None)
+        else:
+            results = await self.table.find({"key": {"$in": keys}}).sel.to_list(None)
         return {r["key"]: r for r in results}

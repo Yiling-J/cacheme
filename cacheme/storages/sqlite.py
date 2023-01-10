@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple, cast, Dict
 
 from sqlalchemy.engine import make_url
-from cacheme.interfaces import CachedData
+from cacheme.interfaces import Cachable, CachedData
 
 from cacheme.serializer import Serializer
 from cacheme.storages.sqldb import SQLStorage
@@ -22,7 +22,9 @@ class SQLiteStorage(SQLStorage):
     async def _connect(self):
         pass
 
-    def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
+    def serialize(
+        self, node: Cachable, raw: Any, serializer: Optional[Serializer]
+    ) -> CachedData:
         data = raw["value"]
         if serializer is not None:
             data = serializer.loads(cast(bytes, raw["value"]))
@@ -31,6 +33,7 @@ class SQLiteStorage(SQLStorage):
         if raw["expire"] != None:
             expire = datetime.fromisoformat(raw["expire"])
         return CachedData(
+            node=node,
             data=data,
             updated_at=updated_at,
             expire=expire,
@@ -59,9 +62,15 @@ class SQLiteStorage(SQLStorage):
         return conn, data
 
     def sync_get_by_keys(
-        self, keys: List[str], conn: Optional[sqlite3.Connection]
+        self,
+        keys: List[str],
+        conn: Optional[sqlite3.Connection],
+        fields: List[str] = [],
     ) -> Tuple[sqlite3.Connection, Dict[str, Any]]:
         cur = None
+        tmp = "*"
+        if len(fields) > 0:
+            tmp = f"({','.join(fields)})"
         if conn is None:
             conn = sqlite3.connect(
                 self.db, isolation_level=None, timeout=30, check_same_thread=False
@@ -71,8 +80,8 @@ class SQLiteStorage(SQLStorage):
             cur.execute("pragma journal_mode=wal")
         if cur is None:
             cur = conn.cursor()
-        sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
-            ", ".join("?" for _ in keys)
+        sql = "SELECT {0} FROM cacheme_data WHERE key in ({1})".format(
+            tmp, ", ".join("?" for _ in keys)
         )
         cur.execute(sql, keys)
         data = cur.fetchall()
@@ -143,7 +152,9 @@ class SQLiteStorage(SQLStorage):
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()
 
-    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_by_keys(
+        self, keys: List[str], fields: List[str] = []
+    ) -> Dict[str, Any]:
         await self.sem.acquire()
         if len(self.pool) > 0:
             conn = self.pool.pop(0)
@@ -154,7 +165,7 @@ class SQLiteStorage(SQLStorage):
         else:
             loop = asyncio.get_running_loop()
             conn, data = await loop.run_in_executor(
-                None, self.sync_get_by_keys, keys, conn
+                None, self.sync_get_by_keys, keys, conn, fields
             )
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()

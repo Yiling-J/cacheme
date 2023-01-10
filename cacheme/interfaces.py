@@ -26,6 +26,7 @@ class Metrics:
 
 class CachedData(NamedTuple):
     data: Any
+    node: "Cachable"
     updated_at: datetime
     expire: Optional[datetime] = None
 
@@ -56,7 +57,7 @@ class Storage(Protocol):
     async def remove(self, node: "Cachable"):
         ...
 
-    async def validate_tags(self, updated_at: datetime, tags: List[str]) -> bool:
+    async def validate_tags(self, data: CachedData) -> bool:
         ...
 
     async def set_all(

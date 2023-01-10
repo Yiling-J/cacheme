@@ -3,6 +3,7 @@ from typing import List, Optional, Sequence, Tuple, cast, Dict
 
 from typing_extensions import Any
 from cacheme.interfaces import Cachable, CachedData
+from cacheme.models import TagNode
 
 from cacheme.serializer import Serializer
 
@@ -17,7 +18,9 @@ class BaseStorage:
     async def get_by_key(self, key: str) -> Any:
         raise NotImplementedError()
 
-    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_by_keys(
+        self, keys: List[str], fields: List[str] = []
+    ) -> Dict[str, Any]:
         raise NotImplementedError()
 
     async def remove_by_key(self, key: str):
@@ -29,7 +32,9 @@ class BaseStorage:
     async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
         raise NotImplementedError()
 
-    def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
+    def serialize(
+        self, node: Cachable, raw: Any, serializer: Optional[Serializer]
+    ) -> CachedData:
         data = raw["value"]
         if serializer is not None:
             data = serializer.loads(cast(bytes, raw["value"]))
@@ -37,6 +42,7 @@ class BaseStorage:
             data=data,
             updated_at=raw["updated_at"],
             expire=raw["expire"],
+            node=node,
         )
 
     async def get(
@@ -45,7 +51,7 @@ class BaseStorage:
         result = await self.get_by_key(node.full_key())
         if result is None:
             return None
-        data = self.serialize(result, serializer)
+        data = self.serialize(node, result, serializer)
         if data.expire is not None and data.expire.replace(
             tzinfo=timezone.utc
         ) <= datetime.now(timezone.utc):
@@ -71,11 +77,22 @@ class BaseStorage:
     async def remove(self, node: Cachable):
         await self.remove_by_key(node.full_key())
 
-    async def validate_tags(self, updated_at: datetime, nodes: List[str]) -> bool:
-        raise NotImplementedError()
+    async def validate_tags(self, data: CachedData) -> bool:
+        tag_nodes = []
+        tags = data.node.tags()
+        for t in tags:
+            tag_nodes.append(TagNode(t))
+        results = await self.get_all(tag_nodes, None, fields=["updated_at"])
+        for r in results:
+            if r[1].updated_at is not None and r[1].updated_at >= data.updated_at:
+                return False
+        return True
 
     async def get_all(
-        self, nodes: Sequence[Cachable], serializer: Optional[Serializer]
+        self,
+        nodes: Sequence[Cachable],
+        serializer: Optional[Serializer],
+        fields: List[str] = [],
     ) -> Sequence[Tuple[Cachable, CachedData]]:
         if len(nodes) == 0:
             return []
@@ -86,12 +103,12 @@ class BaseStorage:
             key = node.full_key()
             keys.append(key)
             mapping[key] = node
-        gets = await self.get_by_keys(keys)
+        gets = await self.get_by_keys(keys, fields)
         for k, v in gets.items():
             node = mapping[k]
             if v is None:
                 continue
-            data = self.serialize(v, serializer)
+            data = self.serialize(node, v, serializer)
             if data.expire is not None and data.expire.replace(
                 tzinfo=timezone.utc
             ) <= datetime.now(timezone.utc):

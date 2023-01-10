@@ -40,11 +40,11 @@ class Cache:
         if element.list is not None:
             element.list.remove(element)
 
-    def get(self, key: str) -> Optional[CachedData]:
+    def get(self, key: str) -> Optional[Element]:
         self.sketch.add(hash_string(key))
         e = self.cache_dict.get(key, None)
         if e is not None:
             if e.item.expire is None or (e.item.expire > datetime.now(timezone.utc)):
-                return CachedData(data=e.item.value, updated_at=e.item.updated_at)
+                return e
             self.remove(e.item.key)
         return None

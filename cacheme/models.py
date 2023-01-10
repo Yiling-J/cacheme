@@ -7,6 +7,7 @@ from typing_extensions import Any
 
 from cacheme.interfaces import Cachable, Metrics, Serializer, Storage
 from cacheme.filter import BloomFilter
+from cacheme.serializer import PickleSerializer
 from cacheme.utils import cached_property, hash_string
 from cacheme.data import get_storage_by_name
 
@@ -134,3 +135,7 @@ class TagNode(Node):
     @property
     def _full_key(self) -> str:
         return f"cacheme:tags:{self.tag}"
+
+    class Meta(Node.Meta):
+        serializer = PickleSerializer()
+        storage = "__tag__"

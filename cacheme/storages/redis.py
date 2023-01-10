@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, cast, List, Dict
 
 import redis.asyncio as redis
-from cacheme.interfaces import CachedData
+from cacheme.interfaces import Cachable, CachedData
 import redis.asyncio.cluster as redis_cluster
 from redis.asyncio.connection import BlockingConnectionPool
 
@@ -35,16 +35,20 @@ class RedisStorage(BaseStorage):
     async def get_by_key(self, key: str) -> Any:
         return await self.client.get(key)
 
-    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_by_keys(
+        self, keys: List[str], fields: List[str] = []
+    ) -> Dict[str, Any]:
         values = await self.client.mget(keys)
         return {keys[i]: v for i, v in enumerate(values) if v is not None}
 
-    def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
+    def serialize(
+        self, node: Cachable, raw: Any, serializer: Optional[Serializer]
+    ) -> CachedData:
         if serializer is None:
             raise Exception("serializer is None")
         data = serializer.loads(cast(bytes, raw))
         return CachedData(
-            data=data["value"], updated_at=data["updated_at"], expire=None
+            node=node, data=data["value"], updated_at=data["updated_at"], expire=None
         )
 
     def deserialize(self, raw: Any, serializer: Optional[Serializer]) -> Any:

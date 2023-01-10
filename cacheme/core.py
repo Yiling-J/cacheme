@@ -58,8 +58,7 @@ async def get(node: Cachable[C_co]) -> C_co:
     if result is not None and len(node.tags()) > 0:
         tag_storage = get_tag_storage()
         valid = await tag_storage.validate_tags(
-            result.updated_at,
-            node.tags(),
+            result,
         )
         if not valid:
             await storage.remove(node)
@@ -79,7 +78,9 @@ async def get(node: Cachable[C_co]) -> C_co:
                 locker.value = loaded
                 metrics.load_success_count += 1
                 metrics.total_load_time += time_ns() - now
-                result = CachedData(data=loaded, updated_at=datetime.now(timezone.utc))
+                result = CachedData(
+                    data=loaded, node=node, updated_at=datetime.now(timezone.utc)
+                )
                 doorkeeper = node.get_doorkeeper()
                 if doorkeeper is not None:
                     exist = doorkeeper.set(node.key_hash())
@@ -91,7 +92,7 @@ async def get(node: Cachable[C_co]) -> C_co:
                 _lockers.pop(node.full_key(), None)
             else:
                 result = CachedData(
-                    data=locker.value, updated_at=datetime.now(timezone.utc)
+                    data=locker.value, node=node, updated_at=datetime.now(timezone.utc)
                 )
     else:
         metrics.hit_count += 1

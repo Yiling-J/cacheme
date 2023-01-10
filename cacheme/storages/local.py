@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, List
 from cacheme.interfaces import Cachable, CachedData
 
 from cacheme.serializer import Serializer
@@ -22,7 +22,10 @@ class TLFUStorage(BaseStorage):
     def _sync_get(
         self, node: Cachable, serializer: Optional[Serializer]
     ) -> Optional[CachedData]:
-        return self.cache.get(node.full_key())
+        e = self.cache.get(node.full_key())
+        if e is None:
+            return None
+        return CachedData(node=node, data=e.item.value, updated_at=e.item.updated_at)
 
     async def set(
         self,
@@ -41,7 +44,10 @@ class TLFUStorage(BaseStorage):
         self.cache.remove(node.full_key())
 
     async def get_all(
-        self, nodes: Sequence[Cachable], serializer: Optional[Serializer]
+        self,
+        nodes: Sequence[Cachable],
+        serializer: Optional[Serializer],
+        fields: List[str] = [],
     ) -> Sequence[Tuple[Cachable, CachedData]]:
         data = []
         for node in nodes:

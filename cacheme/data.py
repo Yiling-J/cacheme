@@ -1,22 +1,18 @@
-from typing import Optional, Dict
+from typing import Dict
 from cacheme.interfaces import Storage
 
-_tag_storage: Optional[Storage] = None
+TAG_STORAGE_KEY = "__tag__"
+_storages: Dict[str, Storage] = {}
 
 
 def get_tag_storage() -> Storage:
-    global _tag_storage
-    if _tag_storage is None:
-        raise Exception()
-    return _tag_storage
+    global _storages
+    return _storages[TAG_STORAGE_KEY]
 
 
 def set_tag_storage(storage: Storage):
-    global _tag_storage
-    _tag_storage = storage
-
-
-_storages: Dict[str, Storage] = {}
+    global _storages
+    _storages[TAG_STORAGE_KEY] = storage
 
 
 async def init_storages(storages: Dict[str, Storage]):
