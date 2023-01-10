@@ -47,7 +47,7 @@ class MongoStorage(BaseStorage):
         if len(fields) > 0:
             results = await self.table.find(
                 {"key": {"$in": keys}}, {k: 1 for k in fields}
-            ).sel.to_list(None)
+            ).to_list(None)
         else:
-            results = await self.table.find({"key": {"$in": keys}}).sel.to_list(None)
+            results = await self.table.find({"key": {"$in": keys}}).to_list(None)
         return {r["key"]: r for r in results}
