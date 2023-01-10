@@ -132,8 +132,7 @@ class TagNode(Node):
     def __init__(self, tag: str):
         self.tag = tag
 
-    @property
-    def _full_key(self) -> str:
+    def full_key(self) -> str:
         return f"cacheme:tags:{self.tag}"
 
     class Meta(Node.Meta):

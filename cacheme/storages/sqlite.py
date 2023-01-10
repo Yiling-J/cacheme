@@ -31,11 +31,11 @@ class SQLiteStorage(SQLStorage):
         updated_at = datetime.fromisoformat(raw["updated_at"])
         expire = None
         if raw["expire"] != None:
-            expire = datetime.fromisoformat(raw["expire"])
+            expire = datetime.fromisoformat(raw["expire"]).replace(tzinfo=timezone.utc)
         return CachedData(
             node=node,
             data=data,
-            updated_at=updated_at,
+            updated_at=updated_at.replace(tzinfo=timezone.utc),
             expire=expire,
         )
 

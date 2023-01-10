@@ -1,11 +1,12 @@
+import os
 from asyncio import gather, sleep
 from dataclasses import dataclass
 from typing import List
 
 import pytest
 
-from cacheme.core import Memoize, get, get_all
-from cacheme.data import init_storages
+from cacheme.core import Memoize, get, get_all, invalid_tag
+from cacheme.data import init_storages, init_tag_storage
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
@@ -182,3 +183,48 @@ async def test_get_cocurrency():
     for r in results:
         assert r == "b-a-10"
     assert fn1_counter == 1
+
+
+bar_counter = 0
+
+
+@dataclass
+class BarNode(Node):
+    name: str
+
+    def key(self) -> str:
+        return f"{self.name}"
+
+    async def load(self) -> str:
+        global bar_counter
+        bar_counter += 1
+        return f"{self.name}"
+
+    def tags(self) -> List[str]:
+        return [f"bar:{self.name}"]
+
+    class Meta(Node.Meta):
+        version = "v1"
+        storage = "local"
+        serializer = MsgPackSerializer()
+
+
+@pytest.mark.asyncio
+async def test_invalid_tag():
+    filename = "testtag"
+    await init_storages({"local": Storage(url="tlfu://", size=100)})
+    await init_tag_storage(Storage(url=f"sqlite:///{filename}", initialize=True))
+    await get(BarNode(name="bar1"))
+    await get(BarNode(name="bar2"))
+    assert bar_counter == 2
+    await get(BarNode(name="bar1"))
+    await get(BarNode(name="bar2"))
+    assert bar_counter == 2
+    await invalid_tag("bar:bar1")
+    await sleep(1)
+    await get(BarNode(name="bar1"))  # not valid
+    await get(BarNode(name="bar2"))  # valid
+    assert bar_counter == 3
+    os.remove(filename)
+    os.remove(f"{filename}-shm")
+    os.remove(f"{filename}-wal")

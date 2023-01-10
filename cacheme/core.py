@@ -22,7 +22,7 @@ from typing_extensions import ParamSpec, Self
 
 from cacheme.interfaces import Cachable, Memoizable, CachedData
 from cacheme.models import TagNode
-from cacheme.serializer import MsgPackSerializer
+from cacheme.serializer import MsgPackSerializer, PickleSerializer
 from cacheme.data import get_tag_storage
 
 
@@ -102,7 +102,7 @@ async def get(node: Cachable[C_co]) -> C_co:
 
 async def invalid_tag(tag: str):
     storage = get_tag_storage()
-    await storage.set(TagNode(tag), None, ttl=None, serializer=MsgPackSerializer())
+    await storage.set(TagNode(tag), None, ttl=None, serializer=TagNode.Meta.serializer)
 
 
 class Wrapper(Generic[P, R]):
