@@ -22,9 +22,7 @@ class CountMinSketch:
         self.sample_size = 10 * self.row_counter_size
 
     def index_of(self, h: int, offset: int) -> Tuple[int, int]:
-        h1 = h & 0xFFFFFFFF
-        h1 += offset * (h >> 32)
-        i = h1 & self.row_mask
+        i = (h + offset * (h >> 32)) & self.row_mask
         index = offset * self.row_i64_size + (i >> 4)
         offset = (i & 0xF) << 2
         return index, offset
