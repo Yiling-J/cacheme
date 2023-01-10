@@ -47,7 +47,6 @@ class TLFUStorage(BaseStorage):
         self,
         nodes: Sequence[Cachable],
         serializer: Optional[Serializer],
-        fields: List[str] = [],
     ) -> Sequence[Tuple[Cachable, CachedData]]:
         data = []
         for node in nodes:

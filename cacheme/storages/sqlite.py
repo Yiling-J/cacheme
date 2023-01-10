@@ -65,12 +65,8 @@ class SQLiteStorage(SQLStorage):
         self,
         keys: List[str],
         conn: Optional[sqlite3.Connection],
-        fields: List[str] = [],
     ) -> Tuple[sqlite3.Connection, Dict[str, Any]]:
         cur = None
-        tmp = "*"
-        if len(fields) > 0:
-            tmp = f"({','.join(fields)})"
         if conn is None:
             conn = sqlite3.connect(
                 self.db, isolation_level=None, timeout=30, check_same_thread=False
@@ -80,8 +76,8 @@ class SQLiteStorage(SQLStorage):
             cur.execute("pragma journal_mode=wal")
         if cur is None:
             cur = conn.cursor()
-        sql = "SELECT {0} FROM cacheme_data WHERE key in ({1})".format(
-            tmp, ", ".join("?" for _ in keys)
+        sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
+            ", ".join("?" for _ in keys)
         )
         cur.execute(sql, keys)
         data = cur.fetchall()
@@ -152,9 +148,7 @@ class SQLiteStorage(SQLStorage):
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()
 
-    async def get_by_keys(
-        self, keys: List[str], fields: List[str] = []
-    ) -> Dict[str, Any]:
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         await self.sem.acquire()
         if len(self.pool) > 0:
             conn = self.pool.pop(0)
@@ -165,7 +159,7 @@ class SQLiteStorage(SQLStorage):
         else:
             loop = asyncio.get_running_loop()
             conn, data = await loop.run_in_executor(
-                None, self.sync_get_by_keys, keys, conn, fields
+                None, self.sync_get_by_keys, keys, conn
             )
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()

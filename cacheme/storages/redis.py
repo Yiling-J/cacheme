@@ -35,9 +35,7 @@ class RedisStorage(BaseStorage):
     async def get_by_key(self, key: str) -> Any:
         return await self.client.get(key)
 
-    async def get_by_keys(
-        self, keys: List[str], fields: List[str] = []
-    ) -> Dict[str, Any]:
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         values = await self.client.mget(keys)
         return {keys[i]: v for i, v in enumerate(values) if v is not None}
 

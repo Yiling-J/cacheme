@@ -41,16 +41,11 @@ class PostgresStorage(SQLStorage):
                 expire,
             )
 
-    async def get_by_keys(
-        self, keys: List[str], fields: List[str] = []
-    ) -> Dict[str, Any]:
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         if self.pool is None:
             raise
-        tmp = "*"
-        if len(fields) > 0:
-            tmp = f"({','.join(fields)})"
         async with self.pool.acquire() as conn:
             records = await conn.fetch(
-                f"select {tmp} from cacheme_data where key=any($1::text[])", keys
+                f"select * from cacheme_data where key=any($1::text[])", keys
             )
         return {r["key"]: r for r in records}

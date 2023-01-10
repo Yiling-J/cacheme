@@ -18,9 +18,7 @@ class BaseStorage:
     async def get_by_key(self, key: str) -> Any:
         raise NotImplementedError()
 
-    async def get_by_keys(
-        self, keys: List[str], fields: List[str] = []
-    ) -> Dict[str, Any]:
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         raise NotImplementedError()
 
     async def remove_by_key(self, key: str):
@@ -82,7 +80,7 @@ class BaseStorage:
         tags = data.node.tags()
         for t in tags:
             tag_nodes.append(TagNode(t))
-        results = await self.get_all(tag_nodes, None, fields=["updated_at"])
+        results = await self.get_all(tag_nodes, None)
         for r in results:
             if r[1].updated_at is not None and r[1].updated_at >= data.updated_at:
                 return False
@@ -92,7 +90,6 @@ class BaseStorage:
         self,
         nodes: Sequence[Cachable],
         serializer: Optional[Serializer],
-        fields: List[str] = [],
     ) -> Sequence[Tuple[Cachable, CachedData]]:
         if len(nodes) == 0:
             return []
@@ -103,7 +100,7 @@ class BaseStorage:
             key = node.full_key()
             keys.append(key)
             mapping[key] = node
-        gets = await self.get_by_keys(keys, fields)
+        gets = await self.get_by_keys(keys)
         for k, v in gets.items():
             node = mapping[k]
             if v is None:
