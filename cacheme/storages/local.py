@@ -1,6 +1,6 @@
-from datetime import timedelta
-from typing import Any, Optional, Sequence, Tuple, List
-from cacheme.interfaces import Cachable, CachedData
+from datetime import timedelta, datetime, timezone
+from typing import Any, Optional, List, Dict
+from cacheme.interfaces import CachedValue
 
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
@@ -9,57 +9,54 @@ from cacheme.tinylfu import tinylfu
 
 class TLFUStorage(BaseStorage):
     def __init__(self, size: int, **options):
-        self.cache = tinylfu.Cache(size)
+        self.cache: Dict[str, CachedValue] = {}
+        self.policy = tinylfu.Cache(size)
 
     async def connect(self):
         return
 
-    async def get(
-        self, node: Cachable, serializer: Optional[Serializer]
-    ) -> Optional[CachedData]:
-        return self._sync_get(node, serializer)
-
-    def _sync_get(
-        self, node: Cachable, serializer: Optional[Serializer]
-    ) -> Optional[CachedData]:
-        e = self.cache.get(node.full_key())
-        if e is None:
-            return None
-        return CachedData(node=node, data=e.item.value, updated_at=e.item.updated_at)
-
-    async def set(
+    async def get_by_key(
         self,
-        node: Cachable,
+        key: str,
+    ) -> Optional[CachedValue]:
+        return self._sync_get(key)
+
+    def _sync_get(self, key: str) -> Optional[CachedValue]:
+        return self.cache.get(key)
+
+    # disable derde for local cache
+    def deserialize(self, raw: Any, serializer: Optional[Serializer]) -> Any:
+        return raw
+
+    async def set_by_key(
+        self,
+        key: str,
         value: Any,
         ttl: Optional[timedelta],
-        serializer: Optional[Serializer],
     ):
-        evicated = self.cache.set(node.full_key(), value, ttl)
-        metrics = node.get_metrics()
-        if evicated and metrics is not None:
-            metrics.eviction_count += 1
+        expire = None
+        if ttl is not None:
+            expire = datetime.now(timezone.utc) + ttl
+        self.cache[key] = CachedValue(
+            data=value, updated_at=datetime.now(timezone.utc), expire=expire
+        )
+        evicated = self.policy.set(key)
+        if evicated is not None:
+            self.cache.pop(evicated, None)
         return
 
-    async def remove(self, node: Cachable):
-        self.cache.remove(node.full_key())
+    async def remove_by_key(self, key: str):
+        self.policy.remove(key)
+        self.cache.pop(key, None)
 
-    async def get_all(
-        self,
-        nodes: Sequence[Cachable],
-        serializer: Optional[Serializer],
-    ) -> Sequence[Tuple[Cachable, CachedData]]:
-        data = []
-        for node in nodes:
-            v = self._sync_get(node, serializer)
+    async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
+        data = {}
+        for key in keys:
+            v = self._sync_get(key)
             if v is not None:
-                data.append((node, v))
+                data[key] = v
         return data
 
-    async def set_all(
-        self,
-        data: Sequence[Tuple[Cachable, Any]],
-        ttl: Optional[timedelta],
-        serializer: Optional[Serializer],
-    ):
-        for node, value in data:
-            await self.set(node, value, ttl, serializer)
+    async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
+        for key, value in data.items():
+            await self.set_by_key(key, value, ttl)

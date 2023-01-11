@@ -1,8 +1,6 @@
-from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
-from cacheme.interfaces import CachedData
+from cacheme.tinylfu.linkedlist import Element
 
-from cacheme.models import Element, Item
 from cacheme.tinylfu.lru import LRU, SLRU
 from cacheme.tinylfu.sketch import CountMinSketch
 from cacheme.utils import hash_string
@@ -13,38 +11,29 @@ class Cache:
         admission_ratio = 0.01
         lru_size = int(size * admission_ratio) or 1
         slru_size = size - lru_size
-        self.cache_dict: Dict[str, Element] = {}
-        self.lru = LRU(lru_size, self.cache_dict)
-        self.slru = SLRU(slru_size, self.cache_dict)
+        self.key_mapping: Dict[str, Element] = {}
+        self.lru = LRU(lru_size, self.key_mapping)
+        self.slru = SLRU(slru_size, self.key_mapping)
         self.sketch = CountMinSketch(size)
 
-    def set(self, key: str, value, ttl: Optional[timedelta]) -> bool:
-        item = Item(key, value, ttl)
-        candidate = self.lru.set(key, item)
+    def set(self, key: str) -> Optional[str]:
+        candidate = self.lru.set(key)
         if candidate is None:
-            return False
+            return None
         victim = self.slru.victim()
         if victim is None:
-            self.slru.set(candidate.key, candidate)
-            return False
-        candidate_count = self.sketch.estimate(candidate.keyh)
-        victim_count = self.sketch.estimate(victim.item.keyh)
+            self.slru.set(candidate)
+            return None
+        evicated: Optional[str] = candidate
+        candidate_count = self.sketch.estimate(hash_string(candidate))
+        victim_count = self.sketch.estimate(hash_string(victim))
         if candidate_count > victim_count:
-            self.slru.set(candidate.key, candidate)
-        return True
+            evicated = self.slru.set(candidate)
+        return evicated
 
     def remove(self, key: str):
-        element = self.cache_dict.pop(key, None)
+        element = self.key_mapping.pop(key, None)
         if element is None:
             return
         if element.list is not None:
             element.list.remove(element)
-
-    def get(self, key: str) -> Optional[Element]:
-        self.sketch.add(hash_string(key))
-        e = self.cache_dict.get(key, None)
-        if e is not None:
-            if e.item.expire is None or (e.item.expire > datetime.now(timezone.utc)):
-                return e
-            self.remove(e.item.key)
-        return None

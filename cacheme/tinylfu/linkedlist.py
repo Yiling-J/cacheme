@@ -1,22 +1,24 @@
-import datetime
 from typing import Optional, cast
 
-from cacheme.models import Element, Item
+
+class Element:
+    prev: Optional["Element"]
+    next: Optional["Element"]
+    list: Optional["LinkedList"]
+    key: str
+
+    def __init__(self, key: str):
+        self.key = key
 
 
 class LinkedList:
-    def __init__(self):
-        self.root = Element(
-            Item(
-                key="root",
-                value=0,
-                ttl=datetime.timedelta(days=600),
-            )
-        )
+    def __init__(self, id: int):
+        self.root = Element(key="__root__")
         self.root.list = self
         self.root.prev = self.root
         self.root.next = self.root
         self.len = 0
+        self.id = id
 
     def __len__(self):
         return self.len
@@ -64,25 +66,23 @@ class LinkedList:
             e.list = None
             self.len -= 1
 
-    def push_front(self, item: Item) -> Element:
-        e = Element(item)
+    def push_front(self, key: str) -> Element:
+        e = Element(key)
         self.__insert(e, self.root)
         return e
 
-    def push_back(self, item: Item) -> Element:
-        e = Element(item)
+    def push_back(self, key: str) -> Element:
+        e = Element(key)
         self.__insert(e, cast(Element, self.root.prev))
         return e
 
-    def insert_before(self, at: Element, item: Item) -> Element:
-        e = Element(item)
-        e.item = item
+    def insert_before(self, at: Element, key: str) -> Element:
+        e = Element(key)
         self.__insert(e, cast(Element, at.prev))
         return e
 
-    def insert_after(self, at: Element, item: Item) -> Element:
-        e = Element(item)
-        e.item = item
+    def insert_after(self, at: Element, key: str) -> Element:
+        e = Element(key)
         self.__insert(e, at)
         return e
 

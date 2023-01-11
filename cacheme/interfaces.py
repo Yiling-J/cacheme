@@ -24,6 +24,13 @@ class Metrics:
     total_load_time: int = 0
 
 
+# used in local cache
+class CachedValue(NamedTuple):
+    data: Any
+    updated_at: datetime
+    expire: Optional[datetime] = None
+
+
 class CachedData(NamedTuple):
     data: Any
     node: "Cachable"

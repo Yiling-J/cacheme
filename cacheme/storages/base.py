@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Sequence, Tuple, cast, Dict
 
 from typing_extensions import Any
-from cacheme.interfaces import Cachable, CachedData
+from cacheme.interfaces import Cachable, CachedData, CachedValue
 from cacheme.models import TagNode
 
 from cacheme.serializer import Serializer
@@ -49,7 +49,16 @@ class BaseStorage:
         result = await self.get_by_key(node.full_key())
         if result is None:
             return None
-        data = self.serialize(node, result, serializer)
+        data: CachedData
+        if isinstance(result, CachedValue):
+            data = CachedData(
+                data=result.data,
+                updated_at=result.updated_at,
+                expire=result.expire,
+                node=node,
+            )
+        else:
+            data = self.serialize(node, result, serializer)
         if data.expire is not None and data.expire.replace(
             tzinfo=timezone.utc
         ) <= datetime.now(timezone.utc):
@@ -105,7 +114,16 @@ class BaseStorage:
             node = mapping[k]
             if v is None:
                 continue
-            data = self.serialize(node, v, serializer)
+            data: CachedData
+            if isinstance(v, CachedValue):
+                data = CachedData(
+                    data=v.data,
+                    updated_at=v.updated_at,
+                    expire=v.expire,
+                    node=node,
+                )
+            else:
+                data = self.serialize(node, v, serializer)
             if data.expire is not None and data.expire.replace(
                 tzinfo=timezone.utc
             ) <= datetime.now(timezone.utc):

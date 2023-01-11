@@ -12,46 +12,6 @@ from cacheme.utils import cached_property, hash_string
 from cacheme.data import get_storage_by_name
 
 
-class Item:
-    key: str
-    value: Any
-    list_id: Optional[int]
-    expire: Optional[datetime.datetime] = None
-    updated_at: datetime.datetime
-
-    def __init__(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[datetime.timedelta],
-        list_id: int | None = None,
-    ):
-        self.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        if ttl is not None:
-            self.expire = datetime.datetime.now(datetime.timezone.utc) + ttl
-        self.key = key
-        self.value = value
-        self.list_id = list_id
-
-    @cached_property
-    def keyh(self) -> int:
-        return hash_string(self.key)
-
-
-class Element:
-    prev: Optional[Element]
-    next: Optional[Element]
-    list: Any
-    item: Item
-
-    def __init__(self, item: Item):
-        self.item = item
-
-    @property
-    def keyh(self) -> int:
-        return self.item.keyh
-
-
 _nodes = []
 
 
