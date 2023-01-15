@@ -4,13 +4,13 @@ from cacheme.interfaces import CachedValue
 
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
-from cacheme.tinylfu import tinylfu
+from cacheme_utils import TinyLfu
 
 
 class TLFUStorage(BaseStorage):
     def __init__(self, size: int, **options):
         self.cache: Dict[str, CachedValue] = {}
-        self.policy = tinylfu.Cache(size)
+        self.policy = TinyLfu(size)
 
     async def connect(self):
         return
@@ -22,6 +22,7 @@ class TLFUStorage(BaseStorage):
         return self._sync_get(key)
 
     def _sync_get(self, key: str) -> Optional[CachedValue]:
+        self.policy.access(key)
         return self.cache.get(key)
 
     # disable derde for local cache

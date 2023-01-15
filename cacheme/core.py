@@ -83,8 +83,9 @@ async def get(node: Cachable[C_co]) -> C_co:
                 )
                 doorkeeper = node.get_doorkeeper()
                 if doorkeeper is not None:
-                    exist = doorkeeper.set(node.key_hash())
+                    exist = doorkeeper.contains(node.full_key())
                     if not exist:
+                        doorkeeper.put(node.full_key())
                         return cast(C_co, result)
                 await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
                 if local_storage is not None:

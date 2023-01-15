@@ -5,8 +5,7 @@ from typing import List, Optional, Sequence, ClassVar
 
 from typing_extensions import Any
 
-from cacheme.interfaces import Cachable, Metrics, Serializer, Storage
-from cacheme.filter import BloomFilter
+from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
 from cacheme.serializer import PickleSerializer
 from cacheme.utils import cached_property, hash_string
 from cacheme.data import get_storage_by_name
@@ -72,7 +71,7 @@ class Node(metaclass=MetaNode):
     def get_seriaizer(self) -> Optional[Serializer]:
         return self.Meta.serializer
 
-    def get_doorkeeper(self) -> Optional[BloomFilter]:
+    def get_doorkeeper(self) -> Optional[DoorKeeper]:
         return self.Meta.doorkeeper
 
     def get_metrics(self) -> Metrics:
@@ -84,7 +83,7 @@ class Node(metaclass=MetaNode):
         ttl: ClassVar[Optional[datetime.timedelta]] = None
         local_cache: ClassVar[Optional[str]] = None
         serializer: ClassVar[Optional[Serializer]] = None
-        doorkeeper: ClassVar[Optional[BloomFilter]] = None
+        doorkeeper: ClassVar[Optional[DoorKeeper]] = None
         metrics: ClassVar[Metrics] = Metrics()
 
 

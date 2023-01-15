@@ -3,7 +3,6 @@ from typing import List, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from typing_extensions import Any, Protocol
 
-from cacheme.filter import BloomFilter
 
 C = TypeVar("C")
 C_co = TypeVar("C_co", covariant=True)
@@ -84,6 +83,14 @@ class Serializer(Protocol):
         ...
 
 
+class DoorKeeper(Protocol):
+    def put(self, key: str):
+        ...
+
+    def contains(self, key: str):
+        ...
+
+
 class MetaData(Protocol):
     def get_version(self) -> str:
         ...
@@ -100,7 +107,7 @@ class MetaData(Protocol):
     def get_seriaizer(self) -> Optional[Serializer]:
         ...
 
-    def get_doorkeeper(self) -> Optional[BloomFilter]:
+    def get_doorkeeper(self) -> Optional[DoorKeeper]:
         ...
 
     def get_metrics(self) -> Metrics:
