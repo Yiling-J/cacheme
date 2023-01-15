@@ -1,105 +1,71 @@
-from datetime import datetime, timedelta
-from cacheme import settings
+from threading import RLock
+from typing import Any, Callable, Generic, Optional, TypeVar
+
+import xxhash
+from typing_extensions import Self, overload
 
 
-class MetaKeys(object):
-    data = set()
-    prefix = settings.REDIS_CACHE_PREFIX + 'meta:'
-
-    def __getattr__(self, attr):
-        if attr not in self.data:
-            self.data.add(attr)
-        return self.prefix + attr
+# generate 64bits hash of  key string
+def hash_string(s: str) -> int:
+    return xxhash.xxh64_intdigest(s)
 
 
-class CachemeUtils(object):
-    meta_keys = MetaKeys()
+_NOT_FOUND = object()
+_T = TypeVar("_T")
 
-    def __init__(self, conn=None):
-        self.conn = conn
+# copy from 3.11 functools
+class cached_property(Generic[_T]):
+    def __init__(self, func: Callable[[Any], _T]):
+        self.func = func
+        self.attrname = None
+        self.__doc__ = func.__doc__
+        self.lock = RLock()
 
-    def split_key(self, string):
-        lg = b'>' if type(string) == bytes else '>'
-        if lg in string:
-            return string.split(lg)[:2]
-        return [string, 'base']
+    def __set_name__(self, owner, name):
+        if self.attrname is None:
+            self.attrname = name
+        elif name != self.attrname:
+            raise TypeError(
+                "Cannot assign the same cached_property to two different names "
+                f"({self.attrname!r} and {name!r})."
+            )
 
-    def flat_list(self, li):
-        if type(li) not in (list, tuple, set):
-            li = [li]
+    @overload
+    def __get__(self, instance: None, owner: Optional[Any]) -> Self:  # type: ignore
+        ...
 
-        result = []
-        for e in li:
-            if type(e) in (list, tuple, set):
-                result += self.flat_list(e)
-            else:
-                result.append(e)
-        return result
+    @overload
+    def __get__(self, instance: object, owner: Optional[Any]) -> _T:
+        ...
 
-    def chunk_iter(self, iterator, size, stop):
-        while True:
-            result = {next(iterator, stop) for i in range(size)}
-            if stop in result:
-                result.remove(stop)
-                yield result
-                break
-            yield result
-
-    def invalid_iter(self, iterator):
-        count = 0
-        chunks = self.chunk_iter(iterator, 500, None)
-        for keys in chunks:
-            if keys:
-                count += self.conn.sadd(
-                    self.meta_keys.deleted,
-                    *list(keys)
-                )
-        return count
-
-    def unlink_iter(self, iterator):
-        count = 0
-        chunks = self.chunk_iter(iterator, 500, None)
-        for keys in chunks:
-            if keys:
-                count += self.conn.unlink(*list(keys))
-        return count
-
-    def invalid_key(self, key):
-        return self.conn.sadd(
-            self.meta_keys.deleted,
-            key
-        )
-
-    def get_epoch(self, seconds=0):
-        dt = datetime.utcnow() + timedelta(seconds=seconds)
-        return int(dt.timestamp())
-
-    def get_metakey(self, key, field):
-        return '%s%s:%s' % (
-            settings.REDIS_CACHE_PREFIX,
-            'Meta:Expire-Buckets:',
-            key
-        )
-
-    def hset_with_ttl(self, key, field, value, ttl, pipe):
-        if field != 'base':
-            raw = '>'.join([key, field])
-        else:
-            raw = key
-        pipe.zadd(self.get_metakey(key, field), {raw: self.get_epoch(ttl)})
-        pipe.hset(key, field, value)
-        pipe.execute()
-
-    def invalid_ttl(self, key):
-        key, field = self.split_key(key)
-        pipe = self.conn.pipeline()
-        metadataKey = self.get_metakey(key, field)
-        now = self.get_epoch()
-
-        pipe.zrangebyscore(metadataKey, 0, now)
-        pipe.zremrangebyscore(metadataKey, 0, now)
-        results = pipe.execute()
-        if results[0]:
-            self.conn.sadd(self.meta_keys.deleted, *results[0])
-
-        return results[1]
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        if self.attrname is None:
+            raise TypeError(
+                "Cannot use cached_property instance without calling __set_name__ on it."
+            )
+        try:
+            cache = instance.__dict__
+        except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+            msg = (
+                f"No '__dict__' attribute on {type(instance).__name__!r} "
+                f"instance to cache {self.attrname!r} property."
+            )
+            raise TypeError(msg) from None
+        val = cache.get(self.attrname, _NOT_FOUND)
+        if val is _NOT_FOUND:
+            with self.lock:
+                # check if another thread filled cache while we awaited lock
+                val = cache.get(self.attrname, _NOT_FOUND)
+                if val is _NOT_FOUND:
+                    val = self.func(instance)
+                    try:
+                        cache[self.attrname] = val
+                    except TypeError:
+                        msg = (
+                            f"The '__dict__' attribute on {type(instance).__name__!r} instance "
+                            f"does not support item assignment for caching {self.attrname!r} property."
+                        )
+                        raise TypeError(msg) from None
+        return val

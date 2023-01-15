@@ -1,0 +1,83 @@
+---
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - "[0-9].[0-9]"
+      - "v2"
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  tests:
+    name: "Python ${{ matrix.python-version }}"
+    runs-on: "ubuntu-latest"
+
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_USER: username
+          MYSQL_PASSWORD: password
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: username
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      mongodb:
+        image: mongo
+        env:
+          MONGO_INITDB_ROOT_USERNAME: test
+          MONGO_INITDB_ROOT_PASSWORD: password
+          MONGO_INITDB_DATABASE: test
+        options: >-
+          --health-cmd "mongosh --eval 'db.version()'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "actions/setup-python@v4"
+        with:
+          python-version: "${{ matrix.python-version }}"
+          cache: 'pip'
+      - name: "Install dependencies"
+        run: "pip install -r requirements_dev.txt"
+      - name: "Run lint"
+        run: "mypy --ignore-missing-imports ."
+      - name: "Run tests"
+        env:
+          CI: "TRUE"
+        run: "pytest"
+      - name: "Run benchmarks"
+        run: "python -m benchmarks.basic"
