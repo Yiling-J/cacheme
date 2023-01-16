@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
 
 import motor.motor_asyncio as mongo
 

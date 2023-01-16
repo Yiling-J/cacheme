@@ -7,19 +7,14 @@ from typing import Dict, List, cast
 
 from benchmarks.zipf import Zipf
 from cacheme.core import get
-from cacheme.data import _storages, init_tag_storage
-from cacheme.data import init_storages
+from cacheme.data import _storages, init_storages, init_tag_storage
 from cacheme.interfaces import Serializer
 from cacheme.interfaces import Storage as StorageP
 from cacheme.models import Metrics, Node
-from cacheme.serializer import (
-    CompressedJSONSerializer,
-    CompressedMsgPackSerializer,
-    CompressedPickleSerializer,
-    JSONSerializer,
-    MsgPackSerializer,
-    PickleSerializer,
-)
+from cacheme.serializer import (CompressedJSONSerializer,
+                                CompressedMsgPackSerializer,
+                                CompressedPickleSerializer, JSONSerializer,
+                                MsgPackSerializer, PickleSerializer)
 from cacheme.storages import Storage
 from tests import utils as test_utils
 

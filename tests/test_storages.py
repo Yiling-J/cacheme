@@ -1,7 +1,7 @@
-from dataclasses import dataclass
 import os
 import random
 from asyncio import sleep
+from dataclasses import dataclass
 from datetime import timedelta
 
 import pytest

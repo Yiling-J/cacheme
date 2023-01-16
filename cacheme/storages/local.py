@@ -1,12 +1,12 @@
-from datetime import timedelta, datetime, timezone
-from typing import Any, Optional, List, Dict, Type
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Type
 from urllib.parse import urlparse
-from cacheme.interfaces import CachedValue, Policy
 
+from cacheme_utils import Lru, TinyLfu
+
+from cacheme.interfaces import CachedValue, Policy
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
-from cacheme_utils import TinyLfu, Lru
-
 
 POLICIES: Dict[str, Type[Policy]] = {
     "tlfu": TinyLfu,

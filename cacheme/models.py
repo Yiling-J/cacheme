@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import datetime
-from typing import List, Optional, Sequence, ClassVar
+from typing import ClassVar, List, Optional, Sequence
 
 from typing_extensions import Any
 
-from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
+from cacheme.data import get_storage_by_name
+from cacheme.interfaces import (Cachable, DoorKeeper, Metrics, Serializer,
+                                Storage)
 from cacheme.serializer import PickleSerializer
 from cacheme.utils import cached_property, hash_string
-from cacheme.data import get_storage_by_name
-
 
 _nodes = []
 

@@ -2,29 +2,15 @@ import types
 from asyncio import Lock
 from datetime import datetime, timezone
 from time import time_ns
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Generic,
-    Optional,
-    OrderedDict,
-    Sequence,
-    Type,
-    TypeVar,
-    cast,
-    overload,
-)
-
+from typing import (Any, Awaitable, Callable, Dict, Generic, Optional,
+                    OrderedDict, Sequence, Type, TypeVar, cast, overload)
 
 from typing_extensions import ParamSpec, Self
 
-from cacheme.interfaces import Cachable, Memoizable, CachedData
+from cacheme.data import get_tag_storage
+from cacheme.interfaces import Cachable, CachedData, Memoizable
 from cacheme.models import TagNode
 from cacheme.serializer import MsgPackSerializer, PickleSerializer
-from cacheme.data import get_tag_storage
-
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)

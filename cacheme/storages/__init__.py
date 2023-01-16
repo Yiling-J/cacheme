@@ -1,10 +1,11 @@
 import importlib
-from typing import Any, Optional, List, Sequence, Tuple
+from datetime import datetime, timedelta
+from typing import Any, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
+
 from cacheme.interfaces import Cachable, CachedData
-from cacheme.storages.base import BaseStorage
 from cacheme.serializer import Serializer
-from datetime import timedelta, datetime
+from cacheme.storages.base import BaseStorage
 
 
 class Storage:

@@ -2,11 +2,10 @@ import asyncio
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional, Tuple, cast, Dict
+from typing import Any, Dict, List, Optional, Tuple, cast
 from urllib.parse import urlparse
 
 from cacheme.interfaces import Cachable, CachedData
-
 from cacheme.serializer import Serializer
 from cacheme.storages.sqldb import SQLStorage
 

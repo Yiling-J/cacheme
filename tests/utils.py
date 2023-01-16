@@ -1,8 +1,10 @@
 from typing import Any
 from urllib.parse import urlparse
+
+import motor.motor_asyncio as mongo
+
 from cacheme.storages.mongo import MongoStorage
 from cacheme.storages.sqldb import SQLStorage
-import motor.motor_asyncio as mongo
 
 
 async def setup_storage(storage: Any):

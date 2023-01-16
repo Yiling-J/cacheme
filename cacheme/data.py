@@ -1,4 +1,5 @@
 from typing import Dict
+
 from cacheme.interfaces import Storage
 
 TAG_STORAGE_KEY = "__tag__"

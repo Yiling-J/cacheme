@@ -1,8 +1,7 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import List, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from typing_extensions import Any, Protocol
-
 
 C = TypeVar("C")
 C_co = TypeVar("C_co", covariant=True)

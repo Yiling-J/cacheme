@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import aiomysql

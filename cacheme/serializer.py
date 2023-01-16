@@ -4,7 +4,7 @@ import json
 import lzma
 import pickle
 from types import ModuleType
-from typing import Any, cast, Dict
+from typing import Any, Dict, cast
 
 import msgpack
 import pydantic
