@@ -26,7 +26,7 @@ class PostgresStorage(SQLStorage):
         if self.pool is None:
             raise
         async with self.pool.acquire() as conn:
-            return await conn.fetchrow(f"select * from {self.table} where key=$2", key)
+            return await conn.fetchrow(f"select * from {self.table} where key=$1", key)
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
         if self.pool is None:
@@ -36,7 +36,7 @@ class PostgresStorage(SQLStorage):
             expire = datetime.now(timezone.utc) + ttl
         async with self.pool.acquire() as conn:
             await conn.execute(
-                f"insert into {self.table}(key, value, expire) values($2,$3,$4) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
+                f"insert into {self.table}(key, value, expire) values($1,$2,$3) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
                 key,
                 value,
                 expire,
@@ -47,6 +47,6 @@ class PostgresStorage(SQLStorage):
             raise
         async with self.pool.acquire() as conn:
             records = await conn.fetch(
-                f"select * from {self.table} where key=any($2::text[])", keys
+                f"select * from {self.table} where key=any($1::text[])", keys
             )
         return {r["key"]: r for r in records}
