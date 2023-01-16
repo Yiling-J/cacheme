@@ -3,8 +3,8 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple, cast, Dict
+from urllib.parse import urlparse
 
-from sqlalchemy.engine import make_url
 from cacheme.interfaces import Cachable, CachedData
 
 from cacheme.serializer import Serializer
@@ -12,12 +12,14 @@ from cacheme.storages.sqldb import SQLStorage
 
 
 class SQLiteStorage(SQLStorage):
-    def __init__(self, address: str, initialize: bool = False, pool_size: int = 10):
-        super().__init__(address, initialize=initialize)
-        dsn = make_url(self.address)
-        self.db = dsn.database or ""
+    def __init__(self, address: str, table: str, pool_size: int = 10):
+        super().__init__(address, table=table)
+        url = urlparse(self.address)
+        db = url.path[1:]
+        self.db = db
         self.sem = asyncio.BoundedSemaphore(pool_size)
         self.pool: List[sqlite3.Connection] = []
+        self.table = table
 
     async def _connect(self):
         pass
@@ -56,7 +58,10 @@ class SQLiteStorage(SQLStorage):
             cur.execute("pragma journal_mode=wal")
         if cur is None:
             cur = conn.cursor()
-        cur.execute("select * from cacheme_data where key=?", (key,))
+        cur.execute(
+            f"select * from {self.table} where key=?",
+            (key,),
+        )
         data = cur.fetchone()
         cur.close()
         return conn, data
@@ -76,8 +81,8 @@ class SQLiteStorage(SQLStorage):
             cur.execute("pragma journal_mode=wal")
         if cur is None:
             cur = conn.cursor()
-        sql = "SELECT * FROM cacheme_data WHERE key in ({0})".format(
-            ", ".join("?" for _ in keys)
+        sql = (
+            f"SELECT * FROM {self.table} WHERE key in ({', '.join('?' for _ in keys)})"
         )
         cur.execute(sql, keys)
         data = cur.fetchall()
@@ -102,7 +107,7 @@ class SQLiteStorage(SQLStorage):
         if cur is None:
             cur = conn.cursor()
         cur.execute(
-            "insert into cacheme_data(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
+            f"insert into {self.table}(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
             (
                 key,
                 value,

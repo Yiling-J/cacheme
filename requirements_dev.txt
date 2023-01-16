@@ -4,7 +4,6 @@ pydantic==1.10.2
 pytest==7.2.0
 pytest-asyncio==0.20.3
 redis==4.4.0
-SQLAlchemy==1.4.41
 xxhash==3.1.0
 typing_extensions==4.4.0
 types-redis==4.3.21.7

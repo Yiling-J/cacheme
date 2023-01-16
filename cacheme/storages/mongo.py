@@ -7,17 +7,15 @@ from cacheme.storages.base import BaseStorage
 
 
 class MongoStorage(BaseStorage):
-    def __init__(self, address: str, initialize: bool = False):
+    def __init__(self, address: str, database: str, collection: str):
         super().__init__(address=address)
         self.address = address
-        self.initialize = initialize
+        self.database = database
+        self.collection = collection
 
     async def connect(self):
         client = mongo.AsyncIOMotorClient(self.address)
-        self.table = client.cacheme.data
-        if self.initialize:
-            await self.table.create_index("key", unique=True)
-            await self.table.create_index("expire")
+        self.table = client[self.database][self.collection]
 
     async def get_by_key(self, key: str) -> Any:
         return await self.table.find_one({"key": key})

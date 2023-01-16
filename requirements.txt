@@ -1,6 +1,5 @@
 msgpack==1.0.4
 pydantic==1.10.2
-SQLAlchemy==1.4.41
 xxhash==3.1.0
 typing_extensions==4.4.0
 cacheme_utils==0.1.0
