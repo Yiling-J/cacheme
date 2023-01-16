@@ -101,6 +101,24 @@ async def test_get():
 
 
 @pytest.mark.asyncio
+async def test_get_override():
+    await init_storages({"local": Storage(url="local://tlfu", size=50)})
+    counter = 0
+
+    async def override(node: FooNode) -> str:
+        nonlocal counter
+        counter += 1
+        return f"{node.user_id}-{node.foo_id}-{node.level}-o"
+
+    result = await get(FooNode(user_id="a", foo_id="1", level=10), override)
+    assert counter == 1
+    assert result == "a-1-10-o"
+    result = await get(FooNode(user_id="a", foo_id="1", level=10), override)
+    assert fn1_counter == 1
+    assert result == "a-1-10-o"
+
+
+@pytest.mark.asyncio
 async def test_get_all():
     global fn1_counter
     await init_storages({"local": Storage(url="local://tlfu", size=50)})

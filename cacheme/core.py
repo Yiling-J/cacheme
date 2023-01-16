@@ -27,6 +27,7 @@ from cacheme.data import get_tag_storage
 
 
 C = TypeVar("C")
+CB = TypeVar("CB", bound=Cachable)
 C_co = TypeVar("C_co", covariant=True)
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -45,7 +46,17 @@ _lockers: Dict[str, Locker] = {}
 
 
 # local storage(if enable) -> storage -> cache miss, load from source
+@overload
 async def get(node: Cachable[C_co]) -> C_co:
+    ...
+
+
+@overload
+async def get(node: CB, load_fn: Callable[[CB], Awaitable[R]]) -> R:
+    ...
+
+
+async def get(node: Cachable, load_fn=None):
     storage = node.get_stroage()
     metrics = node.get_metrics()
     result = None
@@ -70,7 +81,10 @@ async def get(node: Cachable[C_co]) -> C_co:
             if locker.value is None:
                 now = time_ns()
                 try:
-                    loaded = await node.load()
+                    if load_fn is not None:
+                        loaded = await load_fn(node)
+                    else:
+                        loaded = await node.load()
                 except Exception as e:
                     metrics.load_failure_count += 1
                     metrics.total_load_time += time_ns() - now
@@ -86,7 +100,7 @@ async def get(node: Cachable[C_co]) -> C_co:
                     exist = doorkeeper.contains(node.full_key())
                     if not exist:
                         doorkeeper.put(node.full_key())
-                        return cast(C_co, result)
+                        return result.data
                 await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
                 if local_storage is not None:
                     await local_storage.set(node, loaded, node.get_ttl(), None)
@@ -98,7 +112,7 @@ async def get(node: Cachable[C_co]) -> C_co:
     else:
         metrics.hit_count += 1
 
-    return cast(C_co, result.data)
+    return result.data
 
 
 async def invalid_tag(tag: str):
