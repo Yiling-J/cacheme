@@ -78,8 +78,8 @@ async def test_storages(storage):
     filename = ""
     if isinstance(s, SQLiteStorage):
         filename = s.address.split("///")[-1]
-    await setup_storage(s)
     await s.connect()
+    await setup_storage(s)
     node = FooNode(id="foo")
     await s.set(
         node=node,
