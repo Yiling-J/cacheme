@@ -8,7 +8,7 @@ import pytest
 
 from cacheme.models import Node
 from cacheme.serializer import PickleSerializer
-from cacheme.storages.local import TLFUStorage
+from cacheme.storages.local import LocalStorage
 from cacheme.storages.mongo import MongoStorage
 from cacheme.storages.mysql import MySQLStorage
 from cacheme.storages.postgres import PostgresStorage
@@ -31,7 +31,7 @@ class FooNode(Node):
 @pytest.mark.parametrize(
     "storage",
     [
-        {"s": TLFUStorage(200), "local": True},
+        {"s": LocalStorage(200, "local://tlfu"), "local": True},
         {
             "s": SQLiteStorage(
                 f"sqlite:///test{random.randint(0, 50000)}",

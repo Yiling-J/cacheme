@@ -64,7 +64,7 @@ class Bar:
 
 @pytest.mark.asyncio
 async def test_memoize():
-    await init_storages({"local": Storage(url="tlfu://", size=50)})
+    await init_storages({"local": Storage(url="local://tlfu", size=50)})
     assert fn1_counter == 0
     result = await fn1(1, "2")
     assert result == "1/2/apple"
@@ -89,7 +89,7 @@ async def test_memoize():
 @pytest.mark.asyncio
 async def test_get():
     global fn1_counter
-    await init_storages({"local": Storage(url="tlfu://", size=50)})
+    await init_storages({"local": Storage(url="local://tlfu", size=50)})
     fn1_counter = 0
     result = await get(FooNode(user_id="a", foo_id="1", level=10))
     assert fn1_counter == 1
@@ -102,7 +102,7 @@ async def test_get():
 @pytest.mark.asyncio
 async def test_get_all():
     global fn1_counter
-    await init_storages({"local": Storage(url="tlfu://", size=50)})
+    await init_storages({"local": Storage(url="local://tlfu", size=50)})
     fn1_counter = 0
     nodes = [
         FooNode(user_id="c", foo_id="2", level=1),
@@ -162,7 +162,7 @@ def _(a: int, b: str) -> FooNode2:
 
 @pytest.mark.asyncio
 async def test_memoize_cocurrency():
-    await init_storages({"local": Storage(url="tlfu://", size=50)})
+    await init_storages({"local": Storage(url="local://tlfu", size=50)})
     assert fn3_counter == 0
     results = await gather(*[fn3(a=1, b="2") for i in range(50)])
     assert len(results) == 50
@@ -175,7 +175,7 @@ async def test_memoize_cocurrency():
 async def test_get_cocurrency():
     global fn1_counter
     fn1_counter = 0
-    await init_storages({"local": Storage(url="tlfu://", size=50)})
+    await init_storages({"local": Storage(url="local://tlfu", size=50)})
     results = await gather(
         *[get(FooNode(user_id="b", foo_id="a", level=10)) for i in range(50)]
     )
@@ -212,7 +212,7 @@ class BarNode(Node):
 @pytest.mark.asyncio
 async def test_invalid_tag():
     filename = "testtag"
-    await init_storages({"local": Storage(url="tlfu://", size=100)})
+    await init_storages({"local": Storage(url="local://tlfu", size=100)})
     await init_tag_storage(Storage(url=f"sqlite:///{filename}", initialize=True))
     await get(BarNode(name="bar1"))
     await get(BarNode(name="bar2"))

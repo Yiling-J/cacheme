@@ -9,7 +9,7 @@ from datetime import timedelta, datetime
 
 class Storage:
     SUPPORTED_STORAGES = {
-        "tlfu": "cacheme.storages.local:TLFUStorage",
+        "local": "cacheme.storages.local:LocalStorage",
         "redis": "cacheme.storages.redis:RedisStorage",
         "sqlite": "cacheme.storages.sqlite:SQLiteStorage",
         "mongodb": "cacheme.storages.mongo:MongoStorage",

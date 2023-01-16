@@ -1,16 +1,24 @@
 from datetime import timedelta, datetime, timezone
 from typing import Any, Optional, List, Dict
+from urllib.parse import urlparse
 from cacheme.interfaces import CachedValue
 
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
-from cacheme_utils import TinyLfu
+from cacheme_utils import TinyLfu, Lru
 
 
-class TLFUStorage(BaseStorage):
-    def __init__(self, size: int, **options):
+POLICIES = {
+    "tlfu": TinyLfu,
+    "lru": Lru,
+}
+
+
+class LocalStorage(BaseStorage):
+    def __init__(self, size: int, address: str, **options):
+        policy_name = urlparse(address).netloc
         self.cache: Dict[str, CachedValue] = {}
-        self.policy = TinyLfu(size)
+        self.policy = POLICIES[policy_name](size)
 
     async def connect(self):
         return
