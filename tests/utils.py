@@ -19,6 +19,6 @@ async def setup_storage(storage: Any):
 
     if isinstance(storage, MongoStorage):
         client = mongo.AsyncIOMotorClient(storage.collection)
-        table = client[storage.database][storage.table]
+        table = client[storage.database][storage.collection]
         await table.create_index("key", unique=True)
         await table.create_index("expire")
