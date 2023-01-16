@@ -10,6 +10,7 @@ from cacheme.data import init_storages, init_tag_storage
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
+from tests.utils import setup_storage
 
 fn1_counter = 0
 fn2_counter = 0
@@ -213,7 +214,9 @@ class BarNode(Node):
 async def test_invalid_tag():
     filename = "testtag"
     await init_storages({"local": Storage(url="local://tlfu", size=100)})
-    await init_tag_storage(Storage(url=f"sqlite:///{filename}", initialize=True))
+    tag_storage = Storage(url=f"sqlite:///{filename}", table="cacheme_tag")
+    await setup_storage(tag_storage._storage)
+    await init_tag_storage(tag_storage)
     await get(BarNode(name="bar1"))
     await get(BarNode(name="bar2"))
     assert bar_counter == 2

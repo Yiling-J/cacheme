@@ -3,7 +3,7 @@ import json
 import random
 import time
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, cast
 
 from benchmarks.zipf import Zipf
 from cacheme.core import get
@@ -21,6 +21,7 @@ from cacheme.serializer import (
     PickleSerializer,
 )
 from cacheme.storages import Storage
+from tests import utils as test_utils
 
 payload = lambda uid: {
     "uid": uid,
@@ -56,18 +57,27 @@ async def simple_get(i: int):
 
 async def setup_storage():
     storages: Dict[str, StorageP] = {
-        "local": Storage(url="tlfu://", size=1000),
+        "local": Storage(url="local://tlfu", size=1000),
         "sqlite": Storage(
             f"sqlite:///test{random.randint(0, 50000)}",
-            initialize=True,
+            table="test",
             pool_size=10,
         ),
-        "mysql": Storage("mysql://username:password@localhost:3306/test"),
-        "postgres": Storage("postgresql://username:password@127.0.0.1:5432/test"),
+        "mysql": Storage("mysql://username:password@localhost:3306/test", table="test"),
+        "postgres": Storage(
+            "postgresql://username:password@127.0.0.1:5432/test", table="test"
+        ),
         "redis": Storage("redis://localhost:6379"),
-        "mongo": Storage("mongodb://test:password@localhost:27017"),
+        "mongo": Storage(
+            "mongodb://test:password@localhost:27017",
+            database="test",
+            collection="test",
+        ),
     }
     await init_storages(storages)
+    for storage in storages.values():
+        s = cast(Storage, storage)
+        await test_utils.setup_storage(s._storage)
     await init_tag_storage(Storage("redis://localhost:6379"))
 
 
@@ -151,7 +161,7 @@ async def bench_all():
 
     print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
-    _storages["local"] = Storage(url="tlfu://", size=1000)
+    _storages["local"] = Storage(url="local://tlfu", size=1000)
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")

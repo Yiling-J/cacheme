@@ -14,6 +14,7 @@ from cacheme.storages.mysql import MySQLStorage
 from cacheme.storages.postgres import PostgresStorage
 from cacheme.storages.redis import RedisStorage
 from cacheme.storages.sqlite import SQLiteStorage
+from tests.utils import setup_storage
 
 
 @dataclass
@@ -35,21 +36,21 @@ class FooNode(Node):
         {
             "s": SQLiteStorage(
                 f"sqlite:///test{random.randint(0, 50000)}",
-                initialize=True,
+                table="data",
             ),
             "local": True,
         },
         {
             "s": MySQLStorage(
                 "mysql://username:password@localhost:3306/test",
-                initialize=True,
+                table="data",
             ),
             "local": False,
         },
         {
             "s": PostgresStorage(
                 f"postgresql://username:password@127.0.0.1:5432/test",
-                initialize=True,
+                table="data",
             ),
             "local": False,
         },
@@ -61,7 +62,9 @@ class FooNode(Node):
         },
         {
             "s": MongoStorage(
-                "mongodb://test:password@localhost:27017", initialize=True
+                "mongodb://test:password@localhost:27017",
+                database="test",
+                collection="data",
             ),
             "local": False,
         },
@@ -76,6 +79,7 @@ async def test_storages(storage):
     if isinstance(s, SQLiteStorage):
         filename = s.address.split("///")[-1]
     await s.connect()
+    await setup_storage(s)
     node = FooNode(id="foo")
     await s.set(
         node=node,

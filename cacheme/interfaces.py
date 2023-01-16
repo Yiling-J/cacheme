@@ -155,3 +155,17 @@ class Memoizable(MetaData, Protocol):
         cls, nodes: Sequence["Cachable[C]"]
     ) -> Sequence[Tuple["Cachable", C]]:
         ...
+
+
+class Policy(Protocol):
+    def __init__(self, size: int):
+        ...
+
+    def set(self, key: str) -> Optional[str]:
+        ...
+
+    def remove(self, key: str):
+        ...
+
+    def access(self, key: str):
+        ...
