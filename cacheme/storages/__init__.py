@@ -22,7 +22,7 @@ class Storage:
         u = urlparse(url)
         name = self.SUPPORTED_STORAGES.get(u.scheme)
         if name is None:
-            raise
+            raise Exception(f"storage:{u.scheme} not found")
         storage_cls = self.__import(name)
         assert issubclass(storage_cls, BaseStorage)
         self._storage = storage_cls(address=url, **options)
