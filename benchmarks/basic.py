@@ -7,7 +7,7 @@ from typing import Dict, List, cast
 
 from benchmarks.zipf import Zipf
 from cacheme.core import get, stats
-from cacheme.data import _storages, init_storages, init_tag_storage
+from cacheme.data import init_storages, set_storage_by_name
 from cacheme.interfaces import Serializer
 from cacheme.interfaces import Storage as StorageP
 from cacheme.models import Metrics, Node
@@ -77,7 +77,6 @@ async def setup_storage():
     for storage in storages.values():
         s = cast(Storage, storage)
         await test_utils.setup_storage(s._storage)
-    await init_tag_storage(Storage("redis://localhost:6379"))
 
 
 def update_node(serializer: str, storage: str, compressed: bool, payload_size: str):
@@ -156,18 +155,9 @@ async def bench_all():
     await bench_zipf(10000, "mysql", "msgpack", False)
     # await bench_zipf(1000000, "sqlite", "msgpack", False)
 
-    print("========== READ+TAG ==========")
-    FooNode.tags = lambda self: [f"t:{self.uid}"]
-    await bench_zipf(10000, "local", "msgpack", False)
-    await bench_zipf(10000, "redis", "msgpack", False)
-    await bench_zipf(10000, "mongo", "msgpack", False)
-    await bench_zipf(10000, "postgres", "msgpack", False)
-    await bench_zipf(10000, "mysql", "msgpack", False)
-    FooNode.tags = lambda self: []
-
-    print("========== READ+WRITE LARGE ==========")
+    # print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
-    _storages["local"] = Storage(url="local://tlfu", size=1000)
+    set_storage_by_name("local", Storage(url="local://tlfu", size=1000))
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
