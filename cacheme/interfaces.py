@@ -93,9 +93,6 @@ class Storage(Protocol):
     async def remove(self, node: "Cachable"):
         ...
 
-    async def validate_tags(self, data: CachedData) -> bool:
-        ...
-
     async def set_all(
         self,
         data: Sequence[Tuple["Cachable", Any]],
@@ -155,9 +152,6 @@ class Cachable(MetaData, Protocol[C_co]):
     def key_hash(self) -> int:
         ...
 
-    def tags(self) -> List[str]:
-        ...
-
     async def load(self) -> C_co:
         ...
 
@@ -176,9 +170,6 @@ class Memoizable(MetaData, Protocol):
         ...
 
     def key_hash(self) -> int:
-        ...
-
-    def tags(self) -> List[str]:
         ...
 
     @classmethod

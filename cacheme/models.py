@@ -43,9 +43,6 @@ class Node(metaclass=MetaNode):
     def _keyh(self) -> int:
         return hash_string(self.full_key())
 
-    def tags(self) -> List[str]:
-        raise NotImplementedError()
-
     async def load(self):
         raise NotImplementedError()
 
@@ -89,15 +86,3 @@ class Node(metaclass=MetaNode):
         serializer: ClassVar[Optional[Serializer]] = None
         doorkeeper: ClassVar[Optional[DoorKeeper]] = None
         metrics: ClassVar[Metrics] = Metrics()
-
-
-class TagNode(Node):
-    def __init__(self, tag: str):
-        self.tag = tag
-
-    def full_key(self) -> str:
-        return f"cacheme:tags:{self.tag}"
-
-    class Meta(Node.Meta):
-        serializer = PickleSerializer()
-        storage = "__tag__"

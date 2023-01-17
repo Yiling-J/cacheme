@@ -4,7 +4,6 @@ from typing import Dict, List, Optional, Sequence, Tuple, cast
 from typing_extensions import Any
 
 from cacheme.interfaces import Cachable, CachedData, CachedValue
-from cacheme.models import TagNode
 from cacheme.serializer import Serializer
 
 
@@ -83,17 +82,6 @@ class BaseStorage:
 
     async def remove(self, node: Cachable):
         await self.remove_by_key(node.full_key())
-
-    async def validate_tags(self, data: CachedData) -> bool:
-        tag_nodes = []
-        tags = data.node.tags()
-        for t in tags:
-            tag_nodes.append(TagNode(t))
-        results = await self.get_all(tag_nodes, None)
-        for r in results:
-            if r[1].updated_at is not None and r[1].updated_at >= data.updated_at:
-                return False
-        return True
 
     async def get_all(
         self,

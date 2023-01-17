@@ -20,9 +20,8 @@ from typing import (
 
 from typing_extensions import ParamSpec, Self
 
-from cacheme.data import get_tag_storage
 from cacheme.interfaces import Cachable, CachedData, Memoizable, Metrics
-from cacheme.models import TagNode, get_nodes
+from cacheme.models import get_nodes
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)
@@ -59,70 +58,46 @@ async def get(node: Cachable, load_fn=None):
     metrics = node.get_metrics()
     result = None
     local_storage = node.get_local_cache()
-    locker = _lockers.get(node.full_key())
-    # already loading data for the key, just wait
-    if locker is not None:
-        async with locker.lock:
-            result = CachedData(
-                data=locker.value, node=node, updated_at=datetime.now(timezone.utc)
-            )
-    if result is None and local_storage is not None:
-        result = await local_storage.get(node, None)
-    if result is None:
-        result = await storage.get(node, node.get_seriaizer())
-    # get result from cache, check tags
-    if result is not None and len(node.tags()) > 0:
-        tag_storage = get_tag_storage()
-        valid = await tag_storage.validate_tags(
-            result,
-        )
-        if not valid:
-            await storage.remove(node)
-            result = None
-    if result is None:
-        metrics._miss_count += 1
-        locker = _lockers.setdefault(node.full_key(), Locker())
-        async with locker.lock:
-            if locker.value is None:
-                now = time_ns()
-                try:
-                    if load_fn is not None:
-                        loaded = await load_fn(node)
-                    else:
-                        loaded = await node.load()
-                except Exception as e:
-                    metrics._load_failure_count += 1
-                    metrics._total_load_time += time_ns() - now
-                    raise (e)
-                locker.value = loaded
-                metrics._load_success_count += 1
+    locker = _lockers.setdefault(node.full_key(), Locker())
+    async with locker.lock:
+        if locker.value is not None:
+            metrics._hit_count += 1
+            return locker.value.data
+        if local_storage is not None:
+            result = await local_storage.get(node, None)
+        if result is None:
+            result = await storage.get(node, node.get_seriaizer())
+        if result is None:
+            metrics._miss_count += 1
+            now = time_ns()
+            try:
+                if load_fn is not None:
+                    loaded = await load_fn(node)
+                else:
+                    loaded = await node.load()
+            except Exception as e:
+                metrics._load_failure_count += 1
                 metrics._total_load_time += time_ns() - now
-                result = CachedData(
-                    data=loaded, node=node, updated_at=datetime.now(timezone.utc)
-                )
-                doorkeeper = node.get_doorkeeper()
-                if doorkeeper is not None:
-                    exist = doorkeeper.contains(node.full_key())
-                    if not exist:
-                        doorkeeper.put(node.full_key())
-                        return result.data
-                await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
-                if local_storage is not None:
-                    await local_storage.set(node, loaded, node.get_ttl(), None)
-                _lockers.pop(node.full_key(), None)
-            else:
-                result = CachedData(
-                    data=locker.value, node=node, updated_at=datetime.now(timezone.utc)
-                )
-    else:
-        metrics._hit_count += 1
-
+                raise (e)
+            metrics._load_success_count += 1
+            metrics._total_load_time += time_ns() - now
+            result = CachedData(
+                data=loaded, node=node, updated_at=datetime.now(timezone.utc)
+            )
+            doorkeeper = node.get_doorkeeper()
+            if doorkeeper is not None:
+                exist = doorkeeper.contains(node.full_key())
+                if not exist:
+                    doorkeeper.put(node.full_key())
+                    return result.data
+            await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
+            if local_storage is not None:
+                await local_storage.set(node, loaded, node.get_ttl(), None)
+        else:
+            metrics._hit_count += 1
+        locker.value = result
+        _lockers.pop(node.full_key(), None)
     return result.data
-
-
-async def invalid_tag(tag: str):
-    storage = get_tag_storage()
-    await storage.set(TagNode(tag), None, ttl=None, serializer=TagNode.Meta.serializer)
 
 
 class Wrapper(Generic[P, R]):
