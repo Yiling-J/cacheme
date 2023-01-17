@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import datetime
-from typing import ClassVar, List, Optional, Sequence
+from typing import ClassVar, List, Optional, Sequence, Type, cast
 
 from typing_extensions import Any
 
 from cacheme.data import get_storage_by_name
-from cacheme.interfaces import (Cachable, DoorKeeper, Metrics, Serializer,
-                                Storage)
+from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
 from cacheme.serializer import PickleSerializer
 from cacheme.utils import cached_property, hash_string
 
-_nodes = []
+_nodes: List[Type[Cachable]] = []
+
+
+def get_nodes():
+    return _nodes
 
 
 class MetaNode(type):
@@ -19,7 +22,7 @@ class MetaNode(type):
         new = super().__new__(cls, name, bases, dct)
         internal = getattr(new.Meta, "internal", False)
         if internal == False:
-            _nodes.append(cls)
+            _nodes.append(cast(Type[Cachable], cls))
         return new
 
     class Meta:
@@ -74,8 +77,9 @@ class Node(metaclass=MetaNode):
     def get_doorkeeper(self) -> Optional[DoorKeeper]:
         return self.Meta.doorkeeper
 
-    def get_metrics(self) -> Metrics:
-        return self.Meta.metrics
+    @classmethod
+    def get_metrics(cls) -> Metrics:
+        return cls.Meta.metrics
 
     class Meta:
         version: ClassVar[str] = ""

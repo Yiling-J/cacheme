@@ -6,15 +6,19 @@ from dataclasses import dataclass
 from typing import Dict, List, cast
 
 from benchmarks.zipf import Zipf
-from cacheme.core import get
+from cacheme.core import get, stats
 from cacheme.data import _storages, init_storages, init_tag_storage
 from cacheme.interfaces import Serializer
 from cacheme.interfaces import Storage as StorageP
 from cacheme.models import Metrics, Node
-from cacheme.serializer import (CompressedJSONSerializer,
-                                CompressedMsgPackSerializer,
-                                CompressedPickleSerializer, JSONSerializer,
-                                MsgPackSerializer, PickleSerializer)
+from cacheme.serializer import (
+    CompressedJSONSerializer,
+    CompressedMsgPackSerializer,
+    CompressedPickleSerializer,
+    JSONSerializer,
+    MsgPackSerializer,
+    PickleSerializer,
+)
 from cacheme.storages import Storage
 from tests import utils as test_utils
 
@@ -131,7 +135,14 @@ async def bench_zipf(
     if storage == "local":
         result["serializer"] = None
     print(result)
-    print(FooNode.Meta.metrics.__dict__)
+    s = stats(FooNode)
+    print(
+        {
+            "requests_count": s.request_count(),
+            "load_count": s.load_count(),
+            "hit_rate": s.hit_rate(),
+        }
+    )
     print("-" * 50)
 
 

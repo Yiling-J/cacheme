@@ -2,15 +2,27 @@ import types
 from asyncio import Lock
 from datetime import datetime, timezone
 from time import time_ns
-from typing import (Any, Awaitable, Callable, Dict, Generic, Optional,
-                    OrderedDict, Sequence, Type, TypeVar, cast, overload)
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    OrderedDict,
+    Sequence,
+    Type,
+    TypeVar,
+    cast,
+    overload,
+    List,
+)
 
 from typing_extensions import ParamSpec, Self
 
 from cacheme.data import get_tag_storage
-from cacheme.interfaces import Cachable, CachedData, Memoizable
-from cacheme.models import TagNode
-from cacheme.serializer import MsgPackSerializer, PickleSerializer
+from cacheme.interfaces import Cachable, CachedData, Memoizable, Metrics
+from cacheme.models import TagNode, get_nodes
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)
@@ -61,7 +73,7 @@ async def get(node: Cachable, load_fn=None):
             await storage.remove(node)
             result = None
     if result is None:
-        metrics.miss_count += 1
+        metrics._miss_count += 1
         locker = _lockers.setdefault(node.full_key(), Locker())
         async with locker.lock:
             if locker.value is None:
@@ -72,12 +84,12 @@ async def get(node: Cachable, load_fn=None):
                     else:
                         loaded = await node.load()
                 except Exception as e:
-                    metrics.load_failure_count += 1
-                    metrics.total_load_time += time_ns() - now
+                    metrics._load_failure_count += 1
+                    metrics._total_load_time += time_ns() - now
                     raise (e)
                 locker.value = loaded
-                metrics.load_success_count += 1
-                metrics.total_load_time += time_ns() - now
+                metrics._load_success_count += 1
+                metrics._total_load_time += time_ns() - now
                 result = CachedData(
                     data=loaded, node=node, updated_at=datetime.now(timezone.utc)
                 )
@@ -96,7 +108,7 @@ async def get(node: Cachable, load_fn=None):
                     data=locker.value, node=node, updated_at=datetime.now(timezone.utc)
                 )
     else:
-        metrics.hit_count += 1
+        metrics._hit_count += 1
 
     return result.data
 
@@ -190,20 +202,28 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
     for k, v in cached:
         pending_nodes.remove(k)
         s[k.key_hash()] = cast(C, v.data)
-    metrics.miss_count += len(pending_nodes)
+    metrics._miss_count += len(pending_nodes)
     now = time_ns()
     try:
         ns = cast(Sequence[Cachable], pending_nodes.list)
         loaded = await node_cls.load_all(ns)
     except Exception as e:
-        metrics.load_failure_count += len(pending_nodes)
-        metrics.total_load_time += time_ns() - now
+        metrics._load_failure_count += len(pending_nodes)
+        metrics._total_load_time += time_ns() - now
         raise (e)
-    metrics.load_success_count += len(pending_nodes)
-    metrics.total_load_time += time_ns() - now
+    metrics._load_success_count += len(pending_nodes)
+    metrics._total_load_time += time_ns() - now
     if local_storage is not None:
         await local_storage.set_all(loaded, ttl, serializer)
     await storage.set_all(loaded, ttl, serializer)
     for node, value in loaded:
         s[node.key_hash()] = cast(C, value)
     return cast(Sequence[C], tuple(s.values()))
+
+
+async def nodes() -> List[Type[Cachable]]:
+    return get_nodes()
+
+
+def stats(node: Type[Cachable]) -> Metrics:
+    return node.get_metrics()

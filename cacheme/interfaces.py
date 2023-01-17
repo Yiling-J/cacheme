@@ -12,14 +12,45 @@ C_co = TypeVar("C_co", covariant=True)
 # - When an exception is thrown while loading an entry,
 # miss_count and load_failure_count are incremented, and the total loading
 # time, in nanoseconds, is added to total_load_time
-# - (local cache only)When an entry is evicted from the cache, eviction_count is incremented
 class Metrics:
-    hit_count: int = 0
-    miss_count: int = 0
-    load_success_count: int = 0
-    load_failure_count: int = 0
-    eviction_count: int = 0
-    total_load_time: int = 0
+    _hit_count: int = 0
+    _miss_count: int = 0
+    _load_success_count: int = 0
+    _load_failure_count: int = 0
+    _total_load_time: int = 0
+
+    def request_count(self) -> int:
+        return self._hit_count + self._miss_count
+
+    def hit_count(self) -> int:
+        return self._hit_count
+
+    def hit_rate(self) -> float:
+        return self._hit_count / self.request_count()
+
+    def miss_count(self) -> int:
+        return self._miss_count
+
+    def miss_rate(self) -> float:
+        return self._miss_count / self.request_count()
+
+    def load_success_count(self) -> int:
+        return self._load_success_count
+
+    def load_failure_count(self) -> int:
+        return self._load_failure_count
+
+    def load_failure_rate(self) -> float:
+        return self._load_failure_count / self.load_count()
+
+    def load_count(self) -> int:
+        return self._load_failure_count + self._load_success_count
+
+    def total_load_time(self) -> int:
+        return self._total_load_time
+
+    def average_load_time(self) -> float:
+        return self._total_load_time / self.load_count()
 
 
 # used in local cache
@@ -109,7 +140,8 @@ class MetaData(Protocol):
     def get_doorkeeper(self) -> Optional[DoorKeeper]:
         ...
 
-    def get_metrics(self) -> Metrics:
+    @classmethod
+    def get_metrics(cls) -> Metrics:
         ...
 
 
