@@ -59,7 +59,14 @@ async def get(node: Cachable, load_fn=None):
     metrics = node.get_metrics()
     result = None
     local_storage = node.get_local_cache()
-    if local_storage is not None:
+    locker = _lockers.get(node.full_key())
+    # already loading data for the key, just wait
+    if locker is not None:
+        async with locker.lock:
+            result = CachedData(
+                data=locker.value, node=node, updated_at=datetime.now(timezone.utc)
+            )
+    if result is None and local_storage is not None:
         result = await local_storage.get(node, None)
     if result is None:
         result = await storage.get(node, node.get_seriaizer())
