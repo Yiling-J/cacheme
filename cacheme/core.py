@@ -1,5 +1,5 @@
 import types
-from asyncio import Lock
+from asyncio import Event
 from datetime import datetime, timezone
 from time import time_ns
 from typing import (
@@ -31,11 +31,11 @@ R = TypeVar("R")
 
 
 class Locker:
-    lock: Lock
+    lock: Event
     value: Any
 
     def __init__(self):
-        self.lock = Lock()
+        self.lock = Event()
         self.value = None
 
 
@@ -58,11 +58,14 @@ async def get(node: Cachable, load_fn=None):
     metrics = node.get_metrics()
     result = None
     local_storage = node.get_local_cache()
-    locker = _lockers.setdefault(node.full_key(), Locker())
-    async with locker.lock:
-        if locker.value is not None:
-            metrics._hit_count += 1
-            return locker.value.data
+    locker = _lockers.get(node.full_key(), None)
+    if locker is not None:
+        await locker.lock.wait()
+        result = locker.value
+        metrics._hit_count += 1
+    else:
+        locker = Locker()
+        _lockers[node.full_key()] = locker
         if local_storage is not None:
             result = await local_storage.get(node, None)
         if result is None:
@@ -96,6 +99,7 @@ async def get(node: Cachable, load_fn=None):
         else:
             metrics._hit_count += 1
         locker.value = result
+        locker.lock.set()
         _lockers.pop(node.full_key(), None)
     return result.data
 
