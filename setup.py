@@ -1,6 +1,6 @@
 from setuptools import setup
 
-description = 'A memoized/cache decorator for Python using redis.'
+description = "Async caching framework"
 
 
 setup(
@@ -9,16 +9,26 @@ setup(
     author="Yiling",
     author_email="njjyl723@gmail.com",
     license="BSD-3-Clause",
-    version='v0.1.1',
+    version="v0.2.0",
     packages=[
         "cacheme",
     ],
     description=description,
-    python_requires=">=3.5",
+    python_requires=">=3.7",
     install_requires=[
-        "redis>=3.0.0",
+        "msgpack",
+        "pydantic",
+        "xxhash",
+        "typing_extensions",
+        "cacheme_utils",
     ],
     zip_safe=False,
+    extras_require={
+        "postgresql": ["asyncpg"],
+        "mysql": ["aiomysql"],
+        "redis": ["redis"],
+        "mongo": ["motor"],
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Web Environment",
