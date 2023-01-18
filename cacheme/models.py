@@ -23,10 +23,11 @@ class MetaNode(type):
         internal = getattr(new.Meta, "internal", False)
         if internal == False:
             _nodes.append(cast(Type[Cachable], cls))
+            new.Meta.metrics = Metrics()
         return new
 
     class Meta:
-        ...
+        metrics: ClassVar[Metrics]
 
 
 class Node(metaclass=MetaNode):
@@ -85,4 +86,4 @@ class Node(metaclass=MetaNode):
         local_cache: ClassVar[Optional[str]] = None
         serializer: ClassVar[Optional[Serializer]] = None
         doorkeeper: ClassVar[Optional[DoorKeeper]] = None
-        metrics: ClassVar[Metrics] = Metrics()
+        metrics: ClassVar[Metrics]

@@ -5,7 +5,7 @@ from typing import List
 
 import pytest
 
-from cacheme.core import Memoize, get, get_all
+from cacheme.core import Memoize, get, get_all, stats
 from cacheme.data import init_storages
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
@@ -195,3 +195,36 @@ async def test_get_cocurrency():
     for r in results:
         assert r == "b-a-10"
     assert fn1_counter == 1
+
+
+@dataclass
+class StatsNode(Node):
+    id: str
+
+    def key(self) -> str:
+        return f"{self.id}"
+
+    async def load(self) -> str:
+        return f"{self.id}"
+
+    class Meta(Node.Meta):
+        version = "v1"
+        storage = "local"
+
+
+@pytest.mark.asyncio
+async def test_stats():
+    await init_storages({"local": Storage(url="local://lru", size=100)})
+    await get(StatsNode("a"))
+    await get(StatsNode("b"))
+    await get(StatsNode("c"))
+    await get(StatsNode("a"))
+    await get(StatsNode("d"))
+    metrics = stats(StatsNode)
+    assert metrics.request_count() == 5
+    assert metrics.hit_count() == 1
+    assert metrics.load_count() == 4
+    assert metrics.hit_rate() == 1 / 5
+    assert metrics.load_success_count() == 4
+    assert metrics.miss_count() == 4
+    assert metrics.miss_rate() == 4 / 5

@@ -40,9 +40,6 @@ class FooNode(Node):
     async def load(self) -> Dict:
         return payload(self.uid)
 
-    def tags(self) -> List[str]:
-        return []
-
     class Meta(Node.Meta):
         version = "v1"
         storage = "test"
@@ -155,7 +152,7 @@ async def bench_all():
     await bench_zipf(10000, "mysql", "msgpack", False)
     # await bench_zipf(1000000, "sqlite", "msgpack", False)
 
-    # print("========== READ+WRITE LARGE ==========")
+    print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
     set_storage_by_name("local", Storage(url="local://tlfu", size=1000))
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
