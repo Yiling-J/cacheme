@@ -1,0 +1,43 @@
+{
+    "_id": "63c956f065bf6fafd365f977",
+    "index": 0,
+    "guid": "7876d7af-1b0c-4cff-9a23-9239f9652f16",
+    "isActive": true,
+    "balance": "$3,738.42",
+    "picture": "http://placehold.it/32x32",
+    "age": 36,
+    "eyeColor": "green",
+    "name": "Wilkerson Wheeler",
+    "gender": "male",
+    "company": "TRASOLA",
+    "email": "wilkersonwheeler@trasola.com",
+    "phone": "+1 (982) 534-2287",
+    "address": "612 Beekman Place, Heil, Alabama, 1778",
+    "latitude": -12.695606,
+    "longitude": -177.70091,
+    "tags": [
+        "sint",
+        "ut",
+        "consectetur",
+        "esse",
+        "deserunt",
+        "cupidatat",
+        "ipsum"
+    ],
+    "friends": [
+        {
+            "id": 0,
+            "name": "Heather Nolan"
+        },
+        {
+            "id": 1,
+            "name": "Rivera Foley"
+        },
+        {
+            "id": 2,
+            "name": "Billie Gregory"
+        }
+    ],
+    "greeting": "Hello, Wilkerson Wheeler! You have 6 unread messages.",
+    "favoriteFruit": "banana"
+}

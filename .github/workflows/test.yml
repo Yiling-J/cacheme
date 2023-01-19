@@ -80,4 +80,4 @@ jobs:
           CI: "TRUE"
         run: "pytest"
       - name: "Run benchmarks"
-        run: "python -m benchmarks.basic"
+        run: "pytest --benchmark-only"
