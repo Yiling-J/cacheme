@@ -5,11 +5,9 @@ from cacheme.interfaces import Storage
 _storages: Dict[str, Storage] = {}
 
 
-async def init_storages(storages: Dict[str, Storage]):
-    global _storages
-    _storages = storages
-    for v in storages.values():
-        await v.connect()
+async def register_storage(name: str, storage: Storage):
+    _storages[name] = storage
+    await storage.connect()
 
 
 def get_storage_by_name(name: str) -> Storage:
@@ -17,5 +15,5 @@ def get_storage_by_name(name: str) -> Storage:
     return _storages[name]
 
 
-def set_storage_by_name(name: str, storage: Storage):
-    _storages[name] = storage
+def list_storages() -> Dict[str, Storage]:
+    return _storages

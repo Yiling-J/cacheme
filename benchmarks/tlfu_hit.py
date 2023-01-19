@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from asyncpg.connection import asyncio
 from benchmarks.zipf import Zipf
-from cacheme.data import init_storages
+from cacheme.data import register_storage
 from cacheme.interfaces import Metrics
 from cacheme.models import Node
 from cacheme.core import get, stats
@@ -29,7 +29,7 @@ async def simple_get(i: int):
 
 
 async def bench_size(size: int, policy: str):
-    await init_storages({"local": Storage(url=f"local://{policy}", size=size)})
+    await register_storage("local", Storage(url=f"local://{policy}", size=size))
     z = Zipf(1.0001, 10, 100000)
     FooNode.Meta.metrics = Metrics()
     for i in range(10000):
