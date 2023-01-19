@@ -7,9 +7,8 @@ from typing import Dict, List, cast
 
 from benchmarks.zipf import Zipf
 from cacheme.core import get, stats
-from cacheme.data import init_storages, set_storage_by_name
+from cacheme.data import register_storage, list_storages
 from cacheme.interfaces import Serializer
-from cacheme.interfaces import Storage as StorageP
 from cacheme.models import Metrics, Node
 from cacheme.serializer import (
     CompressedJSONSerializer,
@@ -52,26 +51,33 @@ async def simple_get(i: int):
 
 
 async def setup_storage():
-    storages: Dict[str, StorageP] = {
-        "local": Storage(url="local://tlfu", size=1000),
-        "sqlite": Storage(
+    await register_storage("local", Storage(url="local://tlfu", size=1000))
+    await register_storage(
+        "sqlite",
+        Storage(
             f"sqlite:///test{random.randint(0, 50000)}",
             table="test",
             pool_size=10,
         ),
-        "mysql": Storage("mysql://username:password@localhost:3306/test", table="test"),
-        "postgres": Storage(
-            "postgresql://username:password@127.0.0.1:5432/test", table="test"
-        ),
-        "redis": Storage("redis://localhost:6379"),
-        "mongo": Storage(
+    )
+    await register_storage(
+        "mysql", Storage("mysql://username:password@localhost:3306/test", table="test")
+    )
+    await register_storage(
+        "postgres",
+        Storage("postgresql://username:password@127.0.0.1:5432/test", table="test"),
+    )
+    await register_storage("redis", Storage("redis://localhost:6379"))
+    await register_storage(
+        "mongo",
+        Storage(
             "mongodb://test:password@localhost:27017",
             database="test",
             collection="test",
         ),
-    }
-    await init_storages(storages)
-    for storage in storages.values():
+    )
+
+    for storage in list_storages().values():
         s = cast(Storage, storage)
         await test_utils.setup_storage(s._storage)
 
@@ -154,7 +160,7 @@ async def bench_all():
 
     print("========== READ+WRITE LARGE ==========")
     FooNode.Meta.version = "v2"
-    set_storage_by_name("local", Storage(url="local://tlfu", size=1000))
+    await register_storage("local", Storage(url="local://tlfu", size=1000))
     await bench_zipf(10000, "local", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "redis", "msgpack", False, payload_size="large")
     await bench_zipf(10000, "mongo", "msgpack", False, payload_size="large")
