@@ -58,9 +58,6 @@ class Storage:
     async def remove(self, node: Cachable):
         return await self._storage.remove(node)
 
-    async def validate_tags(self, data: CachedData) -> bool:
-        return await self._storage.validate_tags(data)
-
     async def set_all(
         self,
         data: Sequence[Tuple[Cachable, Any]],

@@ -10,9 +10,7 @@ setup(
     author_email="njjyl723@gmail.com",
     license="BSD-3-Clause",
     version="v0.2.0",
-    packages=[
-        "cacheme",
-    ],
+    packages=["cacheme", "cacheme.storages"],
     description=description,
     python_requires=">=3.7",
     install_requires=[
