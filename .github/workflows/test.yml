@@ -78,6 +78,6 @@ jobs:
       - name: "Run tests"
         env:
           CI: "TRUE"
-        run: "pytest"
+        run: "pytest --benchmark-skip"
       - name: "Run benchmarks"
         run: "pytest --benchmark-only"
