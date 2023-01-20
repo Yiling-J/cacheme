@@ -2,7 +2,7 @@ import pytest
 import uuid
 import asyncio
 import json
-from cacheme.core import get
+from cacheme.core import get, get_all
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
 from benchmarks.zipf import Zipf
@@ -42,6 +42,12 @@ class FooNode(Node):
 async def simple_get(i: int):
     result = await get(FooNode(uid=i))
     assert result["uid"] == i
+
+
+async def simple_get_all(i: int):
+    uids = [i for i in range(i, i + 10)]
+    result = await get_all([FooNode(uid=i) for i in uids])
+    assert [r["uid"] for r in result] == uids
 
 
 async def bench_with_zipf(tasks):
@@ -122,6 +128,29 @@ def test_read_only_async(benchmark, storage_provider, payload):
 
     def setup():
         return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+
+    benchmark.pedantic(
+        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        setup=setup,
+        rounds=3,
+    )
+    asyncio.events.set_event_loop(None)
+    loop.close()
+
+
+def test_read_write_batch_async(benchmark, storage_provider, payload):
+    loop = asyncio.events.new_event_loop()
+    asyncio.events.set_event_loop(loop)
+    _uuid = uuid.uuid4().int
+    table = f"test_{_uuid}"
+    storage = storage_provider(table)
+    FooNode.payload_fn = payload
+    FooNode.uuid = _uuid
+    loop.run_until_complete(storage_init(storage))
+    z = Zipf(1.0001, 10, REQUESTS // 10)
+
+    def setup():
+        return ([simple_get_all(z.get()) for _ in range(REQUESTS)],), {}
 
     benchmark.pedantic(
         lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
