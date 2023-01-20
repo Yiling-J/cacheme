@@ -80,4 +80,13 @@ jobs:
           CI: "TRUE"
         run: "pytest --benchmark-skip"
       - name: "Run benchmarks"
-        run: "pytest --benchmark-only"
+        run: "pytest --benchmark-only --benchmark-json output.json"
+      - name: "Publish benchmark result"
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: output.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          gh-repository: 'https://github.com/Yiling-J/cacheme-benchmark'
