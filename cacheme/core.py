@@ -209,25 +209,26 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
         s[k.full_key()] = cast(C, v.data)
     metrics._hit_count += len(cached)
     metrics._miss_count += len(pending_nodes)
-    now = time_ns()
-    try:
-        ns = cast(Sequence[Cachable], pending_nodes.list)
-        loaded = await node_cls.load_all(ns)
-    except Exception as e:
-        metrics._load_failure_count += len(pending_nodes)
+    if len(pending_nodes) > 0:
+        now = time_ns()
+        try:
+            ns = cast(Sequence[Cachable], pending_nodes.list)
+            loaded = await node_cls.load_all(ns)
+        except Exception as e:
+            metrics._load_failure_count += len(pending_nodes)
+            metrics._total_load_time += time_ns() - now
+            raise (e)
+        metrics._load_success_count += len(pending_nodes)
         metrics._total_load_time += time_ns() - now
-        raise (e)
-    metrics._load_success_count += len(pending_nodes)
-    metrics._total_load_time += time_ns() - now
-    for k, v in loaded:
-        locker = _lockers.pop(k.full_key(), None)
-        if locker is not None:
-            locker.value = v
-            locker.lock.set()
-        s[k.full_key()] = cast(C, v)
-    if local_storage is not None:
-        await local_storage.set_all(loaded, ttl, serializer)
-    await storage.set_all(loaded, ttl, serializer)
+        for k, v in loaded:
+            locker = _lockers.pop(k.full_key(), None)
+            if locker is not None:
+                locker.value = v
+                locker.lock.set()
+            s[k.full_key()] = cast(C, v)
+        if local_storage is not None:
+            await local_storage.set_all(loaded, ttl, serializer)
+        await storage.set_all(loaded, ttl, serializer)
     for n in waiting:
         node, locker = n
         await locker.lock.wait()
