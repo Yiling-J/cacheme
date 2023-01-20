@@ -103,20 +103,17 @@ async def test_storages(storage):
     result = await s.get(node, serializer=PickleSerializer())
     assert result is None
 
+    # get/set all
     nodes = []
     result = await s.get_all(nodes, PickleSerializer())
     assert result == []
-
+    data = []
     for i in [3, 1, 2]:
         node = FooNode(id=f"foo-{i}")
-        await s.set(
-            node=node,
-            value=f"bar-{i}",
-            ttl=timedelta(seconds=1),
-            serializer=PickleSerializer(),
-        )
         nodes.append(node)
+        data.append((node, f"bar-{i}"))
     nodes.append(FooNode(id=f"foo-foo"))
+    await s.set_all(data, ttl=timedelta(seconds=1), serializer=PickleSerializer())
     result = await s.get_all(nodes, PickleSerializer())
     assert len(result) == 3
     assert {r[0].key() for r in result} == {"foo-3", "foo-1", "foo-2"}

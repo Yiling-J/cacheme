@@ -50,3 +50,22 @@ class PostgresStorage(SQLStorage):
                 f"select * from {self.table} where key=any($1::text[])", keys
             )
         return {r["key"]: r for r in records}
+
+    async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
+        if self.pool is None:
+            raise
+        expire = None
+        if ttl is not None:
+            expire = datetime.now(timezone.utc) + ttl
+        async with self.pool.acquire() as conn:
+            await conn.executemany(
+                f"insert into {self.table}(key, value, expire) values($1,$2,$3) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
+                [
+                    (
+                        key,
+                        value,
+                        expire,
+                    )
+                    for key, value in data.items()
+                ],
+            )

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import motor.motor_asyncio as mongo
+from pymongo import UpdateOne
 
 from cacheme.storages.base import BaseStorage
 
@@ -42,3 +43,23 @@ class MongoStorage(BaseStorage):
     async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         results = await self.table.find({"key": {"$in": keys}}).to_list(None)
         return {r["key"]: r for r in results}
+
+    async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
+        expire = None
+        if ttl is not None:
+            expire = datetime.now(timezone.utc) + ttl
+        requests = [
+            UpdateOne(
+                {"key": k},
+                {
+                    "$set": {
+                        "value": v,
+                        "updated_at": datetime.now(timezone.utc),
+                        "expire": expire,
+                    }
+                },
+                True,
+            )
+            for k, v in data.items()
+        ]
+        await self.table.bulk_write(requests)
