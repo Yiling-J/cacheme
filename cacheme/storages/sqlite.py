@@ -132,7 +132,7 @@ class SQLiteStorage(SQLStorage):
             cur.execute("pragma journal_mode=wal")
         if cur is None:
             cur = conn.cursor()
-        cur.execute(
+        cur.executemany(
             f"insert into {self.table}(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
             [
                 (

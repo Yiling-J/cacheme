@@ -71,7 +71,7 @@ class MySQLStorage(SQLStorage):
             expire = datetime.now(timezone.utc) + ttl
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(
+                await cur.executemany(
                     f"insert into {self.table}(`key`, value, expire) values(%s,%s,%s) ON DUPLICATE KEY UPDATE value=VALUES(value), expire=VALUES(expire)",
                     [
                         (
