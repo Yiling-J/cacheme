@@ -82,6 +82,7 @@ jobs:
       - name: "Run benchmarks"
         run: "pytest --benchmark-only --benchmark-json output.json"
       - name: "Publish benchmark result"
+        if: ${{ matrix.python-version == '3.11' }}
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Cacheme Benchmark with pytest-benchmark
