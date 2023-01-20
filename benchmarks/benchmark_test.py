@@ -44,8 +44,8 @@ async def simple_get(i: int):
     assert result["uid"] == i
 
 
-async def bench_with_zipf(z):
-    await asyncio.gather(*[simple_get(z.get()) for i in range(REQUESTS)])
+async def bench_with_zipf(tasks):
+    await asyncio.gather(*tasks)
 
 
 @pytest.fixture(
@@ -94,8 +94,13 @@ def test_read_write_async(benchmark, storage_provider, payload):
     FooNode.uuid = _uuid
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
+
+    def setup():
+        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+
     benchmark.pedantic(
-        lambda: loop.run_until_complete(bench_with_zipf(z)),
+        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        setup=setup,
         rounds=3,
     )
     asyncio.events.set_event_loop(None)
