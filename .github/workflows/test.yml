@@ -87,6 +87,6 @@ jobs:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
           output-file-path: output.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.BENCH_TOKEN }}
           auto-push: true
           gh-repository: 'github.com/Yiling-J/cacheme-benchmark'
