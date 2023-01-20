@@ -105,3 +105,28 @@ def test_read_write_async(benchmark, storage_provider, payload):
     )
     asyncio.events.set_event_loop(None)
     loop.close()
+
+
+def test_read_only_async(benchmark, storage_provider, payload):
+    loop = asyncio.events.new_event_loop()
+    asyncio.events.set_event_loop(loop)
+    _uuid = uuid.uuid4().int
+    table = f"test_{_uuid}"
+    storage = storage_provider(table)
+    FooNode.payload_fn = payload
+    FooNode.uuid = _uuid
+    loop.run_until_complete(storage_init(storage))
+    z = Zipf(1.0001, 10, REQUESTS // 10)
+    # fill data
+    loop.run_until_complete(bench_with_zipf([simple_get(i) for i in range(REQUESTS)]))
+
+    def setup():
+        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+
+    benchmark.pedantic(
+        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        setup=setup,
+        rounds=3,
+    )
+    asyncio.events.set_event_loop(None)
+    loop.close()
