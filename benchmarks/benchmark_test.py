@@ -10,7 +10,8 @@ from cacheme.models import Node
 from cacheme.data import register_storage
 from dataclasses import dataclass
 from tests.utils import setup_storage
-from typing import Callable, ClassVar, Dict
+from typing import Callable, ClassVar, Dict, List
+from collections import OrderedDict
 
 
 REQUESTS = 10000
@@ -44,10 +45,9 @@ async def simple_get(i: int):
     assert result["uid"] == i
 
 
-async def simple_get_all(i: int):
-    uids = [i for i in range(i, i + 10)]
-    result = await get_all([FooNode(uid=i) for i in uids])
-    assert [r["uid"] for r in result] == uids
+async def simple_get_all(l: List[int]):
+    result = await get_all([FooNode(uid=i) for i in l])
+    assert [r["uid"] for r in result] == l
 
 
 async def bench_with_zipf(tasks):
@@ -150,7 +150,15 @@ def test_read_write_batch_async(benchmark, storage_provider, payload):
     z = Zipf(1.0001, 10, REQUESTS // 10)
 
     def setup():
-        return ([simple_get_all(z.get()) for _ in range(REQUESTS)],), {}
+        def get20(z):
+            l = set()
+            while True:
+                l.add(z.get())
+                if len(l) == 20:
+                    break
+            return list(l)
+
+        return ([simple_get_all(get20(z)) for _ in range(REQUESTS // 10)],), {}
 
     benchmark.pedantic(
         lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),

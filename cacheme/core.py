@@ -2,6 +2,7 @@ import types
 from asyncio import Event
 from datetime import datetime, timezone
 from time import time_ns
+from collections import OrderedDict
 from typing import (
     Any,
     Awaitable,
@@ -9,7 +10,6 @@ from typing import (
     Dict,
     Generic,
     Optional,
-    OrderedDict,
     Sequence,
     Type,
     TypeVar,
@@ -147,12 +147,12 @@ class Memoize:
 
 class NodeSet:
     def __init__(self, nodes: Sequence[Cachable]):
-        self.hashmap: Dict[int, Cachable] = {}
+        self.hashmap: Dict[str, Cachable] = {}
         for node in nodes:
-            self.hashmap[node.key_hash()] = node
+            self.hashmap[node.full_key()] = node
 
     def remove(self, node: Cachable):
-        self.hashmap.pop(node.key_hash(), None)
+        self.hashmap.pop(node.full_key(), None)
 
     @property
     def list(self) -> Sequence[Cachable]:
@@ -166,61 +166,74 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
     if len(nodes) == 0:
         return tuple()
     node_cls = nodes[0].__class__
-    keys = []
-    s: OrderedDict[int, Optional[C]] = OrderedDict()
+    waiting = []
+    missing = []
+    s: OrderedDict[str, Optional[C]] = OrderedDict()
     for node in nodes:
         if node.__class__ != node_cls:
             raise Exception(
                 f"node class mismatch: expect [{node_cls}], get [{node.__class__}]"
             )
-        s[node.key_hash()] = None
-        keys.append(node.full_key())
-    keys.sort()
+        s[node.full_key()] = None
+        locker = _lockers.get(node.full_key(), None)
+        if locker is not None:
+            waiting.append((node, locker))
+        else:
+            locker = Locker()
+            _lockers[node.full_key()] = locker
+            missing.append(node)
     result = None
     storage = nodes[0].get_stroage()
     metrics = nodes[0].get_metrics()
-    lock_key = "/".join(keys)
-    locker = _lockers.get(lock_key, None)
-    if locker is not None:
-        await locker.lock.wait()
-        result = locker.value
-        metrics._hit_count += 1
-    else:
-        locker = Locker()
-        _lockers[lock_key] = locker
-        pending_nodes = NodeSet(nodes)
-        local_storage = nodes[0].get_local_cache()
-        serializer = nodes[0].get_seriaizer()
-        ttl = nodes[0].get_ttl()
-        if local_storage is not None:
-            cached = await local_storage.get_all(nodes, serializer)
-            for k, v in cached:
-                pending_nodes.remove(k)
-                s[k.key_hash()] = cast(C, v.data)
-        cached = await storage.get_all(pending_nodes.list, serializer)
+    pending_nodes = NodeSet(missing)
+    local_storage = nodes[0].get_local_cache()
+    serializer = nodes[0].get_seriaizer()
+    ttl = nodes[0].get_ttl()
+    if local_storage is not None:
+        cached = await local_storage.get_all(pending_nodes.list, serializer)
         for k, v in cached:
             pending_nodes.remove(k)
-            s[k.key_hash()] = cast(C, v.data)
-        metrics._miss_count += len(pending_nodes)
-        now = time_ns()
-        try:
-            ns = cast(Sequence[Cachable], pending_nodes.list)
-            loaded = await node_cls.load_all(ns)
-        except Exception as e:
-            metrics._load_failure_count += len(pending_nodes)
-            metrics._total_load_time += time_ns() - now
-            raise (e)
-        metrics._load_success_count += len(pending_nodes)
+            locker = _lockers.pop(k.full_key(), None)
+            if locker is not None:
+                locker.value = v.data
+                locker.lock.set()
+            s[k.full_key()] = cast(C, v.data)
+        metrics._hit_count += len(cached)
+    cached = await storage.get_all(pending_nodes.list, serializer)
+    for k, v in cached:
+        pending_nodes.remove(k)
+        locker = _lockers.pop(k.full_key(), None)
+        if locker is not None:
+            locker.value = v.data
+            locker.lock.set()
+        s[k.full_key()] = cast(C, v.data)
+    metrics._hit_count += len(cached)
+    metrics._miss_count += len(pending_nodes)
+    now = time_ns()
+    try:
+        ns = cast(Sequence[Cachable], pending_nodes.list)
+        loaded = await node_cls.load_all(ns)
+    except Exception as e:
+        metrics._load_failure_count += len(pending_nodes)
         metrics._total_load_time += time_ns() - now
-        if local_storage is not None:
-            await local_storage.set_all(loaded, ttl, serializer)
-        await storage.set_all(loaded, ttl, serializer)
-        for node, value in loaded:
-            s[node.key_hash()] = cast(C, value)
-        result = cast(Sequence[C], tuple(s.values()))
-        locker.value = result
-        locker.lock.set()
-        _lockers.pop(lock_key, None)
+        raise (e)
+    metrics._load_success_count += len(pending_nodes)
+    metrics._total_load_time += time_ns() - now
+    for k, v in loaded:
+        locker = _lockers.pop(k.full_key(), None)
+        if locker is not None:
+            locker.value = v
+            locker.lock.set()
+        s[k.full_key()] = cast(C, v)
+    if local_storage is not None:
+        await local_storage.set_all(loaded, ttl, serializer)
+    await storage.set_all(loaded, ttl, serializer)
+    for n in waiting:
+        node, locker = n
+        await locker.lock.wait()
+        s[node.full_key()] = cast(C, locker.value)
+    metrics._hit_count += len(waiting)
+    result = cast(Sequence[C], tuple(s.values()))
     return result
 
 
