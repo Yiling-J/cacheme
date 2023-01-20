@@ -64,3 +64,21 @@ class MySQLStorage(SQLStorage):
                 await cur.execute(sql, keys)
                 result = await cur.fetchall()
         return {i["key"]: i for i in result}
+
+    async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
+        expire = None
+        if ttl is not None:
+            expire = datetime.now(timezone.utc) + ttl
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.executemany(
+                    f"insert into {self.table}(`key`, value, expire) values(%s,%s,%s) ON DUPLICATE KEY UPDATE value=VALUES(value), expire=VALUES(expire)",
+                    [
+                        (
+                            key,
+                            value,
+                            expire,
+                        )
+                        for key, value in data.items()
+                    ],
+                )

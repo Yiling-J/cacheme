@@ -116,6 +116,36 @@ class SQLiteStorage(SQLStorage):
         cur.close()
         return conn
 
+    def sync_set_data_batch(
+        self,
+        data: Dict[str, Any],
+        expire: Optional[datetime],
+        conn: Optional[sqlite3.Connection],
+    ) -> sqlite3.Connection:
+        cur = None
+        if conn is None:
+            conn = sqlite3.connect(
+                self.db, isolation_level=None, timeout=30, check_same_thread=False
+            )
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("pragma journal_mode=wal")
+        if cur is None:
+            cur = conn.cursor()
+        cur.executemany(
+            f"insert into {self.table}(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
+            [
+                (
+                    key,
+                    value,
+                    expire,
+                )
+                for key, value in data.items()
+            ],
+        )
+        cur.close()
+        return conn
+
     async def get_by_key(self, key: str) -> Any:
         await self.sem.acquire()
         if len(self.pool) > 0:
@@ -164,6 +194,26 @@ class SQLiteStorage(SQLStorage):
             loop = asyncio.get_running_loop()
             conn, data = await loop.run_in_executor(
                 None, self.sync_get_by_keys, keys, conn
+            )
+        self.pool.append(cast(sqlite3.Connection, conn))
+        self.sem.release()
+        return data
+
+    async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
+        expire = None
+        if ttl is not None:
+            expire = datetime.now(timezone.utc) + ttl
+        await self.sem.acquire()
+        if len(self.pool) > 0:
+            conn = self.pool.pop(0)
+        else:
+            conn = None
+        if sys.version_info >= (3, 9):
+            conn = await asyncio.to_thread(self.sync_set_data_batch, data, expire, conn)
+        else:
+            loop = asyncio.get_running_loop()
+            conn = await loop.run_in_executor(
+                None, self.sync_set_data_batch, data, expire, conn
             )
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()

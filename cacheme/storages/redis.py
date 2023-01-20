@@ -61,3 +61,14 @@ class RedisStorage(BaseStorage):
             await self.client.setex(key, int(ttl.total_seconds()), value)
         else:
             await self.client.set(key, value)
+
+    async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
+        async with self.client.pipeline() as pipe:
+            if ttl is not None:
+                seconds = int(ttl.total_seconds())
+                for k, v in data.items():
+                    pipe.setex(k, seconds, v)
+            else:
+                for k, v in data.items():
+                    pipe.set(k, v)
+            await pipe.execute()
