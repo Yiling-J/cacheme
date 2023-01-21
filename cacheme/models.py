@@ -7,8 +7,6 @@ from typing_extensions import Any
 
 from cacheme.data import get_storage_by_name
 from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
-from cacheme.serializer import PickleSerializer
-from cacheme.utils import cached_property, hash_string
 
 _nodes: List[Type[Cachable]] = []
 
@@ -36,13 +34,6 @@ class Node(metaclass=MetaNode):
 
     def full_key(self) -> str:
         return f"cacheme:{self.key()}:{self.Meta.version}"
-
-    def key_hash(self) -> int:
-        return self._keyh
-
-    @cached_property
-    def _keyh(self) -> int:
-        return hash_string(self.full_key())
 
     async def load(self):
         raise NotImplementedError()

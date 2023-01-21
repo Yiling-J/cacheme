@@ -149,9 +149,6 @@ class Cachable(MetaData, Protocol[C_co]):
     def full_key(self) -> str:
         ...
 
-    def key_hash(self) -> int:
-        ...
-
     async def load(self) -> C_co:
         ...
 
@@ -167,9 +164,6 @@ class Memoizable(MetaData, Protocol):
         ...
 
     def full_key(self) -> str:
-        ...
-
-    def key_hash(self) -> int:
         ...
 
     @classmethod
