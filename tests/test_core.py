@@ -228,3 +228,7 @@ async def test_stats():
     assert metrics.load_success_count() == 4
     assert metrics.miss_count() == 4
     assert metrics.miss_rate() == 4 / 5
+    await get_all([StatsNode("a"), StatsNode("b"), StatsNode("f")])
+    assert metrics.request_count() == 8
+    assert metrics.hit_count() == 3
+    assert metrics.load_count() == 5
