@@ -244,3 +244,13 @@ async def nodes() -> List[Type[Cachable]]:
 
 def stats(node: Type[Cachable]) -> Metrics:
     return node.get_metrics()
+
+
+async def invalidate(node: Cachable):
+    storage = node.get_stroage()
+    await storage.remove(node)
+
+
+async def refresh(node: Cachable[C_co]) -> C_co:
+    await invalidate(node)
+    return await get(node)

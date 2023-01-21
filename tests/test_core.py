@@ -1,11 +1,9 @@
-import os
 from asyncio import gather, sleep
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 
-from cacheme.core import Memoize, get, get_all, stats
+from cacheme.core import Memoize, get, get_all, stats, invalidate, refresh
 from cacheme.data import register_storage
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
@@ -232,3 +230,31 @@ async def test_stats():
     assert metrics.request_count() == 8
     assert metrics.hit_count() == 3
     assert metrics.load_count() == 5
+
+
+@pytest.mark.asyncio
+async def test_invalidate():
+    global fn1_counter
+    fn1_counter = 0
+    await register_storage("local", Storage(url="local://tlfu", size=50))
+    await get(FooNode(user_id="a", foo_id="1", level=10))
+    await get(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 1
+    await invalidate(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 1
+    await get(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 2
+
+
+@pytest.mark.asyncio
+async def test_refresh():
+    global fn1_counter
+    fn1_counter = 0
+    await register_storage("local", Storage(url="local://tlfu", size=50))
+    await get(FooNode(user_id="a", foo_id="1", level=10))
+    await get(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 1
+    await refresh(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 2
+    await get(FooNode(user_id="a", foo_id="1", level=10))
+    assert fn1_counter == 2
