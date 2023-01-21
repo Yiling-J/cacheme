@@ -70,28 +70,28 @@ jobs:
       - uses: "actions/setup-python@v4"
         with:
           python-version: "${{ matrix.python-version }}"
-      - name: Install and configure Poetry
+      - name: Install Poetry
         uses: abatilo/actions-poetry@v2
         with:
           version: 1.3
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-      - name: cache deps
+      - name: Setup Poetry
+        run: "poetry config virtualenvs.in-project true"
+      - name: Cache Deps
         uses: actions/cache@v2
         id: cached-poetry-dependencies
         with:
           path: .venv
           key: python-${{ matrix.python-version }}-pydeps-${{ hashFiles('**/poetry.lock') }}
-      - name: "Install dependencies"
+      - name: "Install Dependencies"
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: "poetry install --no-interaction --no-root"
-      - name: "Run lint"
+      - name: "Run Lint"
         run: "poetry run mypy --ignore-missing-imports ."
-      - name: "Run tests"
+      - name: "Run Tests"
         env:
           CI: "TRUE"
         run: "poetry run pytest --benchmark-skip"
-      - name: "Run benchmarks"
+      - name: "Run Benchmarks"
         run: "poetry run pytest --benchmark-only --benchmark-json output.json"
       - name: "Publish benchmark result"
         if: ${{ matrix.python-version == '3.11' }}
