@@ -93,7 +93,7 @@ jobs:
         run: "poetry run pytest --benchmark-skip"
       - name: "Run Benchmarks"
         run: "poetry run pytest --benchmark-only --benchmark-json output.json"
-      - name: "Publish benchmark result"
+      - name: "Publish Benchmark Result"
         if: ${{ matrix.python-version == '3.11' }}
         uses: benchmark-action/github-action-benchmark@v1
         with:
