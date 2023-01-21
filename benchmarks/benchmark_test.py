@@ -2,16 +2,12 @@ import pytest
 import uuid
 import asyncio
 import json
-from cacheme.core import get, get_all
+from cacheme import get, get_all, Storage, Node, register_storage
 from cacheme.serializer import MsgPackSerializer
-from cacheme.storages import Storage
 from benchmarks.zipf import Zipf
-from cacheme.models import Node
-from cacheme.data import register_storage
 from dataclasses import dataclass
 from tests.utils import setup_storage
 from typing import Callable, ClassVar, Dict, List
-from collections import OrderedDict
 
 
 REQUESTS = 10000
