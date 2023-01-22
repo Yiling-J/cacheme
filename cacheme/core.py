@@ -1,3 +1,4 @@
+from threading import local
 import types
 from asyncio import Event
 from datetime import datetime, timezone
@@ -57,7 +58,7 @@ async def get(node: Cachable, load_fn=None):
     storage = node.get_stroage()
     metrics = node.get_metrics()
     result = None
-    local_storage = node.get_local_cache()
+    local_storage = node.get_local_storage()
     locker = _lockers.get(node.full_key(), None)
     if locker is not None:
         await locker.lock.wait()
@@ -95,7 +96,7 @@ async def get(node: Cachable, load_fn=None):
                     return result.data
             await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
             if local_storage is not None:
-                await local_storage.set(node, loaded, node.get_ttl(), None)
+                await local_storage.set(node, loaded, node.get_local_ttl(), None)
         else:
             metrics._hit_count += 1
         locker.value = result
@@ -186,7 +187,7 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
     storage = nodes[0].get_stroage()
     metrics = nodes[0].get_metrics()
     pending_nodes = NodeSet(missing)
-    local_storage = nodes[0].get_local_cache()
+    local_storage = nodes[0].get_local_storage()
     serializer = nodes[0].get_seriaizer()
     ttl = nodes[0].get_ttl()
     if local_storage is not None:
@@ -227,7 +228,7 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
                 locker.lock.set()
             s[k.full_key()] = cast(C, v)
         if local_storage is not None:
-            await local_storage.set_all(loaded, ttl, serializer)
+            await local_storage.set_all(loaded, nodes[0].get_local_ttl(), serializer)
         await storage.set_all(loaded, ttl, serializer)
     for n in waiting:
         node, locker = n
@@ -249,6 +250,9 @@ def stats(node: Type[Cachable]) -> Metrics:
 async def invalidate(node: Cachable):
     storage = node.get_stroage()
     await storage.remove(node)
+    local_storage = node.get_local_storage()
+    if local_storage is not None:
+        await local_storage.remove(node)
 
 
 async def refresh(node: Cachable[C_co]) -> C_co:

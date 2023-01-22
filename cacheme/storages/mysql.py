@@ -82,3 +82,11 @@ class MySQLStorage(SQLStorage):
                         for key, value in data.items()
                     ],
                 )
+
+    async def remove_by_key(self, key: str):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    f"delete from {self.table} where `key`=%s",
+                    (key,),
+                )

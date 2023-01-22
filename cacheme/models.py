@@ -55,10 +55,13 @@ class Node(metaclass=MetaNode):
     def get_ttl(self) -> Optional[datetime.timedelta]:
         return self.Meta.ttl
 
-    def get_local_cache(self) -> Optional[Storage]:
-        if self.Meta.local_cache is None:
+    def get_local_ttl(self) -> Optional[datetime.timedelta]:
+        return self.Meta.local_ttl or self.Meta.ttl
+
+    def get_local_storage(self) -> Optional[Storage]:
+        if self.Meta.local_storage is None:
             return None
-        return get_storage_by_name(self.Meta.local_cache)
+        return get_storage_by_name(self.Meta.local_storage)
 
     def get_seriaizer(self) -> Optional[Serializer]:
         return self.Meta.serializer
@@ -74,7 +77,8 @@ class Node(metaclass=MetaNode):
         version: ClassVar[str] = ""
         storage: ClassVar[str] = ""
         ttl: ClassVar[Optional[datetime.timedelta]] = None
-        local_cache: ClassVar[Optional[str]] = None
+        local_ttl: ClassVar[Optional[datetime.timedelta]] = None
+        local_storage: ClassVar[Optional[str]] = None
         serializer: ClassVar[Optional[Serializer]] = None
         doorkeeper: ClassVar[Optional[DoorKeeper]] = None
         metrics: ClassVar[Metrics]

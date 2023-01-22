@@ -69,3 +69,9 @@ class PostgresStorage(SQLStorage):
                     for key, value in data.items()
                 ],
             )
+
+    async def remove_by_key(self, key: str):
+        if self.pool is None:
+            raise
+        async with self.pool.acquire() as conn:
+            return await conn.execute(f"delete from {self.table} where key=$1", key)

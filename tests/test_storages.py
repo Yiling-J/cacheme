@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 import pytest
+from cacheme.core import invalidate, refresh
 
 from cacheme.models import Node
 from cacheme.serializer import PickleSerializer
@@ -122,6 +123,20 @@ async def test_storages(storage):
         "bar-1",
         "bar-2",
     }
+
+    # invalidate
+    node = FooNode(id="invalidate")
+    await s.set(
+        node=node,
+        value={"foo": "bar"},
+        ttl=timedelta(days=10),
+        serializer=PickleSerializer(),
+    )
+    result = await s.get(node, serializer=PickleSerializer())
+    assert result is not None
+    await s.remove(node)
+    result = await s.get(node, serializer=PickleSerializer())
+    assert result is None
 
     if filename != "":
         os.remove(filename)

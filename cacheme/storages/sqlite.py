@@ -65,6 +65,26 @@ class SQLiteStorage(SQLStorage):
         cur.close()
         return conn, data
 
+    def sync_remove_by_key(
+        self, key: str, conn: Optional[sqlite3.Connection]
+    ) -> sqlite3.Connection:
+        cur = None
+        if conn is None:
+            conn = sqlite3.connect(
+                self.db, isolation_level=None, timeout=30, check_same_thread=False
+            )
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("pragma journal_mode=wal")
+        if cur is None:
+            cur = conn.cursor()
+        cur.execute(
+            f"delete from {self.table} where key=?",
+            (key,),
+        )
+        cur.close()
+        return conn
+
     def sync_get_by_keys(
         self,
         keys: List[str],
@@ -218,3 +238,17 @@ class SQLiteStorage(SQLStorage):
         self.pool.append(cast(sqlite3.Connection, conn))
         self.sem.release()
         return data
+
+    async def remove_by_key(self, key: str):
+        await self.sem.acquire()
+        if len(self.pool) > 0:
+            conn = self.pool.pop(0)
+        else:
+            conn = None
+        if sys.version_info >= (3, 9):
+            conn = await asyncio.to_thread(self.sync_remove_by_key, key, conn)
+        else:
+            loop = asyncio.get_running_loop()
+            conn = await loop.run_in_executor(None, self.sync_remove_by_key, key, conn)
+        self.pool.append(cast(sqlite3.Connection, conn))
+        self.sem.release()

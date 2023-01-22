@@ -1,3 +1,4 @@
+import os
 from asyncio import gather, sleep
 from dataclasses import dataclass
 
@@ -8,6 +9,7 @@ from cacheme.data import register_storage
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
+from tests.utils import setup_storage
 
 fn1_counter = 0
 fn2_counter = 0
@@ -258,3 +260,47 @@ async def test_refresh():
     assert fn1_counter == 2
     await get(FooNode(user_id="a", foo_id="1", level=10))
     assert fn1_counter == 2
+
+
+@dataclass
+class FooWithLocalNode(Node):
+    id: str
+
+    def key(self) -> str:
+        return f"{self.id}"
+
+    async def load(self) -> str:
+        return self.id
+
+    class Meta(Node.Meta):
+        version = "v1"
+        storage = "sqlite"
+        local_storage = "local"
+        serializer = MsgPackSerializer()
+
+
+@pytest.mark.asyncio
+async def test_local_storage():
+    storage = Storage("sqlite:///testlocal", table="test")
+    local_storage = Storage(url="local://tlfu", size=50)
+    await register_storage("sqlite", storage)
+    await register_storage("local", local_storage)
+    await setup_storage(storage._storage)
+    node = FooWithLocalNode(id="test")
+    result = await get(node)
+    assert result == "test"
+    r = await storage.get(node, MsgPackSerializer())
+    assert r is not None
+    assert r.data == "test"
+    rl = await local_storage.get(node, None)
+    assert rl is not None
+    assert rl.data == "test"
+    # invalidate node
+    await invalidate(node)
+    r = await storage.get(node, MsgPackSerializer())
+    assert r is None
+    rl = await local_storage.get(node, None)
+    assert rl is None
+    os.remove("testlocal")
+    os.remove("testlocal-shm")
+    os.remove("testlocal-wal")

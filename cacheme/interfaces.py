@@ -128,7 +128,10 @@ class MetaData(Protocol):
     def get_ttl(self) -> Optional[timedelta]:
         ...
 
-    def get_local_cache(self) -> Optional[Storage]:
+    def get_local_ttl(self) -> Optional[timedelta]:
+        ...
+
+    def get_local_storage(self) -> Optional[Storage]:
         ...
 
     def get_seriaizer(self) -> Optional[Serializer]:
