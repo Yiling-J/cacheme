@@ -53,7 +53,7 @@ class RedisStorage(BaseStorage):
         value = {"value": raw, "updated_at": datetime.now(timezone.utc)}
         return super().deserialize(value, serializer)
 
-    async def remove_key(self, key: str):
+    async def remove_by_key(self, key: str):
         await self.client.delete(key)
 
     async def set_by_key(self, key: str, value: Any, ttl: Optional[timedelta]):
