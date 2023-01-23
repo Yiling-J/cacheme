@@ -187,8 +187,10 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     FooNode.Meta.local_ttl = timedelta(seconds=10)
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
-    # fill data
-    loop.run_until_complete(bench_with_zipf([simple_get(i) for i in range(REQUESTS)]))
+    # also warmup local cache
+    loop.run_until_complete(
+        bench_with_zipf([simple_get(z.get()) for _ in range(REQUESTS * 2)])
+    )
 
     def setup():
         return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
