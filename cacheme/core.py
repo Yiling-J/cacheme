@@ -94,9 +94,9 @@ async def get(node: Cachable, load_fn=None):
                 if not exist:
                     doorkeeper.put(node.full_key())
                     return result.data
-            await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
             if local_storage is not None:
                 await local_storage.set(node, loaded, node.get_local_ttl(), None)
+            await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
         else:
             metrics._hit_count += 1
         locker.value = result

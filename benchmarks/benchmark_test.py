@@ -141,6 +141,8 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
     )
     asyncio.events.set_event_loop(None)
     loop.close()
+    FooNode.Meta.local_storage = None
+    FooNode.Meta.local_ttl = None
 
 
 def test_read_only_async(benchmark, storage_provider, payload):
@@ -166,6 +168,40 @@ def test_read_only_async(benchmark, storage_provider, payload):
     )
     asyncio.events.set_event_loop(None)
     loop.close()
+
+
+def test_read_only_with_local_async(benchmark, storage_provider, payload):
+    if storage_provider["name"] not in {"redis", "mongo", "postgres"}:
+        pytest.skip("skip")
+    loop = asyncio.events.new_event_loop()
+    asyncio.events.set_event_loop(loop)
+    loop.run_until_complete(
+        register_storage("local", Storage(url="local://tlfu", size=500))
+    )
+    _uuid = uuid.uuid4().int
+    table = f"test_{_uuid}"
+    storage = storage_provider["storage"](table)
+    FooNode.payload_fn = payload["fn"]
+    FooNode.uuid = _uuid
+    FooNode.Meta.local_storage = "local"
+    FooNode.Meta.local_ttl = timedelta(seconds=10)
+    loop.run_until_complete(storage_init(storage))
+    z = Zipf(1.0001, 10, REQUESTS // 10)
+    # fill data
+    loop.run_until_complete(bench_with_zipf([simple_get(i) for i in range(REQUESTS)]))
+
+    def setup():
+        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+
+    benchmark.pedantic(
+        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        setup=setup,
+        rounds=3,
+    )
+    asyncio.events.set_event_loop(None)
+    loop.close()
+    FooNode.Meta.local_storage = None
+    FooNode.Meta.local_ttl = None
 
 
 def test_read_write_batch_async(benchmark, storage_provider, payload):
