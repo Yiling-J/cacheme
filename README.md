@@ -50,7 +50,7 @@ Register a redis storage called "my-redis", which you can reference by name in n
 ```python
 import cacheme
 
-cacheme.register_storage("my-redis", cacheme.Storage(url="redis://localhost:6379"))
+await cacheme.register_storage("my-redis", cacheme.Storage(url="redis://localhost:6379"))
 ```
 
 ## Use node
@@ -60,5 +60,5 @@ If required data is not cached, will call `load` function in node class, fill th
 ```python
 import cacheme
 
-user_info = cacheme.get(UserInfoNode(user_id=1))
+user_info = await cacheme.get(UserInfoNode(user_id=1))
 ```
