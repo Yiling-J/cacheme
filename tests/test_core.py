@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from cacheme.core import Memoize, get, get_all, stats, invalidate, refresh
+from cacheme.core import Memoize, get, get_all, nodes, stats, invalidate, refresh
 from cacheme.data import register_storage
 from cacheme.models import Node
 from cacheme.serializer import MsgPackSerializer
@@ -304,3 +304,10 @@ async def test_local_storage():
     os.remove("testlocal")
     os.remove("testlocal-shm")
     os.remove("testlocal-wal")
+
+
+def test_nodes():
+    test_nodes = nodes()
+    assert len(test_nodes) > 0
+    for n in test_nodes:
+        assert type(n) != Node

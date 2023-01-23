@@ -18,14 +18,14 @@ def get_nodes():
 class MetaNode(type):
     def __new__(cls, name, bases, dct):
         new = super().__new__(cls, name, bases, dct)
-        internal = getattr(new.Meta, "internal", False)
-        if internal == False:
+        if new.Meta.storage != "":
             _nodes.append(cast(Type[Cachable], cls))
             new.Meta.metrics = Metrics()
         return new
 
     class Meta:
         metrics: ClassVar[Metrics]
+        storage: ClassVar[str] = ""
 
 
 class Node(metaclass=MetaNode):

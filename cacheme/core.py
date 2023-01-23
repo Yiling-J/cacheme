@@ -43,7 +43,6 @@ class Locker:
 _lockers: Dict[str, Locker] = {}
 
 
-# local storage(if enable) -> storage -> cache miss, load from source
 @overload
 async def get(node: Cachable[C_co]) -> C_co:
     ...
@@ -239,7 +238,7 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
     return result
 
 
-async def nodes() -> List[Type[Cachable]]:
+def nodes() -> List[Type[Cachable]]:
     return get_nodes()
 
 
