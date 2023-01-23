@@ -97,11 +97,11 @@ def test_read_write_async(benchmark, storage_provider, payload):
     table = f"test_{_uuid}"
     storage = storage_provider["storage"](table)
     FooNode.payload_fn = payload["fn"]
-    FooNode.uuid = _uuid
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
 
     def setup():
+        FooNode.uuid = uuid.uuid4().int
         return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
 
     benchmark.pedantic(
@@ -119,19 +119,19 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=1000))
+        register_storage("local", Storage(url="local://tlfu", size=500))
     )
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
     storage = storage_provider["storage"](table)
     FooNode.payload_fn = payload["fn"]
-    FooNode.uuid = _uuid
     FooNode.Meta.local_storage = "local"
     FooNode.Meta.local_ttl = timedelta(seconds=10)
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
 
     def setup():
+        FooNode.uuid = uuid.uuid4().int
         return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
 
     benchmark.pedantic(
@@ -175,11 +175,12 @@ def test_read_write_batch_async(benchmark, storage_provider, payload):
     table = f"test_{_uuid}"
     storage = storage_provider["storage"](table)
     FooNode.payload_fn = payload["fn"]
-    FooNode.uuid = _uuid
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
 
     def setup():
+        FooNode.uuid = uuid.uuid4().int
+
         def get20(z):
             l = set()
             while True:
