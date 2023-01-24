@@ -28,7 +28,7 @@ pip install cacheme[mongo]
 pip install cacheme[postgresql]
 ```
 
-## Add node
+## Add Node
 Node is the core part of your cache, each node contains:
 
 - Key attritubes and `key` method,  which generate the cache key. Here the `UserInfoNode` is a dataclass, so the `__init__` method are create automatically.
@@ -56,11 +56,11 @@ class UserInfoNode(cacheme.Node):
         storage = "my-redis"
         serializer = MsgPackSerializer()
 ```
-This simple example use a storage called "my-redis", which will be registered next step. Also we use `MsgPackSerializer` here to dump data into bytes and save to and load from redis. See [Cache Node] for more details.
+This simple example use a storage called "my-redis", which will be registered next step. Also we use `MsgPackSerializer` here to dump and load data from redis. See [Cache Node] for more details.
 
-## Register storage
+## Register Storage
 
-Register a redis storage called "my-redis", which you can reference by name in node meta data. The `register_storage` is asynchronous and will try to establish connection to cache store.
+Register a redis storage called "my-redis", which you can use in node meta data. The `register_storage` is asynchronous and will try to establish connection to cache store.
 See [Cache Storage] for more details.
 
 ```python
@@ -71,27 +71,27 @@ await cacheme.register_storage("my-redis", cacheme.Storage(url="redis://localhos
 
 ## Cacheme API
 
-- `get`: get data from single node.
+`get`: get data from single node.
 ```python
 user = await cacheme.get(UserInfoNode(user_id=1))
 ```
 
-- `get_all`: get data from multiple nodes, same node type.
+`get_all`: get data from multiple nodes, same node type.
 ```python
 users = await cacheme.get_all([UserInfoNode(user_id=1), UserInfoNode(user_id=2)])
 ```
 
-- `invalidate`: invalidate a node, remove data from cache.
+`invalidate`: invalidate a node, remove data from cache.
 ```python
 await cacheme.invalidate(UserInfoNode(user_id=1))
 ```
 
-- `refresh`: reload node data using `load` method.
+`refresh`: reload node data using `load` method.
 ```python
 await cacheme.refresh(UserInfoNode(user_id=1))
 ```
 
-- `Memoize`: memoize function with this decorator.
+`Memoize`: memoize function with this decorator.
 
 Decorate your function with `cacheme.Memoize` decorator and cache node. Cacheme will load data using the decorated function and ignore `load` method.
 Because your function may contain variable number of args/kwargs, we need one more step to map between args/kwargs to node. The decorated map function should have same input signature as memoized function, and return a cache node.
@@ -108,4 +108,109 @@ def _(user_id: int) -> UserInfoNode:
 ```
 
 ## Cache Node
+Meta class
+
+Protocol:
+
+```python
+class MetaData(Protocol):
+    def get_version(self) -> str:
+        ...
+
+    def get_stroage(self) -> Storage:
+        ...
+
+    def get_ttl(self) -> Optional[timedelta]:
+        ...
+
+    def get_local_ttl(self) -> Optional[timedelta]:
+        ...
+
+    def get_local_storage(self) -> Optional[Storage]:
+        ...
+
+    def get_seriaizer(self) -> Optional[Serializer]:
+        ...
+
+    def get_doorkeeper(self) -> Optional[DoorKeeper]:
+        ...
+
+    @classmethod
+    def get_metrics(cls) -> Metrics:
+        ...
+
+
+class Cachable(MetaData, Protocol[C_co]):
+    def key(self) -> str:
+        ...
+
+    def full_key(self) -> str:
+        ...
+
+    async def load(self) -> C_co:
+        ...
+
+    @classmethod
+    async def load_all(
+        cls, nodes: Sequence["Cachable[C]"]
+    ) -> Sequence[Tuple["Cachable", C]]:
+        ...
+```
+
 ## Cache Storage
+Local Storage
+
+Redis Storage
+
+MongoDB Storage
+
+PostgreSQL Storage
+
+MySQL Storage
+
+Protocol:
+
+```python
+class CachedData(NamedTuple):
+    data: Any
+    node: "Cachable"
+    updated_at: datetime
+    expire: Optional[datetime] = None
+
+class Storage(Protocol):
+    async def connect(self):
+        ...
+
+    async def get(
+        self, node: "Cachable", serializer: Optional["Serializer"]
+    ) -> Optional[CachedData]:
+        ...
+
+    async def get_all(
+        self, nodes: Sequence["Cachable"], serializer: Optional["Serializer"]
+    ) -> Sequence[Tuple["Cachable", CachedData]]:
+        ...
+
+    async def set(
+        self,
+        node: "Cachable",
+        value: Any,
+        ttl: Optional[timedelta],
+        serializer: Optional["Serializer"],
+    ):
+        ...
+
+    async def remove(self, node: "Cachable"):
+        ...
+
+    async def set_all(
+        self,
+        data: Sequence[Tuple["Cachable", Any]],
+        ttl: Optional[timedelta],
+        serializer: Optional["Serializer"],
+    ):
+        ...
+```
+## Benchmarks
+- Local Storage Hit Ratios
+- Throughput Benchmark
