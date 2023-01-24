@@ -2,7 +2,7 @@ import asyncio
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
 from cacheme.interfaces import Cachable, CachedData
@@ -21,7 +21,17 @@ class SQLiteStorage(SQLStorage):
         self.table = table
 
     async def _connect(self):
-        pass
+        conn = sqlite3.connect(
+            self.db, isolation_level=None, timeout=30, check_same_thread=False
+        )
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute("pragma journal_mode=wal")
+        cur.close()
+        self.writer = conn
+
+    async def execute_ddl(self, ddl):
+        with sqlite3.connect(self.db, isolation_level=None) as conn:
+            conn.execute(ddl)
 
     def serialize(
         self, node: Cachable, raw: Any, serializer: Optional[Serializer]
@@ -40,92 +50,57 @@ class SQLiteStorage(SQLStorage):
             expire=expire,
         )
 
-    async def execute_ddl(self, ddl):
-        with sqlite3.connect(self.db, isolation_level=None) as conn:
-            conn.execute(ddl)
+    def get_connection(self) -> sqlite3.Connection:
+        if len(self.pool) > 0:
+            return self.pool.pop(0)
+        conn = sqlite3.connect(
+            self.db, isolation_level=None, timeout=30, check_same_thread=False
+        )
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def sync_get_by_key(
-        self, key: str, conn: Optional[sqlite3.Connection]
-    ) -> Tuple[sqlite3.Connection, Any]:
-        cur = None
-        if conn is None:
-            conn = sqlite3.connect(
-                self.db, isolation_level=None, timeout=30, check_same_thread=False
-            )
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            cur.execute("pragma journal_mode=wal")
-        if cur is None:
-            cur = conn.cursor()
-        cur.execute(
+        self,
+        key: str,
+    ) -> Any:
+        conn = self.get_connection()
+        cur = conn.execute(
             f"select * from {self.table} where key=?",
             (key,),
         )
         data = cur.fetchone()
         cur.close()
-        return conn, data
+        self.pool.append(conn)
+        return data
 
-    def sync_remove_by_key(
-        self, key: str, conn: Optional[sqlite3.Connection]
-    ) -> sqlite3.Connection:
-        cur = None
-        if conn is None:
-            conn = sqlite3.connect(
-                self.db, isolation_level=None, timeout=30, check_same_thread=False
-            )
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            cur.execute("pragma journal_mode=wal")
-        if cur is None:
-            cur = conn.cursor()
-        cur.execute(
+    def sync_remove_by_key(self, key: str):
+        cur = self.writer.execute(
             f"delete from {self.table} where key=?",
             (key,),
         )
         cur.close()
-        return conn
 
     def sync_get_by_keys(
         self,
         keys: List[str],
-        conn: Optional[sqlite3.Connection],
-    ) -> Tuple[sqlite3.Connection, Dict[str, Any]]:
-        cur = None
-        if conn is None:
-            conn = sqlite3.connect(
-                self.db, isolation_level=None, timeout=30, check_same_thread=False
-            )
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            cur.execute("pragma journal_mode=wal")
-        if cur is None:
-            cur = conn.cursor()
+    ) -> Dict[str, Any]:
+        conn = self.get_connection()
         sql = (
             f"SELECT * FROM {self.table} WHERE key in ({', '.join('?' for _ in keys)})"
         )
-        cur.execute(sql, keys)
+        cur = conn.execute(sql, keys)
         data = cur.fetchall()
         cur.close()
-        return conn, {i["key"]: i for i in data}
+        self.pool.append(conn)
+        return {i["key"]: i for i in data}
 
     def sync_set_data(
         self,
         key: str,
         value: Any,
         expire: Optional[datetime],
-        conn: Optional[sqlite3.Connection],
-    ) -> sqlite3.Connection:
-        cur = None
-        if conn is None:
-            conn = sqlite3.connect(
-                self.db, isolation_level=None, timeout=30, check_same_thread=False
-            )
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            cur.execute("pragma journal_mode=wal")
-        if cur is None:
-            cur = conn.cursor()
-        cur.execute(
+    ):
+        cur = self.writer.execute(
             f"insert into {self.table}(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
             (
                 key,
@@ -134,25 +109,13 @@ class SQLiteStorage(SQLStorage):
             ),
         )
         cur.close()
-        return conn
 
     def sync_set_data_batch(
         self,
         data: Dict[str, Any],
         expire: Optional[datetime],
-        conn: Optional[sqlite3.Connection],
-    ) -> sqlite3.Connection:
-        cur = None
-        if conn is None:
-            conn = sqlite3.connect(
-                self.db, isolation_level=None, timeout=30, check_same_thread=False
-            )
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            cur.execute("pragma journal_mode=wal")
-        if cur is None:
-            cur = conn.cursor()
-        cur.executemany(
+    ):
+        cur = self.writer.executemany(
             f"insert into {self.table}(key, value, expire) values(?,?,?) on conflict(key) do update set value=EXCLUDED.value, expire=EXCLUDED.expire",
             [
                 (
@@ -164,22 +127,14 @@ class SQLiteStorage(SQLStorage):
             ],
         )
         cur.close()
-        return conn
 
     async def get_by_key(self, key: str) -> Any:
         await self.sem.acquire()
-        if len(self.pool) > 0:
-            conn = self.pool.pop(0)
-        else:
-            conn = None
         if sys.version_info >= (3, 9):
-            conn, data = await asyncio.to_thread(self.sync_get_by_key, key, conn)
+            data = await asyncio.to_thread(self.sync_get_by_key, key)
         else:
             loop = asyncio.get_running_loop()
-            conn, data = await loop.run_in_executor(
-                None, self.sync_get_by_key, key, conn
-            )
-        self.pool.append(cast(sqlite3.Connection, conn))
+            conn, data = await loop.run_in_executor(None, self.sync_get_by_key, key)
         self.sem.release()
         return data
 
@@ -187,35 +142,15 @@ class SQLiteStorage(SQLStorage):
         expire = None
         if ttl is not None:
             expire = datetime.now(timezone.utc) + ttl
-        await self.sem.acquire()
-        if len(self.pool) > 0:
-            conn = self.pool.pop(0)
-        else:
-            conn = None
-        if sys.version_info >= (3, 9):
-            conn = await asyncio.to_thread(self.sync_set_data, key, value, expire, conn)
-        else:
-            loop = asyncio.get_running_loop()
-            conn = await loop.run_in_executor(
-                None, self.sync_set_data, key, value, expire, conn
-            )
-        self.pool.append(cast(sqlite3.Connection, conn))
-        self.sem.release()
+        self.sync_set_data(key, value, expire)
 
     async def get_by_keys(self, keys: List[str]) -> Dict[str, Any]:
         await self.sem.acquire()
-        if len(self.pool) > 0:
-            conn = self.pool.pop(0)
-        else:
-            conn = None
         if sys.version_info >= (3, 9):
-            conn, data = await asyncio.to_thread(self.sync_get_by_keys, keys, conn)
+            data = await asyncio.to_thread(self.sync_get_by_keys, keys)
         else:
             loop = asyncio.get_running_loop()
-            conn, data = await loop.run_in_executor(
-                None, self.sync_get_by_keys, keys, conn
-            )
-        self.pool.append(cast(sqlite3.Connection, conn))
+            conn, data = await loop.run_in_executor(None, self.sync_get_by_keys, keys)
         self.sem.release()
         return data
 
@@ -223,32 +158,7 @@ class SQLiteStorage(SQLStorage):
         expire = None
         if ttl is not None:
             expire = datetime.now(timezone.utc) + ttl
-        await self.sem.acquire()
-        if len(self.pool) > 0:
-            conn = self.pool.pop(0)
-        else:
-            conn = None
-        if sys.version_info >= (3, 9):
-            conn = await asyncio.to_thread(self.sync_set_data_batch, data, expire, conn)
-        else:
-            loop = asyncio.get_running_loop()
-            conn = await loop.run_in_executor(
-                None, self.sync_set_data_batch, data, expire, conn
-            )
-        self.pool.append(cast(sqlite3.Connection, conn))
-        self.sem.release()
-        return data
+        self.sync_set_data_batch(data, expire)
 
     async def remove_by_key(self, key: str):
-        await self.sem.acquire()
-        if len(self.pool) > 0:
-            conn = self.pool.pop(0)
-        else:
-            conn = None
-        if sys.version_info >= (3, 9):
-            conn = await asyncio.to_thread(self.sync_remove_by_key, key, conn)
-        else:
-            loop = asyncio.get_running_loop()
-            conn = await loop.run_in_executor(None, self.sync_remove_by_key, key, conn)
-        self.pool.append(cast(sqlite3.Connection, conn))
-        self.sem.release()
+        self.sync_remove_by_key(key)

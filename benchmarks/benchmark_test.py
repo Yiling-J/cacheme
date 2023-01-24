@@ -52,7 +52,7 @@ async def bench_with_zipf(tasks):
 
 
 @pytest.fixture(
-    params=["local-lru", "local-tlfu", "redis", "mongo", "postgres", "mysql"]
+    params=["local-lru", "local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"]
 )
 def storage_provider(request):
     storages = {
