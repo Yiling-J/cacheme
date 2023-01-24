@@ -1,7 +1,7 @@
 import base64
 import importlib
 import json
-import lzma
+import zlib
 import pickle
 from types import ModuleType
 from typing import Any, Dict, cast
@@ -93,10 +93,10 @@ class CompressedSerializer:
 
     def dumps(self, obj: Any) -> bytes:
         blob = self.serializer.dumps(obj)
-        return lzma.compress(blob)
+        return zlib.compress(blob, level=3)
 
     def loads(self, blob: bytes) -> Any:
-        uncompressed = lzma.decompress(blob)
+        uncompressed = zlib.decompress(blob)
         return self.serializer.loads(uncompressed)
 
 
