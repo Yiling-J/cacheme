@@ -134,7 +134,7 @@ class SQLiteStorage(SQLStorage):
             data = await asyncio.to_thread(self.sync_get_by_key, key)
         else:
             loop = asyncio.get_running_loop()
-            conn, data = await loop.run_in_executor(None, self.sync_get_by_key, key)
+            data = await loop.run_in_executor(None, self.sync_get_by_key, key)
         self.sem.release()
         return data
 
@@ -150,7 +150,7 @@ class SQLiteStorage(SQLStorage):
             data = await asyncio.to_thread(self.sync_get_by_keys, keys)
         else:
             loop = asyncio.get_running_loop()
-            conn, data = await loop.run_in_executor(None, self.sync_get_by_keys, keys)
+            data = await loop.run_in_executor(None, self.sync_get_by_keys, keys)
         self.sem.release()
         return data
 
