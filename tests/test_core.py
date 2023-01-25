@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 from asyncio import gather, sleep
 from dataclasses import dataclass
@@ -6,7 +7,7 @@ import pytest
 
 from cacheme.core import Memoize, get, get_all, nodes, stats, invalidate, refresh
 from cacheme.data import register_storage
-from cacheme.models import Node
+from cacheme.models import Node, Cache
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
 from tests.utils import setup_storage
@@ -31,7 +32,7 @@ class FooNode(Node):
 
     class Meta(Node.Meta):
         version = "v1"
-        storage = "local"
+        caches = [Cache(storage="local", ttl=None)]
         serializer = MsgPackSerializer()
 
 
@@ -152,7 +153,7 @@ class FooNode2(Node):
 
     class Meta(Node.Meta):
         version = "v1"
-        storage = "local"
+        caches = [Cache(storage="local", ttl=None)]
         serializer = MsgPackSerializer()
 
 
@@ -209,7 +210,7 @@ class StatsNode(Node):
 
     class Meta(Node.Meta):
         version = "v1"
-        storage = "local"
+        caches = [Cache(storage="local", ttl=None)]
 
 
 @pytest.mark.asyncio
@@ -274,13 +275,15 @@ class FooWithLocalNode(Node):
 
     class Meta(Node.Meta):
         version = "v1"
-        storage = "sqlite"
-        local_storage = "local"
+        caches = [
+            Cache(storage="local", ttl=timedelta(seconds=10)),
+            Cache(storage="sqlite", ttl=None),
+        ]
         serializer = MsgPackSerializer()
 
 
 @pytest.mark.asyncio
-async def test_local_storage():
+async def test_multiple_storage():
     storage = Storage("sqlite:///testlocal", table="test")
     local_storage = Storage(url="local://tlfu", size=50)
     await register_storage("sqlite", storage)
@@ -301,6 +304,20 @@ async def test_local_storage():
     assert r is None
     rl = await local_storage.get(node, None)
     assert rl is None
+
+    # test remove cache from local only
+    result = await get(node)
+    assert result == "test"
+    await local_storage.remove(node)
+    result = await get(node)
+    assert result == "test"
+    r = await storage.get(node, MsgPackSerializer())
+    assert r is not None
+    assert r.data == "test"
+    rl = await local_storage.get(node, None)
+    assert rl is not None
+    assert rl.data == "test"
+
     os.remove("testlocal")
     os.remove("testlocal-shm")
     os.remove("testlocal-wal")

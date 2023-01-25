@@ -3,7 +3,7 @@ import pytest
 import uuid
 import asyncio
 import json
-from cacheme import get, get_all, Storage, Node, register_storage
+from cacheme import get, get_all, Storage, Node, register_storage, Cache
 from cacheme.serializer import MsgPackSerializer
 from benchmarks.zipf import Zipf
 from dataclasses import dataclass
@@ -33,7 +33,7 @@ class FooNode(Node):
 
     class Meta(Node.Meta):
         version = "v1"
-        storage = "test"
+        caches = [Cache(storage="test", ttl=None)]
         serializer = MsgPackSerializer()
 
 
@@ -125,8 +125,10 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
     table = f"test_{_uuid}"
     storage = storage_provider["storage"](table)
     FooNode.payload_fn = payload["fn"]
-    FooNode.Meta.local_storage = "local"
-    FooNode.Meta.local_ttl = timedelta(seconds=10)
+    FooNode.Meta.caches = [
+        Cache(storage="local", ttl=timedelta(seconds=10)),
+        Cache(storage="test", ttl=None),
+    ]
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
 
@@ -141,8 +143,9 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
     )
     asyncio.events.set_event_loop(None)
     loop.close()
-    FooNode.Meta.local_storage = None
-    FooNode.Meta.local_ttl = None
+    FooNode.Meta.caches = [
+        Cache(storage="test", ttl=None),
+    ]
 
 
 def test_read_only_async(benchmark, storage_provider, payload):
@@ -183,8 +186,10 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     storage = storage_provider["storage"](table)
     FooNode.payload_fn = payload["fn"]
     FooNode.uuid = _uuid
-    FooNode.Meta.local_storage = "local"
-    FooNode.Meta.local_ttl = timedelta(seconds=10)
+    FooNode.Meta.caches = [
+        Cache(storage="local", ttl=timedelta(seconds=10)),
+        Cache(storage="test", ttl=None),
+    ]
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
     # also warmup local cache
@@ -202,8 +207,9 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     )
     asyncio.events.set_event_loop(None)
     loop.close()
-    FooNode.Meta.local_storage = None
-    FooNode.Meta.local_ttl = None
+    FooNode.Meta.caches = [
+        Cache(storage="test", ttl=None),
+    ]
 
 
 def test_read_write_batch_async(benchmark, storage_provider, payload):
