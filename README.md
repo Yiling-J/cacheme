@@ -110,53 +110,6 @@ def _(user_id: int) -> UserInfoNode:
 ## Cache Node
 Meta class
 
-Protocol:
-
-```python
-class MetaData(Protocol):
-    def get_version(self) -> str:
-        ...
-
-    def get_stroage(self) -> Storage:
-        ...
-
-    def get_ttl(self) -> Optional[timedelta]:
-        ...
-
-    def get_local_ttl(self) -> Optional[timedelta]:
-        ...
-
-    def get_local_storage(self) -> Optional[Storage]:
-        ...
-
-    def get_seriaizer(self) -> Optional[Serializer]:
-        ...
-
-    def get_doorkeeper(self) -> Optional[DoorKeeper]:
-        ...
-
-    @classmethod
-    def get_metrics(cls) -> Metrics:
-        ...
-
-
-class Cachable(MetaData, Protocol[C_co]):
-    def key(self) -> str:
-        ...
-
-    def full_key(self) -> str:
-        ...
-
-    async def load(self) -> C_co:
-        ...
-
-    @classmethod
-    async def load_all(
-        cls, nodes: Sequence["Cachable[C]"]
-    ) -> Sequence[Tuple["Cachable", C]]:
-        ...
-```
-
 ## Cache Storage
 Local Storage
 
@@ -164,53 +117,15 @@ Redis Storage
 
 MongoDB Storage
 
+Sqlite Storage
+
 PostgreSQL Storage
 
 MySQL Storage
 
-Protocol:
-
-```python
-class CachedData(NamedTuple):
-    data: Any
-    node: "Cachable"
-    updated_at: datetime
-    expire: Optional[datetime] = None
-
-class Storage(Protocol):
-    async def connect(self):
-        ...
-
-    async def get(
-        self, node: "Cachable", serializer: Optional["Serializer"]
-    ) -> Optional[CachedData]:
-        ...
-
-    async def get_all(
-        self, nodes: Sequence["Cachable"], serializer: Optional["Serializer"]
-    ) -> Sequence[Tuple["Cachable", CachedData]]:
-        ...
-
-    async def set(
-        self,
-        node: "Cachable",
-        value: Any,
-        ttl: Optional[timedelta],
-        serializer: Optional["Serializer"],
-    ):
-        ...
-
-    async def remove(self, node: "Cachable"):
-        ...
-
-    async def set_all(
-        self,
-        data: Sequence[Tuple["Cachable", Any]],
-        ttl: Optional[timedelta],
-        serializer: Optional["Serializer"],
-    ):
-        ...
-```
 ## Benchmarks
 - Local Storage Hit Ratios
-- Throughput Benchmark
+  ![hit ratios](/benchmarks/hit_ratio.png)
+
+- Throughput Benchmark of different storages
+  See [benchmark]( https://github.com/Yiling-J/cacheme-benchmark) for details
