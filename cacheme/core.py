@@ -1,4 +1,3 @@
-from threading import local
 import types
 from asyncio import Event
 from datetime import datetime, timezone
@@ -22,7 +21,7 @@ from typing import (
 from typing_extensions import ParamSpec, Self
 
 from cacheme.interfaces import Cachable, CachedData, Memoizable, Metrics
-from cacheme.models import get_nodes
+from cacheme.models import get_nodes, Cache
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)
@@ -54,10 +53,9 @@ async def get(node: CB, load_fn: Callable[[CB], Awaitable[R]]) -> R:
 
 
 async def get(node: Cachable, load_fn=None):
-    storage = node.get_stroage()
     metrics = node.get_metrics()
     result = None
-    local_storage = node.get_local_storage()
+    caches = node.get_caches()
     locker = _lockers.get(node.full_key(), None)
     if locker is not None:
         await locker.lock.wait()
@@ -66,10 +64,14 @@ async def get(node: Cachable, load_fn=None):
     else:
         locker = Locker()
         _lockers[node.full_key()] = locker
-        if local_storage is not None:
-            result = await local_storage.get(node, None)
-        if result is None:
-            result = await storage.get(node, node.get_seriaizer())
+        serializer = node.get_seriaizer()
+        miss: List[Cache] = []
+        for cache in caches:
+            storage = cache.get_storage()
+            result = await storage.get(node, serializer)
+            if result is not None:
+                break
+            miss.append(cache)
         if result is None:
             metrics._miss_count += 1
             now = time_ns()
@@ -93,14 +95,16 @@ async def get(node: Cachable, load_fn=None):
                 if not exist:
                     doorkeeper.put(node.full_key())
                     return result.data
-            if local_storage is not None:
-                await local_storage.set(node, loaded, node.get_local_ttl(), None)
-            await storage.set(node, loaded, node.get_ttl(), node.get_seriaizer())
         else:
             metrics._hit_count += 1
         locker.value = result
         locker.lock.set()
         _lockers.pop(node.full_key(), None)
+        if len(miss) > 0:
+            for cache in miss:
+                await cache.get_storage().set(
+                    node, result.data, cache.get_ttl(), serializer
+                )
     return result.data
 
 
@@ -154,7 +158,6 @@ class NodeSet:
     def remove(self, node: Cachable):
         self.hashmap.pop(node.full_key(), None)
 
-    @property
     def list(self) -> Sequence[Cachable]:
         return tuple(self.hashmap.values())
 
@@ -183,14 +186,13 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
             _lockers[node.full_key()] = locker
             missing.append(node)
     result = None
-    storage = nodes[0].get_stroage()
     metrics = nodes[0].get_metrics()
     pending_nodes = NodeSet(missing)
-    local_storage = nodes[0].get_local_storage()
     serializer = nodes[0].get_seriaizer()
-    ttl = nodes[0].get_ttl()
-    if local_storage is not None:
-        cached = await local_storage.get_all(pending_nodes.list, serializer)
+    caches = nodes[0].get_caches()
+    missing_nodes = {}
+    for cache in caches:
+        cached = await cache.get_storage().get_all(pending_nodes.list(), serializer)
         for k, v in cached:
             pending_nodes.remove(k)
             locker = _lockers.pop(k.full_key(), None)
@@ -198,21 +200,13 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
                 locker.value = v.data
                 locker.lock.set()
             s[k.full_key()] = cast(C, v.data)
+        missing_nodes[cache] = pending_nodes.list()
         metrics._hit_count += len(cached)
-    cached = await storage.get_all(pending_nodes.list, serializer)
-    for k, v in cached:
-        pending_nodes.remove(k)
-        locker = _lockers.pop(k.full_key(), None)
-        if locker is not None:
-            locker.value = v.data
-            locker.lock.set()
-        s[k.full_key()] = cast(C, v.data)
-    metrics._hit_count += len(cached)
     metrics._miss_count += len(pending_nodes)
     if len(pending_nodes) > 0:
         now = time_ns()
         try:
-            ns = cast(Sequence[Cachable], pending_nodes.list)
+            ns = cast(Sequence[Cachable], pending_nodes.list())
             loaded = await node_cls.load_all(ns)
         except Exception as e:
             metrics._load_failure_count += len(pending_nodes)
@@ -226,9 +220,10 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
                 locker.value = v
                 locker.lock.set()
             s[k.full_key()] = cast(C, v)
-        if local_storage is not None:
-            await local_storage.set_all(loaded, nodes[0].get_local_ttl(), serializer)
-        await storage.set_all(loaded, ttl, serializer)
+        for cache in caches:
+            data = [(node, s[node.full_key()]) for node in missing_nodes[cache]]
+            if len(data) > 0:
+                await cache.get_storage().set_all(data, cache.get_ttl(), serializer)
     for n in waiting:
         node, locker = n
         await locker.lock.wait()
@@ -247,11 +242,9 @@ def stats(node: Type[Cachable]) -> Metrics:
 
 
 async def invalidate(node: Cachable):
-    storage = node.get_stroage()
-    await storage.remove(node)
-    local_storage = node.get_local_storage()
-    if local_storage is not None:
-        await local_storage.remove(node)
+    caches = node.get_caches()
+    for cache in caches:
+        await cache.get_storage().remove(node)
 
 
 async def refresh(node: Cachable[C_co]) -> C_co:

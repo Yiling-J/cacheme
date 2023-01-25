@@ -33,9 +33,9 @@ mypy = "^0.991"
 
 [tool.poetry.extras]
 redis = ["redis"]
-mysql = ["aiomysql"]
-mongo = ["motor"]
-postgresql = ["asyncpg"]
+aiomysql = ["aiomysql"]
+motor = ["motor"]
+asyncpg = ["asyncpg"]
 
 [build-system]
 requires = ["poetry-core"]
