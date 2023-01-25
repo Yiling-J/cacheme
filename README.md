@@ -2,7 +2,7 @@
 
 Asyncio cache framework with multiple cache storages.
 
-- **Cache configuration by node:** Cache configuration with node class, you can apply different cache strategies on different nodes.
+- **Better cache management:** Cache configuration with node class, you can apply different cache strategies on different nodes.
 - **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
 - **Multiple Serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
@@ -31,7 +31,7 @@ pip install cacheme[asyncpg]
 ## Add Node
 Node is the core part of your cache, each node contains:
 
-- Key attritubes and `key` method,  which generate the cache key. Here the `UserInfoNode` is a dataclass, so the `__init__` method are create automatically.
+- Key attritubes and `key` method,  which generate the cache key. Here the `UserInfoNode` is a dataclass, so the `__init__` method are created automatically.
 - Async `load` method, which will be called to load data from data source on cache missing. This method can be omitted if you use `Memoize` decorator only.
 - `Meta` class, node cache configurations.
 
@@ -113,11 +113,46 @@ def _(user_id: int) -> UserInfoNode:
 
 ## Cache Node
 
-#### Meta Class:
+#### Key
+Generated cache key will be: `{prefix}:{key()}:{Meta.version}`. So change `version` will invalid all keys automatically.
+
+#### Meta Class
 - `version[str]`: Version of node, will be used as suffix of cache key.
 - `caches[List[Cache]]`: Caches for node. Each `Cache` has 2 attributes, `storage[str]` and `ttl[Optional[timedelta]]`. `storage` is the name your registered with `register_storage` and `ttl` is how long this cache will live. Cacheme will try to get data from each cache from left to right. In most cases, use single cache or [local, remote] combination.
-- `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored.
-- `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper].
+- `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored. See [Serializers]().
+- `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper]().
+
+Multiple caches example. Local cache is not synchronized, so set a much shorter ttl compared to redis one. Then we don't need to worry too much about stale data.
+
+```python
+import cacheme
+from dataclasses import dataclass
+from datetime import timedelta
+from cacheme.serializer import MsgPackSerializer
+
+@dataclass
+class UserInfoNode(cacheme.Node):
+    user_id: int
+
+    def key(self) -> str:
+        return f"user:{self.user_id}:info"
+
+    async def load(self) -> Dict:
+        user = get_user_from_db(self.user_id)
+        return serialize(user)
+
+    class Meta(cacheme.Node.Meta):
+        version = "v1"
+        caches = [
+            cacheme.Cache(storage="local", ttl=timedelta(seconds=30)),
+            cacheme.Cache(storage="my-redis", ttl=timedelta(days=10))
+        ]
+        serializer = MsgPackSerializer()
+```
+
+#### Serializers
+
+#### DoorKeeper
 
 ## Cache Storage
 
