@@ -1,26 +1,23 @@
 ---
-name: Tests
+name: Benchmarks
 
 on:
   push:
     branches:
       - master
-      - "[0-9].[0-9]"
-  pull_request:
-    branches: ["master"]
 
 jobs:
-  tests:
-    name: "Python ${{ matrix.python-version }}"
+  benchmarks:
+    name: "Benchmark ${{ matrix.case }}"
     runs-on: "ubuntu-latest"
 
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        case: ["test_read_write_async", "test_read_write_with_local_async", "test_read_only_async", "test_read_only_with_local_async", "test_read_write_batch_async"]
 
     services:
       mysql:
-        image: mysql:5.7
+        image: mysql:8.0
         env:
           MYSQL_USER: username
           MYSQL_PASSWORD: password
@@ -68,7 +65,7 @@ jobs:
       - uses: "actions/checkout@v3"
       - uses: "actions/setup-python@v4"
         with:
-          python-version: "${{ matrix.python-version }}"
+          python-version: "3.11"
       - name: Install Poetry
         uses: abatilo/actions-poetry@v2
         with:
@@ -80,13 +77,21 @@ jobs:
         id: cached-poetry-dependencies
         with:
           path: .venv
-          key: python-${{ matrix.python-version }}-pydeps-${{ hashFiles('**/poetry.lock') }}
+          key: python-3.11-pydeps-${{ hashFiles('**/poetry.lock') }}
       - name: "Install Dependencies"
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: "poetry install --no-interaction --no-root"
       - name: "Run Lint"
         run: "poetry run mypy --ignore-missing-imports ."
-      - name: "Run Tests"
-        env:
-          CI: "TRUE"
-        run: "poetry run pytest --benchmark-skip"
+      - name: "Run Benchmarks"
+        run: "poetry run pytest benchmarks/benchmark_test.py::${{ matrix.case }} --benchmark-only --benchmark-json output.json"
+      - name: "Publish Benchmark Result"
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Cacheme Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: output.json
+          github-token: ${{ secrets.BENCH_TOKEN }}
+          auto-push: true
+          gh-repository: 'github.com/Yiling-J/cacheme-benchmark'
+          benchmark-data-dir-path: 'dev/${{ matrix.case }}'
