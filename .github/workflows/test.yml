@@ -94,7 +94,7 @@ jobs:
       - name: "Run Benchmarks"
         run: "poetry run pytest --benchmark-only --benchmark-json output.json"
       - name: "Publish Benchmark Result"
-        if: ${{ matrix.python-version == '3.11' }}
+        if: ${{ matrix.python-version == '3.11' && github.ref == 'refs/heads/master'}}
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: Cacheme Benchmark with pytest-benchmark

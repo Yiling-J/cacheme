@@ -3,11 +3,11 @@
 Asyncio cache framework with multiple cache storages.
 
 - **Cache configuration by node:** Cache configuration with node class, you can apply different cache strategies on different nodes.
-- **Multiple cache storages support:** in-memory/redis/mongodb/postgres..., also support chain in-memory storage with other storages.
+- **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
+- **Multiple Serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
 - **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
 - **Thundering herd protection:** Simultaneously requests to same key will blocked by asyncio Event and only load from source once.
-- **All Protocols:** Node/Storage/Serializer are all protocols, you can customize easily.
 - **Cache stats API:** Stats of each node and colected automatically.
 
 Related projects:
@@ -107,6 +107,10 @@ def _(user_id: int) -> UserInfoNode:
     return UserInfoNode(user_id=user_id)
 ```
 
+`nodes`: list all nodes.
+
+`stats`: get node stats.
+
 ## Cache Node
 
 #### Meta Class:
@@ -197,7 +201,7 @@ Parameters:
 - `pool_size`: connection pool size, default 50.
 
 ## Benchmarks
-- Local Storage Hit Ratios
+- Local Storage Hit Ratios(hit_count/request_count)
   ![hit ratios](benchmarks/hit_ratio.png)
   [source code](benchmarks/tlfu_hit.py)
 
