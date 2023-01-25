@@ -108,24 +108,86 @@ def _(user_id: int) -> UserInfoNode:
 ```
 
 ## Cache Node
-Meta class
+
+#### Meta Class:
+- `version`
+- `storage`
+- `ttl`
+- `local_ttl`
+- `local_storage`
+- `serializer`
+- `doorkeeper`
 
 ## Cache Storage
-Local Storage
 
-Redis Storage
+#### Local Storage
+Local storage uses dictionary to sotre data. A policy is used to evicate keys because size is limited.
+```python
+# lru policy
+Storage(url="local://lru", size=10000)
 
-MongoDB Storage
+# tinylfu policy
+Storage(url="local://tlfu", size=10000)
 
-Sqlite Storage
+```
+- url: `local://{policy}`. 2 policies are currently supported:
+  - `lru`
+  - `tlfu`: TinyLfu policy, see https://arxiv.org/pdf/1512.00727.pdf
 
-PostgreSQL Storage
+- size: size of the storage. Policy will be used to evicate key when cache is full.
 
-MySQL Storage
+#### Redis Storage
+```python
+Storage(url="redis://localhost:6379")
+
+# cluster
+Storage(url="redis://localhost:6379", cluster=True)
+```
+- url: redis connection url.
+- cluster: bool, cluster or not, default False.
+- pool_size: connection pool size, default 100.
+
+#### MongoDB Storage
+To use mongodb storage, create index first. See [mongo.js](cacheme/storages/scripts/mongo.js)
+```python
+Storage(url="mongodb://test:password@localhost:27017",database="test",collection="cache")
+```
+- url: mongodb connection url.
+- database: mongodb database name.
+- collection: mongodb collection name.
+
+#### Sqlite Storage
+To use sqlite storage, create table and index first. See [sqlite.sql](cacheme/storages/scripts/sqlite.sql)
+```python
+Storage(url="sqlite:///test", table="cache")
+```
+- url: sqlite connection url.
+- table: cache table name.
+- pool_size: connection pool size, default 50.
+
+#### PostgreSQL Storage
+To use postgres storage, create table and index first. See [postgresql.sql](cacheme/storages/scripts/postgresql.sql)
+```python
+Storage(url="postgresql://username:password@127.0.0.1:5432/test", table="cache")
+```
+- url: postgres connection url.
+- table: cache table name.
+- pool_size: connection pool size, default 50.
+
+#### MySQL Storage
+To use mysql storage, create table and index first. See [mysql.sql](cacheme/storages/scripts/mysql.sql)
+```python
+Storage("mysql://username:password@localhost:3306/test", table="cache")
+```
+- url: mysql connection url.
+- table: cache table name.
+- pool_size: connection pool size, default 50.
 
 ## Benchmarks
 - Local Storage Hit Ratios
   ![hit ratios](/benchmarks/hit_ratio.png)
+  [source code](/benchmarks/tlfu_hit.py)
 
 - Throughput Benchmark of different storages
-  See [benchmark]( https://github.com/Yiling-J/cacheme-benchmark) for details
+
+  See [benchmark]( https://github.com/Yiling-J/cacheme-benchmark)
