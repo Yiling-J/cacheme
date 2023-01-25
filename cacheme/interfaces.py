@@ -2,6 +2,10 @@ from datetime import datetime, timedelta
 from typing import List, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from typing_extensions import Any, Protocol
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cacheme.models import Cache
 
 C = TypeVar("C")
 C_co = TypeVar("C_co", covariant=True)
@@ -122,16 +126,7 @@ class MetaData(Protocol):
     def get_version(self) -> str:
         ...
 
-    def get_stroage(self) -> Storage:
-        ...
-
-    def get_ttl(self) -> Optional[timedelta]:
-        ...
-
-    def get_local_ttl(self) -> Optional[timedelta]:
-        ...
-
-    def get_local_storage(self) -> Optional[Storage]:
+    def get_caches(self) -> List["Cache"]:
         ...
 
     def get_seriaizer(self) -> Optional[Serializer]:

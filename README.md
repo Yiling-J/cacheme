@@ -23,9 +23,9 @@ pip install cacheme
 Multiple storages are supported by drivers. You can install the required drivers with:
 ```
 pip install cacheme[redis]
-pip install cacheme[mysql]
-pip install cacheme[mongo]
-pip install cacheme[postgresql]
+pip install cacheme[aiomysql]
+pip install cacheme[motor]
+pip install cacheme[asyncpg]
 ```
 
 ## Add Node
@@ -33,7 +33,7 @@ Node is the core part of your cache, each node contains:
 
 - Key attritubes and `key` method,  which generate the cache key. Here the `UserInfoNode` is a dataclass, so the `__init__` method are create automatically.
 - Async `load` method, which will be called to load data from data source on cache missing. This method can be omitted if you use `Memoize` decorator only.
-- `Meta` class, include storage related params: storage backend, serializer, ttl...
+- `Meta` class, node cache configurations.
 
 ```python
 import cacheme
@@ -53,10 +53,10 @@ class UserInfoNode(cacheme.Node):
 
     class Meta(cacheme.Node.Meta):
         version = "v1"
-        storage = "my-redis"
+        caches = [cacheme.Cache(storage="my-redis", ttl=None)]
         serializer = MsgPackSerializer()
 ```
-This simple example use a storage called "my-redis", which will be registered next step. Also we use `MsgPackSerializer` here to dump and load data from redis. See [Cache Node] for more details.
+This simple example use a cache storage called "my-redis", which will be registered next step. Also we use `MsgPackSerializer` here to dump and load data from redis. See [Cache Node] for more details.
 
 ## Register Storage
 
@@ -115,10 +115,7 @@ def _(user_id: int) -> UserInfoNode:
 
 #### Meta Class:
 - `version[str]`: Version of node, will be used as suffix of cache key.
-- `storage[str]`: Storage name string. Should be registered with `register_storage`
-- `ttl[Optional[timedelta]]`: Time to live of cache.
-- `local_ttl[Optional[timedelta]]`: Time to live of local cache, if enabled.
-- `local_storage[Optional[str]]`: Local storage name string. If this is not None, `get` method will try to get from local_storage first, then storage.
+- `caches[List[Cache]]`: Caches for node. Each `Cache` has 2 attributes, `storage[str]` and `ttl[Optional[timedelta]]`. `storage` is the name your registered with `register_storage` and `ttl` is how long this cache will live. Cacheme will try to get data from each cache from left to right. In most cases, use single cache or [local, remote] combination.
 - `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored.
 - `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper].
 

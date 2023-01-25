@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import ClassVar, List, Optional, Sequence, Type, cast
+from typing import ClassVar, List, Optional, Sequence, Tuple, Type, cast, NamedTuple
 
 from typing_extensions import Any
 
@@ -15,10 +15,21 @@ def get_nodes():
     return _nodes
 
 
+class Cache(NamedTuple):
+    storage: str
+    ttl: Optional[datetime.timedelta]
+
+    def get_storage(self) -> Storage:
+        return get_storage_by_name(self.storage)
+
+    def get_ttl(self) -> Optional[datetime.timedelta]:
+        return self.ttl
+
+
 class MetaNode(type):
     def __new__(cls, name, bases, dct):
         new = super().__new__(cls, name, bases, dct)
-        if new.Meta.storage != "":
+        if len(new.Meta.caches) > 0:
             _nodes.append(cast(Type[Cachable], cls))
             new.Meta.metrics = Metrics()
         return new
@@ -26,6 +37,7 @@ class MetaNode(type):
     class Meta:
         metrics: ClassVar[Metrics]
         storage: ClassVar[str] = ""
+        caches: List = []
 
 
 class Node(metaclass=MetaNode):
@@ -35,11 +47,13 @@ class Node(metaclass=MetaNode):
     def full_key(self) -> str:
         return f"cacheme:{self.key()}:{self.Meta.version}"
 
-    async def load(self):
+    async def load(self) -> Any:
         raise NotImplementedError()
 
     @classmethod
-    async def load_all(cls, nodes: Sequence[Cachable]) -> Any:
+    async def load_all(
+        cls, nodes: Sequence[Cachable]
+    ) -> Sequence[Tuple[Cachable, Any]]:
         data = []
         for node in nodes:
             v = await node.load()
@@ -49,19 +63,8 @@ class Node(metaclass=MetaNode):
     def get_version(self) -> str:
         return self.Meta.version
 
-    def get_stroage(self) -> Storage:
-        return get_storage_by_name(self.Meta.storage)
-
-    def get_ttl(self) -> Optional[datetime.timedelta]:
-        return self.Meta.ttl
-
-    def get_local_ttl(self) -> Optional[datetime.timedelta]:
-        return self.Meta.local_ttl or self.Meta.ttl
-
-    def get_local_storage(self) -> Optional[Storage]:
-        if self.Meta.local_storage is None:
-            return None
-        return get_storage_by_name(self.Meta.local_storage)
+    def get_caches(self) -> List[Cache]:
+        return self.Meta.caches
 
     def get_seriaizer(self) -> Optional[Serializer]:
         return self.Meta.serializer
@@ -75,10 +78,7 @@ class Node(metaclass=MetaNode):
 
     class Meta:
         version: ClassVar[str] = ""
-        storage: ClassVar[str] = ""
-        ttl: ClassVar[Optional[datetime.timedelta]] = None
-        local_ttl: ClassVar[Optional[datetime.timedelta]] = None
-        local_storage: ClassVar[Optional[str]] = None
+        caches: List[Cache] = []
         serializer: ClassVar[Optional[Serializer]] = None
         doorkeeper: ClassVar[Optional[DoorKeeper]] = None
         metrics: ClassVar[Metrics]
