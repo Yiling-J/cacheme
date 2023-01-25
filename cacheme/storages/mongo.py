@@ -8,14 +8,17 @@ from cacheme.storages.base import BaseStorage
 
 
 class MongoStorage(BaseStorage):
-    def __init__(self, address: str, database: str, collection: str):
+    def __init__(
+        self, address: str, database: str, collection: str, pool_size: int = 50
+    ):
         super().__init__(address=address)
         self.address = address
         self.database = database
         self.collection = collection
+        self.pool_size = pool_size
 
     async def connect(self):
-        client = mongo.AsyncIOMotorClient(self.address)
+        client = mongo.AsyncIOMotorClient(self.address, maxPoolSize=self.pool_size)
         self.table = client[self.database][self.collection]
 
     async def get_by_key(self, key: str) -> Any:
