@@ -110,13 +110,13 @@ def _(user_id: int) -> UserInfoNode:
 ## Cache Node
 
 #### Meta Class:
-- `version`
-- `storage`
-- `ttl`
-- `local_ttl`
-- `local_storage`
-- `serializer`
-- `doorkeeper`
+- `version[str]`: Version of node, will be used as suffix of cache key.
+- `storage[str]`: Storage name string. Should be registered with `register_storage`
+- `ttl[Optional[timedelta]]`: Time to live of cache.
+- `local_ttl[Optional[timedelta]]`: Time to live of local cache, if enabled.
+- `local_storage[Optional[str]]`: Local storage name string. If this is not None, `get` method will try to get from local_storage first, then storage.
+- `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored.
+- `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper].
 
 ## Cache Storage
 
@@ -130,6 +130,8 @@ Storage(url="local://lru", size=10000)
 Storage(url="local://tlfu", size=10000)
 
 ```
+Parameters:
+
 - `url`: `local://{policy}`. 2 policies are currently supported:
   - `lru`
   - `tlfu`: TinyLfu policy, see https://arxiv.org/pdf/1512.00727.pdf
@@ -143,6 +145,8 @@ Storage(url="redis://localhost:6379")
 # cluster
 Storage(url="redis://localhost:6379", cluster=True)
 ```
+Parameters:
+
 - `url`: redis connection url.
 - `cluster`: bool, cluster or not, default False.
 - `pool_size`: connection pool size, default 100.
@@ -152,15 +156,20 @@ To use mongodb storage, create index first. See [mongo.js](cacheme/storages/scri
 ```python
 Storage(url="mongodb://test:password@localhost:27017",database="test",collection="cache")
 ```
+Parameters:
+
 - `url`: mongodb connection url.
 - `database`: mongodb database name.
 - `collection`: mongodb collection name.
+- `pool_size`: connection pool size, default 50.
 
 #### Sqlite Storage
 To use sqlite storage, create table and index first. See [sqlite.sql](cacheme/storages/scripts/sqlite.sql)
 ```python
 Storage(url="sqlite:///test", table="cache")
 ```
+Parameters:
+
 - `url`: sqlite connection url.
 - `table`: cache table name.
 - `pool_size`: connection pool size, default 50.
@@ -170,6 +179,8 @@ To use postgres storage, create table and index first. See [postgresql.sql](cach
 ```python
 Storage(url="postgresql://username:password@127.0.0.1:5432/test", table="cache")
 ```
+Parameters:
+
 - `url`: postgres connection url.
 - `table`: cache table name.
 - `pool_size`: connection pool size, default 50.
@@ -179,6 +190,8 @@ To use mysql storage, create table and index first. See [mysql.sql](cacheme/stor
 ```python
 Storage("mysql://username:password@localhost:3306/test", table="cache")
 ```
+Parameters:
+
 - `url`: mysql connection url.
 - `table`: cache table name.
 - `pool_size`: connection pool size, default 50.
