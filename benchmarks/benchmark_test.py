@@ -187,12 +187,11 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     FooNode.payload_fn = payload["fn"]
     FooNode.uuid = _uuid
     FooNode.Meta.caches = [
-        Cache(storage="local", ttl=timedelta(seconds=10)),
+        Cache(storage="local", ttl=timedelta(seconds=120)),
         Cache(storage="test", ttl=None),
     ]
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
-    # also warmup local cache
     loop.run_until_complete(
         bench_with_zipf([simple_get(z.get()) for _ in range(REQUESTS * 2)])
     )
