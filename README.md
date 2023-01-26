@@ -4,7 +4,7 @@ Asyncio cache framework with multiple cache storages.
 
 - **Better cache management:** Cache configuration with node class, you can apply different cache strategies on different nodes.
 - **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
-- **Multiple Serializers:** Pickle/Json/Msgpack serializers.
+- **Multiple serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
 - **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
 - **Thundering herd protection:** Simultaneously requests to same key will blocked by asyncio Event and only load from source once.
@@ -131,8 +131,15 @@ def _(user_id: int) -> UserInfoNode:
 ```
 
 `nodes`: list all nodes.
+```python
+nodes = cacheme.nodes()
+```
 
 `stats`: get node stats.
+```
+metrics = cacheme.stats(UserInfoNode)
+print(metrics.hit_rate())
+```
 
 ## Cache Node
 
@@ -176,15 +183,15 @@ class UserInfoNode(cacheme.Node):
 #### Serializers
 Cacheme provides serveral builtin serializers, you can also write your own serializer.
 
-- PickleSerializer: All python objects.
-- JSONSerializer: Use `pydantic_encoder` and `json`, support python primitive types, dataclass, pydantic model.
-- MsgPackSerializer: Use `pydantic_encoder` and `msgpack`, support python primitive types, dataclass, pydantic model.
+- `PickleSerializer`: All python objects.
+- `JSONSerializer`: Use `pydantic_encoder` and `json`, support python primitive types, dataclass, pydantic model. See [pydantic types](https://docs.pydantic.dev/usage/types/).
+- `MsgPackSerializer`: Use `pydantic_encoder` and `msgpack`, support python primitive types, dataclass, pydantic model. See [pydantic types](https://docs.pydantic.dev/usage/types/).
 
 serializer with compression, use zlib level-3
 
-- CompressedPickleSerializer
-- CompressedJSONSerializer
-- CompressedMsgPackSerializer
+- `CompressedPickleSerializer`
+- `CompressedJSONSerializer`
+- `CompressedMsgPackSerializer`
 
 #### DoorKeeper
 Idea from [TinyLfu paper](https://arxiv.org/pdf/1512.00727.pdf).
@@ -197,8 +204,12 @@ otherwise, it is inserted to the cache.*
 ```python
 from cacheme import BloomFilter
 
-# size 100000, false positive probability 0.01
-doorkeeper = BloomFilter(100000, 0.01)
+@dataclass
+class UserInfoNode(cacheme.Node):
+
+    class Meta(cacheme.Node.Meta):
+        # size 100000, false positive probability 0.01
+        doorkeeper = BloomFilter(100000, 0.01)
 ```
 BloomFilter is cleared automatically when requests count == size.
 
