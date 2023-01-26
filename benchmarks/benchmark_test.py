@@ -119,7 +119,7 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=500))
+        register_storage("local", Storage(url="local://tlfu", size=650))
     )
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
@@ -179,7 +179,7 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=500))
+        register_storage("local", Storage(url="local://tlfu", size=650))
     )
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
