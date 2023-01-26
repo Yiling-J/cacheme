@@ -88,7 +88,7 @@ jobs:
       - name: "Publish Benchmark Result"
         uses: benchmark-action/github-action-benchmark@v1
         with:
-          name: Cacheme Benchmark: ${{ matrix-case }}
+          name: Cacheme Benchmark: ${{ matrix.case }}
           tool: 'pytest'
           output-file-path: output.json
           github-token: ${{ secrets.BENCH_TOKEN }}
