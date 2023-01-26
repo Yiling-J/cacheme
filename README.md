@@ -34,6 +34,9 @@ Related projects:
     + [MySQL Storage](#mysql-storage)
 - [Benchmarks](#benchmarks)
 
+## Requirements
+Python 3.7+
+
 ## Installation
 
 ```
