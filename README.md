@@ -33,7 +33,7 @@ Node is the core part of your cache, each node contains:
 
 - Key attritubes and `key` method,  which generate the cache key. Here the `UserInfoNode` is a dataclass, so the `__init__` method are created automatically.
 - Async `load` method, which will be called to load data from data source on cache missing. This method can be omitted if you use `Memoize` decorator only.
-- `Meta` class, node cache configurations.
+- `Meta` class, node cache configurations. See [Cache Node](#cache-node)
 
 ```python
 import cacheme
@@ -118,9 +118,9 @@ Generated cache key will be: `{prefix}:{key()}:{Meta.version}`. So change `versi
 
 #### Meta Class
 - `version[str]`: Version of node, will be used as suffix of cache key.
-- `caches[List[Cache]]`: Caches for node. Each `Cache` has 2 attributes, `storage[str]` and `ttl[Optional[timedelta]]`. `storage` is the name your registered with `register_storage` and `ttl` is how long this cache will live. Cacheme will try to get data from each cache from left to right. In most cases, use single cache or [local, remote] combination.
-- `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored. See [Serializers]().
-- `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper]().
+- `caches[List[Cache]]`: Caches for node. Each `Cache` has 2 attributes, `storage[str]` and `ttl[Optional[timedelta]]`. `storage` is the name you registered with `register_storage` and `ttl` is how long this cache will live. Cacheme will try to get data from each cache from left to right. In most cases, use single cache or [local, remote] combination.
+- `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored. See [Serializers](#serializers).
+- `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper](#doorkeeper).
 
 Multiple caches example. Local cache is not synchronized, so set a much shorter ttl compared to redis one. Then we don't need to worry too much about stale data.
 
@@ -151,8 +151,34 @@ class UserInfoNode(cacheme.Node):
 ```
 
 #### Serializers
+Cacheme provides serveral builtin serializers, you can also write your own serializer.
+
+- PickleSerializer: All python objects.
+- JSONSerializer: Use `pydantic_encoder` and `json`, support python primitive types, dataclass, pydantic model.
+- MsgPackSerializer: Use `pydantic_encoder` and `msgpack`, support python primitive types, dataclass, pydantic model.
+
+serializer with compression, use zlib level-3
+
+- CompressedPickleSerializer
+- CompressedJSONSerializer
+- CompressedMsgPackSerializer
 
 #### DoorKeeper
+Idea from [TinyLfu paper](https://arxiv.org/pdf/1512.00727.pdf).
+
+*The Doorkeeper is a regular Bloom filter placed in front of the cahce. Upon
+item arrival, we first check if the item is contained in the Doorkeeper. If it is not contained in the
+Doorkeeper (as is expected with first timers and tail items), the item is inserted to the Doorkeeper and
+otherwise, it is inserted to the cache.*
+
+```python
+from cacheme import BloomFilter
+
+# size 100000, false positive probability 0.01
+doorkeeper = BloomFilter(100000, 0.01)
+```
+BloomFilter is cleared automatically when requests count == size.
+
 
 ## Cache Storage
 

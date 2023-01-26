@@ -2,3 +2,4 @@ from cacheme.core import get, get_all, Memoize, nodes, stats, invalidate, refres
 from cacheme.storages import Storage
 from cacheme.models import Node, Cache
 from cacheme.data import register_storage
+from cacheme_utils import BloomFilter
