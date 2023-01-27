@@ -7,7 +7,7 @@ Asyncio cache framework with multiple cache storages.
 - **Multiple serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
 - **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
-- **Thundering herd protection:** Thanks to asyncio, simultaneously requests to same key can be blocked by asyncio Event and only load from source once.
+- **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once.
 - **Cache stats API:** Stats of each node and colected automatically.
 
 Related projects:
