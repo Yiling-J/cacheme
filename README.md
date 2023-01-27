@@ -2,12 +2,12 @@
 
 Asyncio cache framework with multiple cache storages.
 
-- **Better cache management:** Cache configuration with node class, you can apply different cache strategies on different nodes.
+- **Better cache management:** Cache configuration with node, you can apply different strategies on different nodes.
 - **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
 - **Multiple serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
 - **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
-- **Thundering herd protection:** Simultaneously requests to same key will blocked by asyncio Event and only load from source once.
+- **Thundering herd protection:** Thanks to asyncio, simultaneously requests to same key can be blocked by asyncio Event and only load from source once.
 - **Cache stats API:** Stats of each node and colected automatically.
 
 Related projects:
@@ -52,9 +52,10 @@ pip install cacheme[asyncpg]
 ```
 
 ## Add Node
-Node is the core part of your cache, each node contains:
+Node is the core part of cache. Each node has its own key function, load function and storage options. Stats of each node are collected independently. You can place all node definations into one package/module, so everyone knows exactly what is cached now and how they are cached. All cacheme API are based on node.
 
-- Key attritubes and `key` method,  which generate the cache key. Here the `UserInfoNode` is a dataclass, so the `__init__` method are created automatically.
+Each node contains:
+- Key attritubes and `key` method,  which are used to generate cache key. Here the `UserInfoNode` is a dataclass, so `__init__` method is generated automatically.
 - Async `load` method, which will be called to load data from data source on cache missing. This method can be omitted if you use `Memoize` decorator only.
 - `Meta` class, node cache configurations. See [Cache Node](#cache-node)
 
