@@ -138,7 +138,18 @@ nodes = cacheme.nodes()
 `stats`: get node stats.
 ```
 metrics = cacheme.stats(UserInfoNode)
-print(metrics.hit_rate())
+
+metrics.request_count() # total request count
+metrics.hit_count() # total hit count
+metrics.hit_rate() # hit_count/request_count
+metrics.miss_count() # (request_count - hit_count)/request_count
+metrics.miss_rate() # miss_count/request_count
+metric.load_success_count() # total load success count
+metrics.load_failure_count() # total load fail count
+metrics.load_failure_rate() # load_failure_count/load_count
+metrics.load_count() # total load count
+metrics.total_load_time() # total load time in nanoseconds
+metrics.average_load_time() # total_load_time/load_count
 ```
 
 ## Cache Node
