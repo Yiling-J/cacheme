@@ -9,10 +9,16 @@ from cacheme.data import get_storage_by_name
 from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
 
 _nodes: List[Type[Cachable]] = []
+_prefix: str = "cacheme"
 
 
 def get_nodes():
     return _nodes
+
+
+def set_prefix(prefix: str):
+    global _prefix
+    _prefix = prefix
 
 
 class Cache(NamedTuple):
@@ -45,7 +51,7 @@ class Node(metaclass=MetaNode):
         raise NotImplementedError()
 
     def full_key(self) -> str:
-        return f"cacheme:{self.key()}:{self.Meta.version}"
+        return f"{_prefix}:{self.key()}:{self.Meta.version}"
 
     async def load(self) -> Any:
         raise NotImplementedError()

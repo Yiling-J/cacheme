@@ -152,6 +152,12 @@ metrics.total_load_time() # total load time in nanoseconds
 metrics.average_load_time() # total_load_time/load_count
 ```
 
+`set_prefix`: set prefix for all keys. Default prefix is `cacheme`. Change prefix will invalid all keys, because prefix is part of the key.
+```python
+cacheme.set_prefix("mycache")
+```
+
+
 ## Cache Node
 
 #### Key

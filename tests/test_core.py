@@ -7,7 +7,7 @@ import pytest
 
 from cacheme.core import Memoize, get, get_all, nodes, stats, invalidate, refresh
 from cacheme.data import register_storage
-from cacheme.models import Node, Cache
+from cacheme.models import Node, Cache, set_prefix
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
 from tests.utils import setup_storage
@@ -328,3 +328,10 @@ def test_nodes():
     assert len(test_nodes) > 0
     for n in test_nodes:
         assert type(n) != Node
+
+
+def test_set_prefix():
+    node = FooWithLocalNode(id="test")
+    assert node.full_key() == "cacheme:test:v1"
+    set_prefix("youcache")
+    assert node.full_key() == "youcache:test:v1"
