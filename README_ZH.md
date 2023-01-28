@@ -5,8 +5,8 @@
 - 通过Node结构化管理缓存，可以给不同的Node分配不同的缓存存储方式及缓存策略
 - 多种序列化方式， 支持 pickle/json/msgpack及压缩存储
 - API全部添加Type hint
-- Rust编写的，基于TinyLFU的高效内存缓存
-- 通过asyncio Event避免Thundering herd
+- 基于TinyLFU的高效缓存管理策略，使用Rust编写
+- 通过asyncio Event避免Thundering herd问题，提高命中率及减轻高并发下数据源/缓存源压力
 - 基于Node的缓存统计API
 
 相关项目：
