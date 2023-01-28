@@ -1,24 +1,23 @@
 # Cacheme
 
-Asyncio cache framework with multiple cache storages. [中文文档](README_ZH.md)
+多源结构化异步缓存框架。
 
-- **Better cache management:** Cache configuration with node, you can apply different strategies on different nodes.
-- **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
-- **Multiple serializers:** Pickle/Json/Msgpack serializers.
-- **Type annotated:** All cacheme API are type annotated with generics.
-- **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
-- **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once.
-- **Cache stats API:** Stats of each node and colected automatically.
+- 通过Node结构化管理缓存，可以给不同的Node分配不同的缓存存储方式及缓存策略
+- 多种序列化方式， 支持 pickle/json/msgpack及压缩存储
+- API全部添加Type hint
+- Rust编写的，基于TinyLFU的高效内存缓存
+- 通过asyncio Event避免Thundering herd
+- 基于Node的缓存统计API
 
-Related projects:
-- Rust tiny-lfu/lru/bloomfilter used in cacheme: https://github.com/Yiling-J/cacheme-utils
-- Benchmark(auto updated): https://github.com/Yiling-J/cacheme-benchmark
+相关项目：
+- Rust编写的tiny-lfu/lru/bloomfilter：https://github.com/Yiling-J/cacheme-utils
+- 相关benchmarks：https://github.com/Yiling-J/cacheme-benchmark
 
-## Table of Contents
+## 目录
 
-- [Installation](#installation)
-- [Add Node](#add-node)
-- [Register Storage](#register-storage)
+- [安装](#安装)
+- [定义Node](#定义Node)
+- [注册Storage](#注册Storage)
 - [Cacheme API](#cacheme-api)
 - [Cache Node](#cache-node)
     + [Key](#key)
@@ -34,16 +33,15 @@ Related projects:
     + [MySQL Storage](#mysql-storage)
 - [Benchmarks](#benchmarks)
 
-## Requirements
+## 基本要求
 Python 3.7+
 
-## Installation
-
+## 安装
 ```
 pip install cacheme
 ```
 
-Multiple storages are supported by drivers. You can install the required drivers with:
+不同存储源通过对应driver支持，可以根据情况选择安装
 ```
 pip install cacheme[redis]
 pip install cacheme[aiomysql]
@@ -51,14 +49,8 @@ pip install cacheme[motor]
 pip install cacheme[asyncpg]
 ```
 
-## Add Node
-Node is the core part of cache. Each node has its own key function, load function and storage options. Stats of each node are collected independently. You can place all node definations into one package/module, so everyone knows exactly what is cached now and how they are cached. All cacheme API are based on node.
-
-Each node contains:
-- Key attritubes and `key` method,  which are used to generate cache key. Here the `UserInfoNode` is a dataclass, so `__init__` method is generated automatically.
-- Async `load` method, which will be called to load data from data source on cache missing. This method can be omitted if you use `Memoize` decorator only.
-- `Meta` class, node cache configurations. See [Cache Node](#cache-node)
-
+## 定义Node
+Node是Cacheme的核心部分。Node定义包含了缓存的key定义，缓存源数据读取以及存储相关的各种配置。通过例子比较直接：
 ```python
 import cacheme
 from dataclasses import dataclass
@@ -80,13 +72,10 @@ class UserInfoNode(cacheme.Node):
         caches = [cacheme.Cache(storage="my-redis", ttl=None)]
         serializer = MsgPackSerializer()
 ```
-This simple example use a cache storage called "my-redis", which will be registered next step. Also we use `MsgPackSerializer` here to dump and load data from redis. See [Cache Node] for more details.
+以上这个例子定义了UserInfoNode，用于缓存UserInfo数据。缓存的key通过`key`函数生成。通过dataclass装饰器自动生成init方法。这样在调用Cacheme API时只使用node，避免手工输入key string。load函数定义了当缓存miss时如何从数据源获取数据。而Meta class则定义了cache的version(会自动加入key中)，cache的存储方式，这里用了名叫my-redis的存储源以及存储/读取时用的serializer。
 
-## Register Storage
-
-Register a redis storage called "my-redis", which you can use in node meta data. The `register_storage` is asynchronous and will try to establish connection to cache store.
-See [Cache Storage] for more details.
-
+## 注册Storage
+Cacheme的Node和Storage是分开的，Node表示业务信息，比如用户信息node。而storage则是cache的存储方式。一个Node可以支持串联多种存储方式，同样一个存储方式也可以用在多种node上。
 ```python
 import cacheme
 
@@ -95,27 +84,27 @@ await cacheme.register_storage("my-redis", cacheme.Storage(url="redis://localhos
 
 ## Cacheme API
 
-`get`: get data from single node.
+`get`: 通过node获取数据
 ```python
 user = await cacheme.get(UserInfoNode(user_id=1))
 ```
 
-`get_all`: get data from multiple nodes, same node type.
+`get_all`: 通过node获取多条数据，传入nodes必须是同一类型
 ```python
 users = await cacheme.get_all([UserInfoNode(user_id=1), UserInfoNode(user_id=2)])
 ```
 
-`invalidate`: invalidate a node, remove data from cache.
+`invalidate`: 删除某个node的缓存
 ```python
 await cacheme.invalidate(UserInfoNode(user_id=1))
 ```
 
-`refresh`: reload node data using `load` method.
+`refresh`: 重新从数据源读取某个node的缓存
 ```python
 await cacheme.refresh(UserInfoNode(user_id=1))
 ```
 
-`Memoize`: memoize function with this decorator.
+`Memoize`: memoize装饰器，可用于memoize已有函数
 
 Decorate your function with `cacheme.Memoize` decorator and cache node. Cacheme will load data using the decorated function and ignore `load` method.
 Because your function may contain variable number of args/kwargs, we need one more step to map between args/kwargs to node. The decorated map function should have same input signature as memoized function, and return a cache node.
@@ -131,12 +120,12 @@ def _(user_id: int) -> UserInfoNode:
     return UserInfoNode(user_id=user_id)
 ```
 
-`nodes`: list all nodes.
+`nodes`: 列出所有nodes
 ```python
 nodes = cacheme.nodes()
 ```
 
-`stats`: get node stats.
+`stats`: 获取节点统计数据
 ```
 metrics = cacheme.stats(UserInfoNode)
 
@@ -153,24 +142,23 @@ metrics.total_load_time() # total load time in nanoseconds
 metrics.average_load_time() # total_load_time/load_count
 ```
 
-`set_prefix`: set prefix for all keys. Default prefix is `cacheme`. Change prefix will invalid all keys, because prefix is part of the key.
+`set_prefix`: 设置全局key前缀
 ```python
 cacheme.set_prefix("mycache")
 ```
 
-
 ## Cache Node
 
 #### Key
-Generated cache key will be: `{prefix}:{key()}:{Meta.version}`. So change `version` will invalid all keys automatically.
+实际存储到storage层的key形式为`{prefix}:{key()}:{Meta.version}`
 
 #### Meta Class
-- `version[str]`: Version of node, will be used as suffix of cache key.
-- `caches[List[Cache]]`: Caches for node. Each `Cache` has 2 attributes, `storage[str]` and `ttl[Optional[timedelta]]`. `storage` is the name you registered with `register_storage` and `ttl` is how long this cache will live. Cacheme will try to get data from each cache from left to right. In most cases, use single cache or [local, remote] combination.
-- `serializer[Optional[Serializer]]`: Serializer used to dump/load data. If storage type is `local`, serializer is ignored. See [Serializers](#serializers).
+- `version[str]`: node版本信息.
+- `caches[List[Cache]]`: Node缓存的存储源. 多个存储源会按从左到右的顺序依次调用，在写入缓存时也会依次写入。定义`Cache`需要2个参数：`storage[str]` 和 `ttl[Optional[timedelta]]`. `storage`是调用 `register_storage`时传入的name， 而`ttl`就是这个node对应缓存的ttl.
+- `serializer[Optional[Serializer]]`: Serializer用于dump/load data. 如果是local cache，由于直接使用dict存储会忽略serializer. See [Serializers](#serializers).
 - `doorkeeper[Optional[DoorKeeper]]`: See [DoorKeeper](#doorkeeper).
 
-Multiple caches example. Local cache is not synchronized, so set a much shorter ttl compared to redis one. Then we don't need to worry too much about stale data.
+以下例子展示了使用local + redis两级缓存的情况
 
 ```python
 import cacheme
@@ -199,25 +187,27 @@ class UserInfoNode(cacheme.Node):
 ```
 
 #### Serializers
-Cacheme provides serveral builtin serializers, you can also write your own serializer.
+Cacheme 提供以下内置serializer.
 
-- `PickleSerializer`: All python objects.
-- `JSONSerializer`: Use `pydantic_encoder` and `json`, support python primitive types, dataclass, pydantic model. See [pydantic types](https://docs.pydantic.dev/usage/types/).
-- `MsgPackSerializer`: Use `pydantic_encoder` and `msgpack`, support python primitive types, dataclass, pydantic model. See [pydantic types](https://docs.pydantic.dev/usage/types/).
+- `PickleSerializer`: 使用Python pickle，支持各种类型.
+- `JSONSerializer`: 使用`pydantic_encoder` 和 `json`, 支持python基本类型/dataclass/pydantic model. See [pydantic types](https://docs.pydantic.dev/usage/types/).
+- `MsgPackSerializer`: 使用`pydantic_encoder` 和 `msgpack`, 支持python基本类型/dataclass/pydantic model. See [pydantic types](https://docs.pydantic.dev/usage/types/).
 
-serializer with compression, use zlib level-3
+以上3种serializer同时有对应的压缩版本, 在存入存储源前会使用zlib level-3进行压缩
 
 - `CompressedPickleSerializer`
 - `CompressedJSONSerializer`
 - `CompressedMsgPackSerializer`
 
 #### DoorKeeper
-Idea from [TinyLfu paper](https://arxiv.org/pdf/1512.00727.pdf).
+概念来源于[TinyLfu 论文](https://arxiv.org/pdf/1512.00727.pdf).
 
 *The Doorkeeper is a regular Bloom filter placed in front of the cahce. Upon
 item arrival, we first check if the item is contained in the Doorkeeper. If it is not contained in the
 Doorkeeper (as is expected with first timers and tail items), the item is inserted to the Doorkeeper and
 otherwise, it is inserted to the cache.*
+
+缓存请求第一次到达服务端时先不缓存数据，只是更新Bloom filter， 等请求第二次到达时才把数据存入缓存。这么做好处是很多只请求1次的数据会被筛掉不进入缓存，节约空间。坏处是所有请求都会至少从数据源load两次。BloomFilter在请求到达size后会自动重制。
 
 ```python
 from cacheme import BloomFilter
@@ -229,13 +219,11 @@ class UserInfoNode(cacheme.Node):
         # size 100000, false positive probability 0.01
         doorkeeper = BloomFilter(100000, 0.01)
 ```
-BloomFilter is cleared automatically when requests count == size.
-
 
 ## Cache Storage
 
 #### Local Storage
-Local storage uses dictionary to store data. A policy is used to evicate keys when cache is full.
+Local Storage使用Python dict存储数据，支持lru和tlfu两种policy。当缓存到达设定size时会自动通过policy进行驱逐。
 ```python
 # lru policy
 Storage(url="local://lru", size=10000)
@@ -266,7 +254,7 @@ Parameters:
 - `pool_size`: connection pool size, default 100.
 
 #### MongoDB Storage
-To use mongodb storage, create index first. See [mongo.js](cacheme/storages/scripts/mongo.js)
+使用该storage前需要先创建index. See [mongo.js](cacheme/storages/scripts/mongo.js)
 ```python
 Storage(url="mongodb://test:password@localhost:27017",database="test",collection="cache")
 ```
@@ -278,7 +266,7 @@ Parameters:
 - `pool_size`: connection pool size, default 50.
 
 #### Sqlite Storage
-To use sqlite storage, create table and index first. See [sqlite.sql](cacheme/storages/scripts/sqlite.sql)
+使用该storage前需要先创建table及index. See [sqlite.sql](cacheme/storages/scripts/sqlite.sql)
 ```python
 Storage(url="sqlite:///test", table="cache")
 ```
@@ -289,7 +277,7 @@ Parameters:
 - `pool_size`: connection pool size, default 50.
 
 #### PostgreSQL Storage
-To use postgres storage, create table and index first. See [postgresql.sql](cacheme/storages/scripts/postgresql.sql)
+使用该storage前需要先创建table及index. See [postgresql.sql](cacheme/storages/scripts/postgresql.sql)
 ```python
 Storage(url="postgresql://username:password@127.0.0.1:5432/test", table="cache")
 ```
@@ -300,7 +288,7 @@ Parameters:
 - `pool_size`: connection pool size, default 50.
 
 #### MySQL Storage
-To use mysql storage, create table and index first. See [mysql.sql](cacheme/storages/scripts/mysql.sql)
+使用该storage前需要先创建table及index. See [mysql.sql](cacheme/storages/scripts/mysql.sql)
 ```python
 Storage("mysql://username:password@localhost:3306/test", table="cache")
 ```
