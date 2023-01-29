@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 import pytest
-from cacheme.core import invalidate, refresh
 
+from cacheme.core import invalidate, refresh
 from cacheme.models import Node
 from cacheme.serializer import PickleSerializer
 from cacheme.storages.local import LocalStorage

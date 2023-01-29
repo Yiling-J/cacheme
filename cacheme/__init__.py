@@ -1,5 +1,7 @@
-from cacheme.core import get, get_all, Memoize, nodes, stats, invalidate, refresh
-from cacheme.storages import Storage
-from cacheme.models import Node, Cache, set_prefix
-from cacheme.data import register_storage
 from cacheme_utils import BloomFilter
+
+from cacheme.core import (Memoize, get, get_all, invalidate, nodes, refresh,
+                          stats)
+from cacheme.data import register_storage
+from cacheme.models import Cache, Node, set_prefix
+from cacheme.storages import Storage

@@ -1,13 +1,14 @@
-from datetime import timedelta
 import os
 from asyncio import gather, sleep
 from dataclasses import dataclass
+from datetime import timedelta
 
 import pytest
 
-from cacheme.core import Memoize, get, get_all, nodes, stats, invalidate, refresh
+from cacheme.core import (Memoize, get, get_all, invalidate, nodes, refresh,
+                          stats)
 from cacheme.data import register_storage
-from cacheme.models import Node, Cache, set_prefix
+from cacheme.models import Cache, Node, set_prefix
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
 from tests.utils import setup_storage

@@ -1,4 +1,4 @@
-from asyncio import create_task, get_event_loop, sleep
+from asyncio import Task, create_task, sleep
 from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Type
@@ -21,7 +21,8 @@ class LocalStorage(BaseStorage):
         policy_name = urlparse(address).netloc
         self.cache: OrderedDict[str, CachedValue] = OrderedDict()
         self.policy = POLICIES[policy_name](size)
-        self.expire_task = None
+        self.wait_expire: Optional[timedelta] = None
+        self.expire_task: Optional[Task] = None
 
     async def connect(self):
         return

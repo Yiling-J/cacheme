@@ -1,10 +1,12 @@
 from dataclasses import dataclass
+
 from asyncpg.connection import asyncio
+
 from benchmarks.zipf import Zipf
+from cacheme.core import get, stats
 from cacheme.data import register_storage
 from cacheme.interfaces import Metrics
 from cacheme.models import Node
-from cacheme.core import get, stats
 from cacheme.storages import Storage
 
 
