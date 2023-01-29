@@ -21,7 +21,6 @@ class LocalStorage(BaseStorage):
         policy_name = urlparse(address).netloc
         self.cache: OrderedDict[str, CachedValue] = OrderedDict()
         self.policy = POLICIES[policy_name](size)
-        self.wait_expire = None
         self.expire_task = None
 
     async def connect(self):
