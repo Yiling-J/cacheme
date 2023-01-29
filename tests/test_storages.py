@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 import pytest
-from cacheme.core import invalidate, refresh
 
+from cacheme.core import invalidate, refresh
 from cacheme.models import Node
 from cacheme.serializer import PickleSerializer
 from cacheme.storages.local import LocalStorage
@@ -142,3 +142,28 @@ async def test_storages(storage):
         os.remove(filename)
         os.remove(f"{filename}-shm")
         os.remove(f"{filename}-wal")
+
+
+@pytest.mark.asyncio
+async def test_local_storage_expire():
+    storage = LocalStorage(200, "local://tlfu")
+    for i in range(100):
+        await storage.set(FooNode(id=f"foo-{i}"), 0, timedelta(seconds=2), None)
+    await sleep(1)
+    await storage.set(FooNode(id="foo-test"), 0, timedelta(seconds=2), None)
+    assert storage.expire_task is not None
+    await sleep(0.5)
+    assert len(storage.cache) == 101
+    await sleep(2)
+    await storage.set(FooNode(id="foo-test"), 0, timedelta(seconds=2), None)
+    await sleep(0.5)
+    assert len(storage.cache) == 1
+    await sleep(2.5)
+    assert len(storage.cache) == 0
+    assert storage.expire_task.done() == True
+    await storage.set(FooNode(id=f"foo-test2"), 0, timedelta(seconds=1), None)
+    assert storage.expire_task.done() == False
+    assert len(storage.cache) == 1
+    await sleep(1.5)
+    assert len(storage.cache) == 0
+    assert storage.expire_task.done() == True

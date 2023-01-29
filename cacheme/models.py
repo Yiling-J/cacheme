@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import datetime
-from typing import ClassVar, List, Optional, Sequence, Tuple, Type, cast, NamedTuple
+from typing import (ClassVar, List, NamedTuple, Optional, Sequence, Tuple,
+                    Type, cast)
 
 from typing_extensions import Any
 
 from cacheme.data import get_storage_by_name
-from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
+from cacheme.interfaces import (Cachable, DoorKeeper, Metrics, Serializer,
+                                Storage)
 
 _nodes: List[Type[Cachable]] = []
 _prefix: str = "cacheme"

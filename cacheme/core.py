@@ -1,27 +1,15 @@
 import types
 from asyncio import Event
+from collections import OrderedDict
 from datetime import datetime, timezone
 from time import time_ns
-from collections import OrderedDict
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Generic,
-    Optional,
-    Sequence,
-    Type,
-    TypeVar,
-    cast,
-    overload,
-    List,
-)
+from typing import (Any, Awaitable, Callable, Dict, Generic, List, Optional,
+                    Sequence, Type, TypeVar, cast, overload)
 
 from typing_extensions import ParamSpec, Self
 
 from cacheme.interfaces import Cachable, CachedData, Memoizable, Metrics
-from cacheme.models import get_nodes, Cache
+from cacheme.models import Cache, get_nodes
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)

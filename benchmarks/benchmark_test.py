@@ -1,15 +1,16 @@
-from datetime import timedelta
-import pytest
-import uuid
 import asyncio
 import json
-from cacheme import get, get_all, Storage, Node, register_storage, Cache
-from cacheme.serializer import MsgPackSerializer
-from benchmarks.zipf import Zipf
+import uuid
 from dataclasses import dataclass
-from tests.utils import setup_storage
+from datetime import timedelta
 from typing import Callable, ClassVar, Dict, List
 
+import pytest
+
+from benchmarks.zipf import Zipf
+from cacheme import Cache, Node, Storage, get, get_all, register_storage
+from cacheme.serializer import MsgPackSerializer
+from tests.utils import setup_storage
 
 REQUESTS = 10000
 

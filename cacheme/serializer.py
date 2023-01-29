@@ -1,8 +1,8 @@
 import base64
 import importlib
 import json
-import zlib
 import pickle
+import zlib
 from types import ModuleType
 from typing import Any, Dict, cast
 

@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
-from typing import List, NamedTuple, Optional, Sequence, Tuple, TypeVar
+from typing import (TYPE_CHECKING, List, NamedTuple, Optional, Sequence, Tuple,
+                    TypeVar)
 
 from typing_extensions import Any, Protocol
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from cacheme.models import Cache
