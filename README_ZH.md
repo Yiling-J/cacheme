@@ -13,6 +13,10 @@
 - Rust编写的tiny-lfu/lru/bloomfilter：https://github.com/Yiling-J/cacheme-utils
 - 相关benchmarks：https://github.com/Yiling-J/cacheme-benchmark
 
+相关介绍文章:
+- [Python异步缓存框架设计(Part 1): 缓存设计概览](https://zhuanlan.zhihu.com/p/601599941)
+- [Python异步缓存框架设计(Part 2): Cacheme介绍](https://zhuanlan.zhihu.com/p/601599941)
+
 ## 目录
 
 - [安装](#安装)
