@@ -3,13 +3,32 @@ from asyncio import Event
 from collections import OrderedDict
 from datetime import datetime, timezone
 from time import time_ns
-from typing import (Any, Awaitable, Callable, Dict, Generic, List, Optional,
-                    Sequence, Type, TypeVar, cast, overload)
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import ParamSpec, Self
 
-from cacheme.interfaces import Cachable, CachedData, Memoizable, Metrics
-from cacheme.models import Cache, get_nodes
+from cacheme.interfaces import (
+    Cachable,
+    CachedData,
+    Memoizable,
+    Metrics,
+    Serializer,
+    DoorKeeper,
+)
+from cacheme.models import Cache, get_nodes, DynamicNode, Node, _add_node
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)
@@ -238,3 +257,26 @@ async def invalidate(node: Cachable):
 async def refresh(node: Cachable[C_co]) -> C_co:
     await invalidate(node)
     return await get(node)
+
+
+_dynamic_nodes: Dict[str, Type[Node]] = {}
+
+
+def build_node(
+    name: str,
+    version: str,
+    caches: List[Cache],
+    serializer: Optional[Serializer] = None,
+    doorkeeper: Optional[DoorKeeper] = None,
+) -> Type[Node]:
+    if name in _dynamic_nodes:
+        return _dynamic_nodes[name]
+    new: Type[DynamicNode] = type(name, (DynamicNode,), {})
+    new.Meta.version = version
+    new.Meta.caches = caches
+    new.Meta.serializer = serializer
+    new.Meta.doorkeeper = doorkeeper
+    new.Meta.metrics = Metrics()
+    _dynamic_nodes[name] = new
+    _add_node(new)
+    return new

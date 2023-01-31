@@ -5,10 +5,18 @@ from datetime import timedelta
 
 import pytest
 
-from cacheme.core import (Memoize, get, get_all, invalidate, nodes, refresh,
-                          stats)
+from cacheme.core import (
+    Memoize,
+    get,
+    get_all,
+    invalidate,
+    nodes,
+    refresh,
+    stats,
+    build_node,
+)
 from cacheme.data import register_storage
-from cacheme.models import Cache, Node, set_prefix
+from cacheme.models import Cache, Node, set_prefix, DynamicNode
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
 from tests.utils import setup_storage
@@ -336,3 +344,64 @@ def test_set_prefix():
     assert node.full_key() == "cacheme:test:v1"
     set_prefix("youcache")
     assert node.full_key() == "youcache:test:v1"
+
+
+@pytest.mark.asyncio
+async def test_build_node():
+    await register_storage("local", Storage(url="local://tlfu", size=50))
+    Node = build_node("DynamicFooNode", "v1", [Cache(storage="local", ttl=None)])
+    c = 0
+
+    async def counter(node) -> int:
+        nonlocal c
+        c += 1
+        return c
+
+    for i in range(0, 10):
+        result = await get(Node(key=f"foo:{i}"), load_fn=counter)
+        assert result == i + 1
+    assert c == 10
+    for i in range(0, 10):
+        result = await get(Node(key=f"foo:{i}"), load_fn=counter)
+        assert result == i + 1
+    assert c == 10
+
+    # assert nodes/stats API
+    assert Node in nodes()
+    metrics = stats(Node)
+    assert metrics.request_count() == 20
+    assert metrics.hit_count() == 10
+
+    # build with same name, should use existing one
+    Node2 = build_node("DynamicFooNode", "v1", [Cache(storage="local", ttl=None)])
+    assert Node == Node2
+
+
+fn_dynamic_counter = 0
+
+
+@Memoize(build_node("DynamicBarNode", "v1", [Cache(storage="local", ttl=None)]))
+async def fn_dynamic(a: int) -> int:
+    global fn_dynamic_counter
+    fn_dynamic_counter += 1
+    return a
+
+
+@fn_dynamic.to_node
+def _(a: int) -> DynamicNode:
+    return DynamicNode(key=f"bar:{a}")
+
+
+@pytest.mark.asyncio
+async def test_build_node_decorator():
+    await register_storage("local", Storage(url="local://tlfu", size=50))
+    assert fn_dynamic_counter == 0
+    result = await fn_dynamic(1)
+    assert result == 1
+    assert fn_dynamic_counter == 1
+    result = await fn_dynamic(1)
+    assert result == 1
+    assert fn_dynamic_counter == 1
+    result = await fn_dynamic(2)
+    assert result == 2
+    assert fn_dynamic_counter == 2
