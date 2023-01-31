@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import (ClassVar, List, NamedTuple, Optional, Sequence, Tuple,
-                    Type, cast)
+from typing import ClassVar, List, NamedTuple, Optional, Sequence, Tuple, Type, cast
 
 from typing_extensions import Any
 
 from cacheme.data import get_storage_by_name
-from cacheme.interfaces import (Cachable, DoorKeeper, Metrics, Serializer,
-                                Storage)
+from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
 
 _nodes: List[Type[Cachable]] = []
 _prefix: str = "cacheme"
@@ -16,6 +14,10 @@ _prefix: str = "cacheme"
 
 def get_nodes():
     return _nodes
+
+
+def _add_node(node: Type[Cachable]):
+    _nodes.append(node)
 
 
 def set_prefix(prefix: str):
@@ -90,3 +92,14 @@ class Node(metaclass=MetaNode):
         serializer: ClassVar[Optional[Serializer]] = None
         doorkeeper: ClassVar[Optional[DoorKeeper]] = None
         metrics: ClassVar[Metrics]
+
+
+class DynamicNode(Node):
+    key_str: str
+
+    def __init__(self, key: str):
+        super().__init__()
+        self.key_str = key
+
+    def key(self) -> str:
+        return self.key_str

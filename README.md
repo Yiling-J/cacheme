@@ -198,6 +198,20 @@ class UserInfoNode(cacheme.Node):
         serializer = MsgPackSerializer()
 ```
 
+Cacheme also support creating Node dynamically, you can use this together with `Memoize` decorator:
+
+```python
+@Memoize(cacheme.build_node("TestNodeDynamic", "v1", [Cache(storage="local", ttl=None)]))
+async def fn(a: int) -> int:
+    return 1
+
+
+@fn.to_node
+def _(a: int) -> cacheme.DynamicNode:
+    return DynamicNode(key=f"bar:{a}")
+```
+Here we use `DynamicNode`, which only support one param: `key`
+
 #### Serializers
 Cacheme provides serveral builtin serializers, you can also write your own serializer.
 

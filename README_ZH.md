@@ -78,6 +78,19 @@ class UserInfoNode(cacheme.Node):
 ```
 以上这个例子定义了UserInfoNode，用于缓存UserInfo数据。缓存的key通过`key`函数生成。通过dataclass装饰器自动生成init方法。这样在调用Cacheme API时只使用node，避免手工输入key string。load函数定义了当缓存miss时如何从数据源获取数据。而Meta class则定义了cache的version(会自动加入key中)，cache的存储方式，这里用了名叫my-redis的存储源以及存储/读取时用的serializer。
 
+同时Cacheme也支持动态创建Node，可以和装饰器一起使用来快速缓存现有函数。当然推荐的方法还是单独定义Node class。
+```python
+@Memoize(cacheme.build_node("TestNodeDynamic", "v1", [Cache(storage="local", ttl=None)]))
+async def fn(a: int) -> int:
+    return 1
+
+
+@fn.to_node
+def _(a: int) -> cacheme.DynamicNode:
+    return DynamicNode(key=f"bar:{a}")
+```
+这里使用的时`DynamicNode`, 因为没有预先定义的Node class。只支持单一的`key`参数。
+
 ## 注册Storage
 Cacheme的Node和Storage是分开的，Node表示业务信息，比如用户信息node。而storage则是cache的存储方式。一个Node可以支持串联多种存储方式，同样一个存储方式也可以用在多种node上。
 ```python
