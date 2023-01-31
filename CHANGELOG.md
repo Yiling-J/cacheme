@@ -1,9 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.2.1]
 ### Added
-- Support compress
+- Remove expired nodes automatically
+- Add build_node API
+- Add missing py.typed
+
+## [0.2.0]
+### Added
+- Cacheme V2
 
 ## [0.1.1]
 ### Added
