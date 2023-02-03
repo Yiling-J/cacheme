@@ -10,7 +10,7 @@ python = "^3.7"
 msgpack = "^1.0.4"
 pydantic = "^1.10.4"
 typing-extensions = "^4.4.0"
-cacheme-utils = "^0.1.1"
+cacheme-utils = "^0.1.2"
 redis = { version = "^4.4.2", optional = true }
 motor = { version = "^3.1.1", optional = true }
 aiomysql = { version = "^0.1.1", optional = true }
