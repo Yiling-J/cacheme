@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.2.2]
+### Fixed
+- Fix local cache set existing key, policy should not update
+
+### Changed
+- Bump Cacheme-utils version
+
 ## [0.2.1]
 ### Added
 - Remove expired nodes automatically

@@ -47,6 +47,7 @@ class LocalStorage(BaseStorage):
         value: Any,
         ttl: Optional[timedelta],
     ):
+        exist = key in self.cache
         expire = None
         if ttl is not None:
             expire = datetime.now(timezone.utc) + ttl
@@ -54,6 +55,8 @@ class LocalStorage(BaseStorage):
             data=value, updated_at=datetime.now(timezone.utc), expire=expire
         )
         self.cache.move_to_end(key)
+        if exist:
+            return
         evicated = self.policy.set(key)
         if evicated is not None:
             self.cache.pop(evicated, None)
