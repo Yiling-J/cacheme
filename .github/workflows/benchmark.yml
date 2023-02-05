@@ -8,35 +8,35 @@ on:
 
 jobs:
   benchmark-1:
-    name: "Benchmark ${{ matrix.case }}"
     uses: ./.github/workflows/benchmark_template.yml
     with:
       case: "test_read_write_async"
+    secrets: inherit
 
   benchmark-2:
-    name: "Benchmark ${{ matrix.case }}"
     needs: benchmark-1
     uses: ./.github/workflows/benchmark_template.yml
     with:
       case: "test_read_write_with_local_async"
+    secrets: inherit
 
   benchmark-3:
-    name: "Benchmark ${{ matrix.case }}"
     needs: benchmark-2
     uses: ./.github/workflows/benchmark_template.yml
     with:
       case: "test_read_only_async"
+    secrets: inherit
 
   benchmark-4:
-    name: "Benchmark ${{ matrix.case }}"
     needs: benchmark-3
     uses: ./.github/workflows/benchmark_template.yml
     with:
       case: "test_read_only_with_local_async"
+    secrets: inherit
 
   benchmark-5:
-    name: "Benchmark ${{ matrix.case }}"
     needs: benchmark-4
     uses: ./.github/workflows/benchmark_template.yml
     with:
       case: "test_read_write_batch_async"
+    secrets: inherit
