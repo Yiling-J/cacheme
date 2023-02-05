@@ -65,7 +65,9 @@ async def bench_with_zipf(queue):
     await queue.join()
 
 
-@pytest.fixture(params=["local-tlfu"])
+@pytest.fixture(
+    params=["local-lru", "local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"]
+)
 def storage_provider(request):
     storages = {
         "local-lru": lambda table: Storage(url="local://lru", size=REQUESTS // 10),
