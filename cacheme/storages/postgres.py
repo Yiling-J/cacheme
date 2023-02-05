@@ -16,6 +16,9 @@ class PostgresStorage(SQLStorage):
     async def _connect(self):
         self.pool = await asyncpg.create_pool(dsn=self.address, max_size=self.pool_size)
 
+    async def close(self):
+        await self.pool.close()
+
     async def execute_ddl(self, ddl):
         if self.pool is None:
             raise

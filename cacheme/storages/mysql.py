@@ -26,6 +26,10 @@ class MySQLStorage(SQLStorage):
             maxsize=self.pool_size,
         )
 
+    async def close(self):
+        self.pool.close()
+        await self.pool.wait_closed()
+
     async def execute_ddl(self, ddl):
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:

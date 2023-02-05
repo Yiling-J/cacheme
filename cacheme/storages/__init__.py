@@ -65,3 +65,6 @@ class Storage:
         serializer: Optional[Serializer],
     ):
         return await self._storage.set_all(data, ttl, serializer)
+
+    async def close(self):
+        return await self._storage.close()

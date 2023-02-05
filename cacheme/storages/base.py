@@ -130,3 +130,6 @@ class BaseStorage:
             update[node.full_key()] = self.deserialize(value, serializer)
 
         await self.set_by_keys(update, ttl)
+
+    async def close(self):
+        return

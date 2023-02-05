@@ -13,7 +13,7 @@ from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
 
 REQUESTS = 10000
-WORKERS = 80
+WORKERS = 100
 
 
 async def storage_init(storage):
@@ -126,6 +126,7 @@ def test_read_write_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=3,
     )
+    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
 
@@ -161,6 +162,7 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=3,
     )
+    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
     FooNode.Meta.caches = [
@@ -195,6 +197,7 @@ def test_read_only_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=3,
     )
+    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
 
@@ -234,6 +237,7 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=3,
     )
+    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
     FooNode.Meta.caches = [
@@ -272,5 +276,6 @@ def test_read_write_batch_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=3,
     )
+    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
