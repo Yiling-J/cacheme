@@ -9,14 +9,12 @@ on:
 jobs:
   benchmark-1:
     name: "Benchmark ${{ matrix.case }}"
-    runs-on: "ubuntu-latest"
     uses: ./.github/workflows/benchmark_template.yml
     with:
       case: "test_read_write_async"
 
   benchmark-2:
     name: "Benchmark ${{ matrix.case }}"
-    runs-on: "ubuntu-latest"
     needs: benchmark-1
     uses: ./.github/workflows/benchmark_template.yml
     with:
@@ -24,7 +22,6 @@ jobs:
 
   benchmark-3:
     name: "Benchmark ${{ matrix.case }}"
-    runs-on: "ubuntu-latest"
     needs: benchmark-2
     uses: ./.github/workflows/benchmark_template.yml
     with:
@@ -32,7 +29,6 @@ jobs:
 
   benchmark-4:
     name: "Benchmark ${{ matrix.case }}"
-    runs-on: "ubuntu-latest"
     needs: benchmark-3
     uses: ./.github/workflows/benchmark_template.yml
     with:
@@ -40,7 +36,6 @@ jobs:
 
   benchmark-5:
     name: "Benchmark ${{ matrix.case }}"
-    runs-on: "ubuntu-latest"
     needs: benchmark-4
     uses: ./.github/workflows/benchmark_template.yml
     with:
