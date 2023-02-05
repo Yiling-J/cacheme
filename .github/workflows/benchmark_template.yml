@@ -1,0 +1,98 @@
+---
+name: Benchmarks
+
+on:
+  workflow_call:
+    inputs:
+      case:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  benchmarks:
+    name: "Benchmark ${{ inputs.case }}"
+    runs-on: "ubuntu-latest"
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_USER: username
+          MYSQL_PASSWORD: password
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: username
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      mongodb:
+        image: mongo
+        env:
+          MONGO_INITDB_ROOT_USERNAME: test
+          MONGO_INITDB_ROOT_PASSWORD: password
+          MONGO_INITDB_DATABASE: test
+        options: >-
+          --health-cmd "mongosh --eval 'db.version()'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "actions/setup-python@v4"
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          version: 1.3
+      - name: Setup Poetry
+        run: "poetry config virtualenvs.in-project true"
+      - name: Cache Deps
+        uses: actions/cache@v2
+        id: cached-poetry-dependencies
+        with:
+          path: .venv
+          key: python-3.11-pydeps-${{ hashFiles('**/poetry.lock') }}
+      - name: "Install Dependencies"
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: "poetry install --no-interaction --no-root"
+      - name: "Run Lint"
+        run: "poetry run mypy --ignore-missing-imports ."
+      - name: "Run Benchmarks"
+        run: "poetry run pytest benchmarks/benchmark_test.py::${{ inputs.case }} --benchmark-only --benchmark-json output.json"
+      - name: "Publish Benchmark Result"
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: 'Cacheme Benchmark: ${{ inputs.case }}'
+          tool: 'pytest'
+          output-file-path: output.json
+          github-token: ${{ secrets.BENCH_TOKEN }}
+          auto-push: true
+          gh-repository: 'github.com/Yiling-J/cacheme-benchmark'
+          benchmark-data-dir-path: 'dev/${{ inputs.case }}'
