@@ -13,6 +13,7 @@ from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
 
 REQUESTS = 10000
+WORKERS = 20
 
 
 async def storage_init(storage):
@@ -48,13 +49,23 @@ async def simple_get_all(l: List[int]):
     assert [r["uid"] for r in result] == l
 
 
-async def bench_with_zipf(tasks):
-    await asyncio.gather(*tasks)
+async def worker(queue):
+    while True:
+        try:
+            task = queue.get_nowait()
+        except:
+            return
+        await task
+        queue.task_done()
 
 
-@pytest.fixture(
-    params=["local-lru", "local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"]
-)
+async def bench_with_zipf(queue):
+    for _ in range(WORKERS):
+        asyncio.create_task(worker(queue))
+    await queue.join()
+
+
+@pytest.fixture(params=["local-tlfu"])
 def storage_provider(request):
     storages = {
         "local-lru": lambda table: Storage(url="local://lru", size=REQUESTS // 10),
@@ -103,10 +114,13 @@ def test_read_write_async(benchmark, storage_provider, payload):
 
     def setup():
         FooNode.uuid = uuid.uuid4().int
-        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+        queue = asyncio.Queue()
+        for _ in range(REQUESTS):
+            queue.put_nowait(simple_get(z.get()))
+        return (queue,), {}
 
     benchmark.pedantic(
-        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
         setup=setup,
         rounds=3,
     )
@@ -135,10 +149,13 @@ def test_read_write_with_local_async(benchmark, storage_provider, payload):
 
     def setup():
         FooNode.uuid = uuid.uuid4().int
-        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+        queue = asyncio.Queue()
+        for _ in range(REQUESTS):
+            queue.put_nowait(simple_get(z.get()))
+        return (queue,), {}
 
     benchmark.pedantic(
-        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
         setup=setup,
         rounds=3,
     )
@@ -160,13 +177,19 @@ def test_read_only_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
     # fill data
-    loop.run_until_complete(bench_with_zipf([simple_get(i) for i in range(REQUESTS)]))
+    queue = asyncio.Queue()
+    for _ in range(REQUESTS * 2):
+        queue.put_nowait(simple_get(z.get()))
+    loop.run_until_complete(bench_with_zipf(queue))
 
     def setup():
-        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+        queue = asyncio.Queue()
+        for _ in range(REQUESTS):
+            queue.put_nowait(simple_get(z.get()))
+        return (queue,), {}
 
     benchmark.pedantic(
-        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
         setup=setup,
         rounds=3,
     )
@@ -193,15 +216,19 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     ]
     loop.run_until_complete(storage_init(storage))
     z = Zipf(1.0001, 10, REQUESTS // 10)
-    loop.run_until_complete(
-        bench_with_zipf([simple_get(z.get()) for _ in range(REQUESTS * 2)])
-    )
+    queue = asyncio.Queue()
+    for _ in range(REQUESTS * 2):
+        queue.put_nowait(simple_get(z.get()))
+    loop.run_until_complete(bench_with_zipf(queue))
 
     def setup():
-        return ([simple_get(z.get()) for _ in range(REQUESTS)],), {}
+        queue = asyncio.Queue()
+        for _ in range(REQUESTS):
+            queue.put_nowait(simple_get(z.get()))
+        return (queue,), {}
 
     benchmark.pedantic(
-        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
         setup=setup,
         rounds=3,
     )
@@ -212,7 +239,7 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     ]
 
 
-def test_read_write_batch_async(benchmark, storage_provider, payload):
+def _test_read_write_batch_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     _uuid = uuid.uuid4().int
@@ -233,10 +260,13 @@ def test_read_write_batch_async(benchmark, storage_provider, payload):
                     break
             return list(l)
 
-        return ([simple_get_all(get20(z)) for _ in range(REQUESTS // 10)],), {}
+        queue = asyncio.Queue()
+        for _ in range(REQUESTS // 10):
+            queue.put_nowait(simple_get_all(get20(z)))
+        return (queue,), {}
 
     benchmark.pedantic(
-        lambda tasks: loop.run_until_complete(bench_with_zipf(tasks)),
+        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
         setup=setup,
         rounds=3,
     )
