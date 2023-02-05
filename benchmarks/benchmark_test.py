@@ -13,7 +13,7 @@ from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
 
 REQUESTS = 10000
-WORKERS = 100
+WORKERS = 250
 
 
 async def storage_init(storage):
@@ -132,12 +132,12 @@ def test_read_write_async(benchmark, storage_provider, payload):
 
 
 def test_read_write_with_local_async(benchmark, storage_provider, payload):
-    if storage_provider["name"] not in {"redis", "mongo", "postgres"}:
+    if storage_provider["name"] not in {"redis", "mongo", "postgres", "mysql"}:
         pytest.skip("skip")
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=650))
+        register_storage("local", Storage(url="local://tlfu", size=400))
     )
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
@@ -203,12 +203,12 @@ def test_read_only_async(benchmark, storage_provider, payload):
 
 
 def test_read_only_with_local_async(benchmark, storage_provider, payload):
-    if storage_provider["name"] not in {"redis", "mongo", "postgres"}:
+    if storage_provider["name"] not in {"redis", "mongo", "postgres", "mysql"}:
         pytest.skip("skip")
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=650))
+        register_storage("local", Storage(url="local://tlfu", size=400))
     )
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
