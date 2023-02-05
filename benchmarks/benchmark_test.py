@@ -241,7 +241,7 @@ def test_read_only_with_local_async(benchmark, storage_provider, payload):
     ]
 
 
-def _test_read_write_batch_async(benchmark, storage_provider, payload):
+def test_read_write_batch_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     _uuid = uuid.uuid4().int
