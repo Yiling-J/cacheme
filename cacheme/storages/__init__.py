@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
-from cacheme.interfaces import Cachable, CachedData
+from cacheme.interfaces import Cachable
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
 
@@ -21,12 +21,16 @@ class Storage:
 
     def __init__(self, url: str, **options: Any):
         u = urlparse(url)
+        self._scheme = u.scheme
         name = self.SUPPORTED_STORAGES.get(u.scheme)
         if name is None:
             raise Exception(f"storage:{u.scheme} not found")
         storage_cls = self.__import(name)
         assert issubclass(storage_cls, BaseStorage)
         self._storage = storage_cls(address=url, **options)
+
+    def scheme(self) -> str:
+        return self._scheme
 
     def __import(self, name: str) -> Any:
         mod_name, attr_name = name.rsplit(":", 1)
@@ -36,14 +40,12 @@ class Storage:
     async def connect(self):
         await self._storage.connect()
 
-    async def get(
-        self, node: Cachable, serializer: Optional[Serializer]
-    ) -> Optional[CachedData]:
+    async def get(self, node: Cachable, serializer: Optional[Serializer]) -> Any:
         return await self._storage.get(node, serializer)
 
     async def get_all(
         self, nodes: Sequence[Cachable], serializer: Optional[Serializer]
-    ) -> Sequence[Tuple[Cachable, CachedData]]:
+    ) -> Sequence[Tuple[Cachable, Any]]:
         return await self._storage.get_all(nodes, serializer)
 
     async def set(

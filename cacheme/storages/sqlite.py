@@ -33,9 +33,7 @@ class SQLiteStorage(SQLStorage):
         with sqlite3.connect(self.db, isolation_level=None) as conn:
             conn.execute(ddl)
 
-    def serialize(
-        self, node: Cachable, raw: Any, serializer: Optional[Serializer]
-    ) -> CachedData:
+    def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
         data = raw["value"]
         if serializer is not None:
             data = serializer.loads(cast(bytes, raw["value"]))
@@ -44,9 +42,7 @@ class SQLiteStorage(SQLStorage):
         if raw["expire"] != None:
             expire = datetime.fromisoformat(raw["expire"]).replace(tzinfo=timezone.utc)
         return CachedData(
-            node=node,
             data=data,
-            updated_at=updated_at.replace(tzinfo=timezone.utc),
             expire=expire,
         )
 

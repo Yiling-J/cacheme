@@ -16,7 +16,7 @@ from cacheme.core import (
     build_node,
 )
 from cacheme.data import register_storage
-from cacheme.models import Cache, Node, set_prefix, DynamicNode
+from cacheme.models import Cache, Node, set_prefix, DynamicNode, sentinel
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
 from tests.utils import setup_storage
@@ -302,17 +302,15 @@ async def test_multiple_storage():
     result = await get(node)
     assert result == "test"
     r = await storage.get(node, MsgPackSerializer())
-    assert r is not None
-    assert r.data == "test"
+    assert r == "test"
     rl = await local_storage.get(node, None)
-    assert rl is not None
-    assert rl.data == "test"
+    assert rl == "test"
     # invalidate node
     await invalidate(node)
     r = await storage.get(node, MsgPackSerializer())
-    assert r is None
+    assert r == sentinel
     rl = await local_storage.get(node, None)
-    assert rl is None
+    assert rl == sentinel
 
     # test remove cache from local only
     result = await get(node)
@@ -321,11 +319,9 @@ async def test_multiple_storage():
     result = await get(node)
     assert result == "test"
     r = await storage.get(node, MsgPackSerializer())
-    assert r is not None
-    assert r.data == "test"
+    assert r == "test"
     rl = await local_storage.get(node, None)
-    assert rl is not None
-    assert rl.data == "test"
+    assert rl == "test"
 
     os.remove("testlocal")
     os.remove("testlocal-shm")

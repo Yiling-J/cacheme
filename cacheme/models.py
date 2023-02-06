@@ -11,6 +11,8 @@ from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storag
 _nodes: List[Type[Cachable]] = []
 _prefix: str = "cacheme"
 
+sentinel = object()
+
 
 def get_nodes():
     return _nodes

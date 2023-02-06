@@ -1,7 +1,7 @@
+from datetime import timedelta
 import types
 from asyncio import Event
 from collections import OrderedDict
-from datetime import datetime, timezone
 from time import time_ns
 from typing import (
     Any,
@@ -12,6 +12,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     Type,
     TypeVar,
     cast,
@@ -22,13 +23,13 @@ from typing_extensions import ParamSpec, Self
 
 from cacheme.interfaces import (
     Cachable,
-    CachedData,
     Memoizable,
     Metrics,
     Serializer,
     DoorKeeper,
+    Storage,
 )
-from cacheme.models import Cache, get_nodes, DynamicNode, Node, _add_node
+from cacheme.models import Cache, get_nodes, DynamicNode, Node, _add_node, sentinel
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Cachable)
@@ -61,58 +62,70 @@ async def get(node: CB, load_fn: Callable[[CB], Awaitable[R]]) -> R:
 
 async def get(node: Cachable, load_fn=None):
     metrics = node.get_metrics()
-    result = None
+    result = sentinel
     caches = node.get_caches()
-    locker = _lockers.get(node.full_key(), None)
-    if locker is not None:
-        await locker.lock.wait()
-        result = locker.value
-        metrics._hit_count += 1
-    else:
-        locker = Locker()
-        _lockers[node.full_key()] = locker
-        serializer = node.get_seriaizer()
-        miss: List[Cache] = []
-        for cache in caches:
-            storage = cache.get_storage()
-            result = await storage.get(node, serializer)
-            if result is not None:
-                break
-            miss.append(cache)
-        if result is None:
-            metrics._miss_count += 1
-            now = time_ns()
-            try:
-                if load_fn is not None:
-                    loaded = await load_fn(node)
-                else:
-                    loaded = await node.load()
-            except Exception as e:
-                metrics._load_failure_count += 1
-                metrics._total_load_time += time_ns() - now
-                raise (e)
-            metrics._load_success_count += 1
-            metrics._total_load_time += time_ns() - now
-            result = CachedData(
-                data=loaded, node=node, updated_at=datetime.now(timezone.utc)
-            )
-            doorkeeper = node.get_doorkeeper()
-            if doorkeeper is not None:
-                exist = doorkeeper.contains(node.full_key())
-                if not exist:
-                    doorkeeper.put(node.full_key())
-                    return result.data
+    local_storages: List[Tuple[Storage, Optional[timedelta]]] = []
+    storages: List[Tuple[Storage, Optional[timedelta]]] = []
+    serializer = node.get_seriaizer()
+    miss: List[Tuple[Storage, Optional[timedelta]]] = []
+
+    for cache in caches:
+        storage = cache.get_storage()
+        if storage.scheme() == "local":
+            local_storages.append((storage, cache.get_ttl()))
         else:
+            storages.append((storage, cache.get_ttl()))
+
+    for storage_info in local_storages:
+        result = await storage_info[0].get(node, None)
+        if result != sentinel:
             metrics._hit_count += 1
-        locker.value = result
-        locker.lock.set()
-        _lockers.pop(node.full_key(), None)
-        if len(miss) > 0:
-            for cache in miss:
-                await cache.get_storage().set(
-                    node, result.data, cache.get_ttl(), serializer
-                )
-    return result.data
+            break
+        miss.append(storage_info)
+    if result == sentinel:
+        locker = _lockers.get(node.full_key(), None)
+        if locker is not None:
+            await locker.lock.wait()
+            result = locker.value
+            metrics._hit_count += 1
+        else:
+            locker = Locker()
+            _lockers[node.full_key()] = locker
+            for storage_info in storages:
+                result = await storage_info[0].get(node, serializer)
+                if result != sentinel:
+                    break
+                miss.append(storage_info)
+            if result == sentinel:
+                metrics._miss_count += 1
+                now = time_ns()
+                try:
+                    if load_fn is not None:
+                        loaded = await load_fn(node)
+                    else:
+                        loaded = await node.load()
+                except Exception as e:
+                    metrics._load_failure_count += 1
+                    metrics._total_load_time += time_ns() - now
+                    raise (e)
+                metrics._load_success_count += 1
+                metrics._total_load_time += time_ns() - now
+                result = loaded
+                doorkeeper = node.get_doorkeeper()
+                if doorkeeper is not None:
+                    exist = doorkeeper.contains(node.full_key())
+                    if not exist:
+                        doorkeeper.put(node.full_key())
+                        return result
+            else:
+                metrics._hit_count += 1
+            locker.value = result
+            locker.lock.set()
+            _lockers.pop(node.full_key(), None)
+    if len(miss) > 0:
+        for storage_info in miss:
+            await storage_info[0].set(node, result, storage_info[1], serializer)
+    return result
 
 
 class Wrapper(Generic[P, R]):
@@ -204,9 +217,9 @@ async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
             pending_nodes.remove(k)
             locker = _lockers.pop(k.full_key(), None)
             if locker is not None:
-                locker.value = v.data
+                locker.value = v
                 locker.lock.set()
-            s[k.full_key()] = cast(C, v.data)
+            s[k.full_key()] = cast(C, v)
         missing_nodes[cache] = pending_nodes.list()
         metrics._hit_count += len(cached)
     metrics._miss_count += len(pending_nodes)

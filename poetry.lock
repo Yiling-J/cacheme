@@ -795,6 +795,22 @@ hiredis = ["hiredis (>=1.0.0)"]
 ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==20.0.1)", "requests (>=2.26.0)"]
 
 [[package]]
+name = "theine"
+version = "0.1.0"
+description = "high performance in-memory cache"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "theine-0.1.0-py3-none-any.whl", hash = "sha256:7c1bfb9c69dc8dc3b7faee8d599a44776f6aeab4e80df1a12c10b3050b899165"},
+    {file = "theine-0.1.0.tar.gz", hash = "sha256:24fd9285d1ba081f591197979748d78b1e153a6e17d3047cba874d68d7364c71"},
+]
+
+[package.dependencies]
+cacheme-utils = ">=0.1.2,<0.2.0"
+typing-extensions = ">=4.4.0,<5.0.0"
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -908,4 +924,4 @@ redis = ["redis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "80e7c4cc18e048d7c6bb686d4f94d6997985cf03a15fb70af65b4c91852f9d3d"
+content-hash = "5e809bb2f7b9528afca0d6d4f0632e96f9fd3a0810b125b2431dcf7c51203a1d"

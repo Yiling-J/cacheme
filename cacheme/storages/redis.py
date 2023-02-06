@@ -39,15 +39,11 @@ class RedisStorage(BaseStorage):
         values = await self.client.mget(keys)
         return {keys[i]: v for i, v in enumerate(values) if v is not None}
 
-    def serialize(
-        self, node: Cachable, raw: Any, serializer: Optional[Serializer]
-    ) -> CachedData:
+    def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
         if serializer is None:
             raise Exception("serializer is None")
         data = serializer.loads(cast(bytes, raw))
-        return CachedData(
-            node=node, data=data["value"], updated_at=data["updated_at"], expire=None
-        )
+        return CachedData(data=data["value"], expire=None)
 
     def deserialize(self, raw: Any, serializer: Optional[Serializer]) -> Any:
         value = {"value": raw, "updated_at": datetime.now(timezone.utc)}

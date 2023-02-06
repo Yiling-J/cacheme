@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
-from typing import (TYPE_CHECKING, List, NamedTuple, Optional, Sequence, Tuple,
-                    TypeVar)
+from typing import TYPE_CHECKING, List, NamedTuple, Optional, Sequence, Tuple, TypeVar
 
 from typing_extensions import Any, Protocol
 
@@ -57,17 +56,8 @@ class Metrics:
         return self._total_load_time / self.load_count()
 
 
-# used in local cache
-class CachedValue(NamedTuple):
-    data: Any
-    updated_at: datetime
-    expire: Optional[datetime] = None
-
-
 class CachedData(NamedTuple):
     data: Any
-    node: "Cachable"
-    updated_at: datetime
     expire: Optional[datetime] = None
 
 
@@ -103,6 +93,9 @@ class Storage(Protocol):
         ttl: Optional[timedelta],
         serializer: Optional["Serializer"],
     ):
+        ...
+
+    def scheme(self) -> str:
         ...
 
 
