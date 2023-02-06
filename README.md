@@ -11,7 +11,7 @@ Asyncio cache framework with multiple cache storages. [中文文档](README_ZH.m
 - **Cache stats API:** Stats of each node and colected automatically.
 
 Related projects:
-- Rust tiny-lfu/lru/bloomfilter used in cacheme: https://github.com/Yiling-J/cacheme-utils
+- High performance in-memory cache: https://github.com/Yiling-J/theine
 - Benchmark(auto updated): https://github.com/Yiling-J/cacheme-benchmark
 
 ## Table of Contents

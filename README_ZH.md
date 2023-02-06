@@ -10,7 +10,7 @@
 - 基于Node的缓存统计API
 
 相关项目：
-- Rust编写的tiny-lfu/lru/bloomfilter：https://github.com/Yiling-J/cacheme-utils
+- 高性能内存缓存：https://github.com/Yiling-J/theine
 - 相关benchmarks：https://github.com/Yiling-J/cacheme-benchmark
 
 相关介绍文章:
