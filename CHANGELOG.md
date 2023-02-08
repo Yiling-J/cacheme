@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.2.3]
+### Changed
+- Add theine in-memory cache(replace cacheme-utils)
+
 ## [0.2.2]
 ### Fixed
 - Fix local cache set existing key, policy should not update
