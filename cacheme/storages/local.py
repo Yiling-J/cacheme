@@ -13,7 +13,7 @@ from cacheme.models import sentinel
 class LocalStorage(BaseStorage):
     def __init__(self, size: int, address: str, **options):
         policy_name = urlparse(address).netloc
-        self.cache: Cache = Cache(policy_name, size, timer="bucket")
+        self.cache: Cache = Cache(policy_name, size)
 
     async def connect(self):
         return

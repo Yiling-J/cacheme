@@ -1,4 +1,4 @@
-from cacheme_utils import BloomFilter
+from theine import BloomFilter
 
 from cacheme.core import (
     Memoize,
