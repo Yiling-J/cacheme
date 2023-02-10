@@ -255,7 +255,7 @@ Parameters:
   - `lru`
   - `tlfu`: TinyLfu policy, see https://arxiv.org/pdf/1512.00727.pdf
 
-- `size`: size of the storage. Policy will be used to evicte key when cache is full.
+- `size`: size of the storage. Policy will be used to evict key when cache is full.
 
 #### Redis Storage
 ```python

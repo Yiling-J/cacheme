@@ -249,7 +249,7 @@ BloomFilter is cleared automatically when requests count == size.
 ## Cache Storage
 
 #### Local Storage
-Local storage uses dictionary to store data. A policy is used to evicte keys when cache is full.
+Local storage uses dictionary to store data. A policy is used to evict keys when cache is full.
 ```python
 # lru policy
 Storage(url="local://lru", size=10000)
@@ -264,7 +264,7 @@ Parameters:
   - `lru`
   - `tlfu`: TinyLfu policy, see https://arxiv.org/pdf/1512.00727.pdf
 
-- `size`: size of the storage. Policy will be used to evicte key when cache is full.
+- `size`: size of the storage. Policy will be used to evict key when cache is full.
 
 #### Redis Storage
 ```python
