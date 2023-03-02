@@ -29,6 +29,7 @@ motor = "^3.1.1"
 aiomysql = "^0.1.1"
 asyncpg = "^0.27.0"
 mypy = "^0.991"
+aiocache = "^0.12.0"
 
 [tool.poetry.extras]
 redis = ["redis"]

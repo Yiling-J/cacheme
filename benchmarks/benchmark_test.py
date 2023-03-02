@@ -2,50 +2,35 @@ import asyncio
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import Callable, ClassVar, Dict, List
+from cacheme.data import list_storages
 
 import pytest
+
 
 from benchmarks.zipf import Zipf
 from cacheme import Cache, Node, Storage, get, get_all, register_storage
 from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
+from random import sample
 
 REQUESTS = 10000
-WORKERS = 500
 
 
 async def storage_init(storage):
+    if not isinstance(storage, Storage):
+        return
     await register_storage("test", storage)
     await setup_storage(storage._storage)
 
 
-@dataclass
-class FooNode(Node):
-    uid: int
-    payload_fn: ClassVar[Callable]
-    uuid: ClassVar[int]
-
-    def key(self) -> str:
-        return f"uid:{self.uid}:{self.uuid}"
-
-    async def load(self) -> Dict:
-        return self.payload_fn(self.uid)
-
-    class Meta(Node.Meta):
-        version = "v1"
-        caches = [Cache(storage="test", ttl=None)]
-        serializer = MsgPackSerializer()
-
-
-async def simple_get(i: int):
-    result = await get(FooNode(uid=i))
+async def simple_get(Node: Callable, i: int):
+    result = await get(Node(uid=i))
     assert result["uid"] == i
 
 
-async def simple_get_all(l: List[int]):
-    result = await get_all([FooNode(uid=i) for i in l])
+async def simple_get_all(Node: Callable, l: List[int]):
+    result = await get_all([Node(uid=i) for i in l])
     assert [r["uid"] for r in result] == l
 
 
@@ -59,41 +44,75 @@ async def worker(queue):
         queue.task_done()
 
 
-async def bench_with_zipf(queue):
-    for _ in range(WORKERS):
-        asyncio.create_task(worker(queue))
-    await queue.join()
+async def bench_run(queue):
+    for f in queue:
+        await f
 
 
-@pytest.fixture(
-    params=["local-lru", "local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"]
-)
+async def bench_run_concurrency(queue, workers):
+    await asyncio.gather(*[worker(queue) for _ in range(workers)])
+
+
+@pytest.fixture(params=[500, 2000, 5000, 10000])
+def workers(request):
+    return int(request.param)
+
+
+@pytest.fixture(params=["local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"])
 def storage_provider(request):
+    @dataclass
+    class FooNode(Node):
+        uid: int
+        payload_fn: ClassVar[Callable]
+        uuid: ClassVar[int]
+        sleep = False
+
+        def key(self) -> str:
+            return f"uid:{self.uid}:{self.uuid}"
+
+        async def load(self) -> Dict:
+            if self.sleep:
+                await asyncio.sleep(0.1)
+            return self.payload_fn(self.uid)
+
+        class Meta(Node.Meta):
+            version = "v1"
+            caches = [Cache(storage="test", ttl=None)]
+            serializer = MsgPackSerializer()
+
     storages = {
-        "local-lru": lambda table: Storage(url="local://lru", size=REQUESTS // 10),
-        "local-tlfu": lambda table: Storage(url="local://tlfu", size=REQUESTS // 10),
-        "sqlite": lambda table: Storage(
+        "local-lru": lambda table, size: Storage(url="local://lru", size=size),
+        "local-tlfu": lambda table, size: Storage(url="local://tlfu", size=size),
+        "sqlite": lambda table, _: Storage(
             f"sqlite:///{table}",
             table="test",
             pool_size=10,
         ),
-        "mysql": lambda table: Storage(
+        "mysql": lambda table, _: Storage(
             "mysql://username:password@localhost:3306/test", table=table
         ),
-        "postgres": lambda table: Storage(
+        "postgres": lambda table, _: Storage(
             "postgresql://username:password@127.0.0.1:5432/test", table=table
         ),
-        "redis": lambda table: Storage("redis://localhost:6379"),
-        "mongo": lambda table: Storage(
+        "redis": lambda table, _: Storage("redis://localhost:6379"),
+        "mongo": lambda table, _: Storage(
             "mongodb://test:password@localhost:27017",
             database="test",
             collection=table,
         ),
     }
-    return {"storage": storages[request.param], "name": request.param}
+    yield {
+        "storage": storages[request.param],
+        "name": request.param,
+        "node_cls": FooNode,
+    }
+    loop = asyncio.events.new_event_loop()
+    for storage in list_storages().values():
+        loop.run_until_complete(storage.close())
+    loop.close()
 
 
-@pytest.fixture(params=["small", "medium", "large"])
+@pytest.fixture(params=["small"])
 def payload(request):
     with open(f"benchmarks/{request.param}.json") as f:
         content = f.read()
@@ -104,160 +123,173 @@ def payload(request):
     }
 
 
-def test_read_write_async(benchmark, storage_provider, payload):
-    loop = asyncio.events.new_event_loop()
-    asyncio.events.set_event_loop(loop)
-    _uuid = uuid.uuid4().int
-    table = f"test_{_uuid}"
-    storage = storage_provider["storage"](table)
-    FooNode.payload_fn = payload["fn"]
-    loop.run_until_complete(storage_init(storage))
-    z = Zipf(1.0001, 10, REQUESTS // 10)
-
-    def setup():
-        FooNode.uuid = uuid.uuid4().int
-        queue = asyncio.Queue()
-        for _ in range(REQUESTS):
-            queue.put_nowait(simple_get(z.get()))
-        return (queue,), {}
-
-    benchmark.pedantic(
-        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
-        setup=setup,
-        rounds=3,
-    )
-    loop.run_until_complete(storage.close())
-    asyncio.events.set_event_loop(None)
-    loop.close()
-
-
-def test_read_write_with_local_async(benchmark, storage_provider, payload):
-    if storage_provider["name"] not in {"redis", "mongo", "postgres", "mysql"}:
-        pytest.skip("skip")
-    loop = asyncio.events.new_event_loop()
-    asyncio.events.set_event_loop(loop)
-    loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=400))
-    )
-    _uuid = uuid.uuid4().int
-    table = f"test_{_uuid}"
-    storage = storage_provider["storage"](table)
-    FooNode.payload_fn = payload["fn"]
-    FooNode.Meta.caches = [
-        Cache(storage="local", ttl=timedelta(seconds=10)),
-        Cache(storage="test", ttl=None),
-    ]
-    loop.run_until_complete(storage_init(storage))
-    z = Zipf(1.0001, 10, REQUESTS // 10)
-
-    def setup():
-        FooNode.uuid = uuid.uuid4().int
-        queue = asyncio.Queue()
-        for _ in range(REQUESTS):
-            queue.put_nowait(simple_get(z.get()))
-        return (queue,), {}
-
-    benchmark.pedantic(
-        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
-        setup=setup,
-        rounds=3,
-    )
-    loop.run_until_complete(storage.close())
-    asyncio.events.set_event_loop(None)
-    loop.close()
-    FooNode.Meta.caches = [
-        Cache(storage="test", ttl=None),
-    ]
-
-
+# each request contains 1 operation: a hit get
 def test_read_only_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
-    storage = storage_provider["storage"](table)
-    FooNode.payload_fn = payload["fn"]
-    FooNode.uuid = _uuid
-    loop.run_until_complete(storage_init(storage))
-    z = Zipf(1.0001, 10, REQUESTS // 10)
-    # fill data
-    queue = asyncio.Queue()
-    for _ in range(REQUESTS * 2):
-        queue.put_nowait(simple_get(z.get()))
-    loop.run_until_complete(bench_with_zipf(queue))
+    Node = storage_provider["node_cls"]
+    Node.payload_fn = payload["fn"]
+    Node.uuid = _uuid
 
     def setup():
-        queue = asyncio.Queue()
-        for _ in range(REQUESTS):
-            queue.put_nowait(simple_get(z.get()))
+        storage = storage_provider["storage"](table, REQUESTS)
+        loop.run_until_complete(storage_init(storage))
+        queue = []
+        for i in range(REQUESTS):
+            queue.append(simple_get(Node, i))
+        # warm cache first because this is read only test
+        loop.run_until_complete(bench_run(queue))
+        queue.clear()
+        for i in range(REQUESTS):
+            queue.append(simple_get(Node, i))
         return (queue,), {}
 
     benchmark.pedantic(
-        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
+        lambda queue: loop.run_until_complete(bench_run(queue)),
         setup=setup,
-        rounds=3,
+        rounds=10,
     )
-    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
 
 
-def test_read_only_with_local_async(benchmark, storage_provider, payload):
-    if storage_provider["name"] not in {"redis", "mongo", "postgres", "mysql"}:
-        pytest.skip("skip")
+# each request contains 3 operations: a miss get -> load from source -> set result to cache
+def test_write_only_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
-    loop.run_until_complete(
-        register_storage("local", Storage(url="local://tlfu", size=400))
-    )
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
-    storage = storage_provider["storage"](table)
-    FooNode.payload_fn = payload["fn"]
-    FooNode.uuid = _uuid
-    FooNode.Meta.caches = [
-        Cache(storage="local", ttl=timedelta(seconds=120)),
-        Cache(storage="test", ttl=None),
-    ]
-    loop.run_until_complete(storage_init(storage))
-    z = Zipf(1.0001, 10, REQUESTS // 10)
-    queue = asyncio.Queue()
-    for _ in range(REQUESTS * 2):
-        queue.put_nowait(simple_get(z.get()))
-    loop.run_until_complete(bench_with_zipf(queue))
+    Node = storage_provider["node_cls"]
+    Node.payload_fn = payload["fn"]
+    Node.uuid = _uuid
 
     def setup():
-        queue = asyncio.Queue()
-        for _ in range(REQUESTS):
-            queue.put_nowait(simple_get(z.get()))
+        storage = storage_provider["storage"](table, REQUESTS)
+        loop.run_until_complete(storage_init(storage))
+        queue = []
+        _uuid = uuid.uuid4().int
+        for i in range(REQUESTS):
+            queue.append(simple_get(Node, _uuid + i))
         return (queue,), {}
 
     benchmark.pedantic(
-        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
+        lambda queue: loop.run_until_complete(bench_run(queue)),
         setup=setup,
-        rounds=3,
+        rounds=10,
     )
-    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()
-    FooNode.Meta.caches = [
-        Cache(storage="test", ttl=None),
-    ]
 
 
-def test_read_write_batch_async(benchmark, storage_provider, payload):
+# each request use a random zipf number: read >> write, size limit to REQUESTS//10
+def test_zipf_async(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     _uuid = uuid.uuid4().int
     table = f"test_{_uuid}"
-    storage = storage_provider["storage"](table)
-    FooNode.payload_fn = payload["fn"]
-    loop.run_until_complete(storage_init(storage))
-    z = Zipf(1.0001, 10, REQUESTS // 10)
+    Node = storage_provider["node_cls"]
+    Node.payload_fn = payload["fn"]
+    Node.uuid = _uuid
 
     def setup():
-        FooNode.uuid = uuid.uuid4().int
+        storage = storage_provider["storage"](table, REQUESTS // 10)
+        loop.run_until_complete(storage_init(storage))
+        queue = []
+        z = Zipf(1.0001, 10, REQUESTS)
+        for _ in range(REQUESTS):
+            queue.append(simple_get(Node, z.get()))
+        return (queue,), {}
 
+    benchmark.pedantic(
+        lambda queue: loop.run_until_complete(bench_run(queue)),
+        setup=setup,
+        rounds=10,
+    )
+    asyncio.events.set_event_loop(None)
+    loop.close()
+
+
+# each request use a random zipf number: read >> write, cache capacity limit to REQUESTS//10
+# the load function will sleep 100 ms
+# requests are processed simultaneously using worker
+def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
+    loop = asyncio.events.new_event_loop()
+    asyncio.events.set_event_loop(loop)
+    _uuid = uuid.uuid4().int
+    table = f"test_{_uuid}"
+    Node = storage_provider["node_cls"]
+    Node.payload_fn = payload["fn"]
+    Node.uuid = _uuid
+    Node.sleep = True
+
+    def setup():
+        storage = storage_provider["storage"](table, REQUESTS // 10)
+        loop.run_until_complete(storage_init(storage))
+        queue = asyncio.Queue()
+        z = Zipf(1.0001, 10, REQUESTS)
+        for _ in range(REQUESTS):
+            queue.put_nowait(simple_get(Node, z.get()))
+        return (queue,), {}
+
+    benchmark.pedantic(
+        lambda queue: loop.run_until_complete(bench_run_concurrency(queue, workers)),
+        setup=setup,
+        rounds=10,
+    )
+    asyncio.events.set_event_loop(None)
+    loop.close()
+
+
+# each request contains 1 get_all with 20 nodes
+def test_read_only_batch_async(benchmark, storage_provider, payload):
+    loop = asyncio.events.new_event_loop()
+    asyncio.events.set_event_loop(loop)
+    _uuid = uuid.uuid4().int
+    table = f"test_{_uuid}"
+    Node = storage_provider["node_cls"]
+    Node.payload_fn = payload["fn"]
+    Node.uuid = _uuid
+
+    def setup():
+        storage = storage_provider["storage"](table, REQUESTS)
+        loop.run_until_complete(storage_init(storage))
+        queue = []
+        for i in range(REQUESTS):
+            queue.append(simple_get(Node, i))
+        # warm cache first because this is read only test
+        loop.run_until_complete(bench_run(queue))
+        queue.clear()
+        for i in range(REQUESTS):
+            queue.append(simple_get_all(Node, sample(range(REQUESTS), 20)))
+        return (queue,), {}
+
+    benchmark.pedantic(
+        lambda queue: loop.run_until_complete(bench_run(queue)),
+        setup=setup,
+        rounds=10,
+    )
+    asyncio.events.set_event_loop(None)
+    loop.close()
+
+
+# each request use 20 unique random zipf number: read >> write, cache capacity limit to REQUESTS//10
+# the load function will sleep 100 ms
+# requests are processed simultaneously using worker
+def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, workers):
+    loop = asyncio.events.new_event_loop()
+    asyncio.events.set_event_loop(loop)
+    _uuid = uuid.uuid4().int
+    table = f"test_{_uuid}"
+    Node = storage_provider["node_cls"]
+    Node.payload_fn = payload["fn"]
+    Node.uuid = _uuid
+    Node.sleep = True
+
+    def setup():
+
+        # get 20 unique zipf numbers
         def get20(z):
             l = set()
             while True:
@@ -266,16 +298,18 @@ def test_read_write_batch_async(benchmark, storage_provider, payload):
                     break
             return list(l)
 
+        storage = storage_provider["storage"](table, REQUESTS // 10)
+        loop.run_until_complete(storage_init(storage))
         queue = asyncio.Queue()
-        for _ in range(REQUESTS // 10):
-            queue.put_nowait(simple_get_all(get20(z)))
+        z = Zipf(1.0001, 10, REQUESTS)
+        for _ in range(REQUESTS):
+            queue.put_nowait(simple_get_all(Node, get20(z)))
         return (queue,), {}
 
     benchmark.pedantic(
-        lambda queue: loop.run_until_complete(bench_with_zipf(queue)),
+        lambda queue: loop.run_until_complete(bench_run_concurrency(queue, workers)),
         setup=setup,
-        rounds=3,
+        rounds=10,
     )
-    loop.run_until_complete(storage.close())
     asyncio.events.set_event_loop(None)
     loop.close()

@@ -6,7 +6,7 @@ from benchmarks.zipf import Zipf
 from cacheme.core import get, stats
 from cacheme.data import register_storage
 from cacheme.interfaces import Metrics
-from cacheme.models import Node
+from cacheme.models import Cache, Node
 from cacheme.storages import Storage
 
 
@@ -22,7 +22,7 @@ class FooNode(Node):
 
     class Meta(Node.Meta):
         version = "v1"
-        storage = "local"
+        caches = [Cache(storage="local", ttl=None)]
 
 
 async def simple_get(i: int):
@@ -53,4 +53,17 @@ async def bench_hits():
         print(r2)
 
 
-asyncio.run(bench_hits())
+async def infinit_run():
+    await register_storage("local", Storage(url=f"local://tlfu", size=10000))
+    count = 0
+    await get(FooNode(uid=1))
+    while True:
+        data = await get(FooNode(uid=1))
+        assert data == "test"
+        count += 1
+        if count % 100000 == 0:
+            print(f"finish {count // 100000}")
+
+
+# asyncio.run(bench_hits())
+asyncio.run(infinit_run())

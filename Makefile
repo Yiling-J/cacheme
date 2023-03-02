@@ -2,6 +2,10 @@
 test:
 	poetry run pytest --benchmark-skip
 
+.PHONY: testx
+testx:
+	poetry run pytest --benchmark-skip -x
+
 .PHONY: benchmark
 benchmark:
 	poetry run pytest --benchmark-only
