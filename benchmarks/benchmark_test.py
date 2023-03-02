@@ -11,10 +11,9 @@ from benchmarks.zipf import Zipf
 from cacheme import Cache, Node, Storage, get, get_all, register_storage
 from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
-from random import sample
 from time import time
 
-REQUESTS = 10000
+REQUESTS = 1000
 
 
 async def storage_init(storage):
@@ -53,7 +52,7 @@ async def bench_run_concurrency(queue, workers):
     await asyncio.gather(*[worker(queue) for _ in range(workers)])
 
 
-@pytest.fixture(params=[1000, 5000, 10000])
+@pytest.fixture(params=[REQUESTS // 10, REQUESTS // 2, REQUESTS])
 def workers(request):
     return int(request.param)
 
@@ -147,7 +146,7 @@ def test_read_only_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 15))
         )
 
     def setup():
@@ -184,7 +183,7 @@ def test_write_only_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 15))
         )
 
     def setup():
@@ -217,7 +216,7 @@ def test_zipf_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 15))
         )
 
     def setup():
@@ -253,12 +252,12 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 15))
         )
 
     def setup():
         queue = asyncio.Queue()
-        z = Zipf(1.0001, 10, REQUESTS)
+        z = Zipf(1.0001, 10, REQUESTS // 10)
         for _ in range(REQUESTS):
             queue.put_nowait(simple_get(Node, z.get()))
         return (queue,), {}
@@ -289,7 +288,7 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 15))
         )
 
     def setup():
@@ -304,7 +303,7 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
             return list(l)
 
         queue = asyncio.Queue()
-        z = Zipf(1.0001, 10, REQUESTS)
+        z = Zipf(1.0001, 10, REQUESTS // 10)
         for _ in range(REQUESTS):
             queue.put_nowait(simple_get_all(Node, get20(z)))
         return (queue,), {}
