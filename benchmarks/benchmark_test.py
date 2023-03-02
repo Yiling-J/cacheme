@@ -101,8 +101,7 @@ def storage_provider(request):
         ]
 
     storages = {
-        "local-lru": lambda table, size: Storage(url="local://lru", size=size),
-        "local-tlfu": lambda table, size: Storage(url="local://tlfu", size=size),
+        "theine-tlfu": lambda table, size: Storage(url="local://tlfu", size=size),
         "mysql": lambda table, _: Storage(
             "mysql://username:password@localhost:3306/test", table=table
         ),
@@ -148,7 +147,7 @@ def test_read_only_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=500))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
         )
 
     def setup():
@@ -185,7 +184,7 @@ def test_write_only_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=500))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
         )
 
     def setup():
@@ -218,7 +217,7 @@ def test_zipf_async(benchmark, storage_provider, payload):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=500))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
         )
 
     def setup():
@@ -254,7 +253,7 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=500))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
         )
 
     def setup():
@@ -290,7 +289,7 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
     loop.run_until_complete(storage_init(storage))
     if storage_provider["with_theine"]:
         loop.run_until_complete(
-            register_storage("local", Storage(url="local://tlfu", size=500))
+            register_storage("local", Storage(url="local://tlfu", size=REQUESTS // 10))
         )
 
     def setup():
