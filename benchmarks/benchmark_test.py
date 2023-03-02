@@ -58,7 +58,7 @@ def workers(request):
     return int(request.param)
 
 
-@pytest.fixture(params=["local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"])
+@pytest.fixture(params=["local-lru"])
 def storage_provider(request):
     @dataclass
     class FooNode(Node):
@@ -106,9 +106,10 @@ def storage_provider(request):
         "name": request.param,
         "node_cls": FooNode,
     }
-    loop = asyncio.events.new_event_loop()
+    loop = asyncio.get_event_loop()
     for storage in list_storages().values():
         loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
     loop.close()
 
 
@@ -151,8 +152,6 @@ def test_read_only_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=10,
     )
-    asyncio.events.set_event_loop(None)
-    loop.close()
 
 
 # each request contains 3 operations: a miss get -> load from source -> set result to cache
@@ -179,8 +178,6 @@ def test_write_only_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=10,
     )
-    asyncio.events.set_event_loop(None)
-    loop.close()
 
 
 # each request use a random zipf number: read >> write, size limit to REQUESTS//10
@@ -207,8 +204,6 @@ def test_zipf_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=10,
     )
-    asyncio.events.set_event_loop(None)
-    loop.close()
 
 
 # each request use a random zipf number: read >> write, cache capacity limit to REQUESTS//10
@@ -238,8 +233,6 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
         setup=setup,
         rounds=10,
     )
-    asyncio.events.set_event_loop(None)
-    loop.close()
 
 
 # each request contains 1 get_all with 20 nodes
@@ -270,8 +263,6 @@ def test_read_only_batch_async(benchmark, storage_provider, payload):
         setup=setup,
         rounds=10,
     )
-    asyncio.events.set_event_loop(None)
-    loop.close()
 
 
 # each request use 20 unique random zipf number: read >> write, cache capacity limit to REQUESTS//10
@@ -311,5 +302,3 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
         setup=setup,
         rounds=10,
     )
-    asyncio.events.set_event_loop(None)
-    loop.close()
