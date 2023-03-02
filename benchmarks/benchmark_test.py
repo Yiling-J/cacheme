@@ -168,7 +168,7 @@ def test_write_only_async(benchmark, storage_provider, payload):
         queue = []
         _uuid = uuid.uuid4().int
         for i in range(REQUESTS):
-            queue.append(simple_get(Node, _uuid + i))
+            queue.append(simple_get(Node, int(_uuid + i)))
         return (queue,), {}
 
     benchmark.pedantic(
