@@ -58,8 +58,24 @@ def workers(request):
     return int(request.param)
 
 
-@pytest.fixture(params=["local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"])
+@pytest.fixture(
+    params=[
+        "theine-tlfu",
+        "sqlite",
+        "sqlite+theine",
+        "redis",
+        "redis+theine",
+        "mongo",
+        "mongo+theine",
+        "postgres",
+        "postgres+theine",
+        "mysql",
+        "mysql+theine",
+    ]
+)
 def storage_provider(request):
+    with_theine = request.param.endswith("+theine")
+
     @dataclass
     class FooNode(Node):
         uid: int
@@ -79,6 +95,12 @@ def storage_provider(request):
             version = "v1"
             caches = [Cache(storage="test", ttl=None)]
             serializer = MsgPackSerializer()
+
+    if with_theine:
+        FooNode.Meta.caches = [
+            Cache(storage="local", ttl=None),
+            Cache(storage="test", ttl=None),
+        ]
 
     storages = {
         "local-lru": lambda table, size: Storage(url="local://lru", size=size),
@@ -105,6 +127,7 @@ def storage_provider(request):
         "storage": storages[request.param],
         "name": request.param,
         "node_cls": FooNode,
+        "with_theine": with_theine,
     }
 
 
@@ -130,6 +153,10 @@ def test_read_only_async(benchmark, storage_provider, payload):
     Node.uuid = _uuid
     storage = storage_provider["storage"](table, REQUESTS)
     loop.run_until_complete(storage_init(storage))
+    if storage_provider["with_theine"]:
+        loop.run_until_complete(
+            register_storage("local", Storage(url="local://tlfu", size=500))
+        )
 
     def setup():
         queue = []
@@ -163,6 +190,10 @@ def test_write_only_async(benchmark, storage_provider, payload):
     Node.uuid = _uuid
     storage = storage_provider["storage"](table, REQUESTS)
     loop.run_until_complete(storage_init(storage))
+    if storage_provider["with_theine"]:
+        loop.run_until_complete(
+            register_storage("local", Storage(url="local://tlfu", size=500))
+        )
 
     def setup():
         queue = []
@@ -192,6 +223,10 @@ def test_zipf_async(benchmark, storage_provider, payload):
     Node.uuid = _uuid
     storage = storage_provider["storage"](table, REQUESTS // 10)
     loop.run_until_complete(storage_init(storage))
+    if storage_provider["with_theine"]:
+        loop.run_until_complete(
+            register_storage("local", Storage(url="local://tlfu", size=500))
+        )
 
     def setup():
         queue = []
@@ -224,6 +259,10 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
     Node.sleep = True
     storage = storage_provider["storage"](table, REQUESTS // 10)
     loop.run_until_complete(storage_init(storage))
+    if storage_provider["with_theine"]:
+        loop.run_until_complete(
+            register_storage("local", Storage(url="local://tlfu", size=500))
+        )
 
     def setup():
         queue = asyncio.Queue()
@@ -256,6 +295,10 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
     Node.sleep = True
     storage = storage_provider["storage"](table, REQUESTS // 10)
     loop.run_until_complete(storage_init(storage))
+    if storage_provider["with_theine"]:
+        loop.run_until_complete(
+            register_storage("local", Storage(url="local://tlfu", size=500))
+        )
 
     def setup():
 
