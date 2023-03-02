@@ -53,7 +53,7 @@ async def bench_run_concurrency(queue, workers):
     await asyncio.gather(*[worker(queue) for _ in range(workers)])
 
 
-@pytest.fixture(params=[500, 2000, 5000, 10000])
+@pytest.fixture(params=[1000, 5000, 10000])
 def workers(request):
     return int(request.param)
 
@@ -61,8 +61,6 @@ def workers(request):
 @pytest.fixture(
     params=[
         "theine-tlfu",
-        "sqlite",
-        "sqlite+theine",
         "redis",
         "redis+theine",
         "mongo",
@@ -105,11 +103,6 @@ def storage_provider(request):
     storages = {
         "local-lru": lambda table, size: Storage(url="local://lru", size=size),
         "local-tlfu": lambda table, size: Storage(url="local://tlfu", size=size),
-        "sqlite": lambda table, _: Storage(
-            f"sqlite:///{table}",
-            table="test",
-            pool_size=10,
-        ),
         "mysql": lambda table, _: Storage(
             "mysql://username:password@localhost:3306/test", table=table
         ),
