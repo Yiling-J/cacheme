@@ -124,7 +124,7 @@ def storage_provider(request):
         ),
     }
     yield {
-        "storage": storages[request.param],
+        "storage": storages[request.param.replace("+theine", "")],
         "name": request.param,
         "node_cls": FooNode,
         "with_theine": with_theine,
