@@ -106,14 +106,9 @@ def storage_provider(request):
         "name": request.param,
         "node_cls": FooNode,
     }
-    loop = asyncio.get_event_loop()
-    for storage in list_storages().values():
-        loop.run_until_complete(storage.close())
-    asyncio.events.set_event_loop(None)
-    loop.close()
 
 
-@pytest.fixture(params=["small"])
+@pytest.fixture(params=["small", "medium", "large"])
 def payload(request):
     with open(f"benchmarks/{request.param}.json") as f:
         content = f.read()
@@ -133,10 +128,10 @@ def test_read_only_async(benchmark, storage_provider, payload):
     Node = storage_provider["node_cls"]
     Node.payload_fn = payload["fn"]
     Node.uuid = _uuid
+    storage = storage_provider["storage"](table, REQUESTS)
+    loop.run_until_complete(storage_init(storage))
 
     def setup():
-        storage = storage_provider["storage"](table, REQUESTS)
-        loop.run_until_complete(storage_init(storage))
         queue = []
         for i in range(REQUESTS):
             queue.append(simple_get(Node, i))
@@ -150,8 +145,11 @@ def test_read_only_async(benchmark, storage_provider, payload):
     benchmark.pedantic(
         lambda queue: loop.run_until_complete(bench_run(queue)),
         setup=setup,
-        rounds=10,
+        rounds=1,
     )
+    loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
+    loop.close()
 
 
 # each request contains 3 operations: a miss get -> load from source -> set result to cache
@@ -163,10 +161,10 @@ def test_write_only_async(benchmark, storage_provider, payload):
     Node = storage_provider["node_cls"]
     Node.payload_fn = payload["fn"]
     Node.uuid = _uuid
+    storage = storage_provider["storage"](table, REQUESTS)
+    loop.run_until_complete(storage_init(storage))
 
     def setup():
-        storage = storage_provider["storage"](table, REQUESTS)
-        loop.run_until_complete(storage_init(storage))
         queue = []
         _uuid = uuid.uuid4().int
         for i in range(REQUESTS):
@@ -176,8 +174,11 @@ def test_write_only_async(benchmark, storage_provider, payload):
     benchmark.pedantic(
         lambda queue: loop.run_until_complete(bench_run(queue)),
         setup=setup,
-        rounds=10,
+        rounds=1,
     )
+    loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
+    loop.close()
 
 
 # each request use a random zipf number: read >> write, size limit to REQUESTS//10
@@ -189,10 +190,10 @@ def test_zipf_async(benchmark, storage_provider, payload):
     Node = storage_provider["node_cls"]
     Node.payload_fn = payload["fn"]
     Node.uuid = _uuid
+    storage = storage_provider["storage"](table, REQUESTS // 10)
+    loop.run_until_complete(storage_init(storage))
 
     def setup():
-        storage = storage_provider["storage"](table, REQUESTS // 10)
-        loop.run_until_complete(storage_init(storage))
         queue = []
         z = Zipf(1.0001, 10, REQUESTS)
         for _ in range(REQUESTS):
@@ -202,8 +203,11 @@ def test_zipf_async(benchmark, storage_provider, payload):
     benchmark.pedantic(
         lambda queue: loop.run_until_complete(bench_run(queue)),
         setup=setup,
-        rounds=10,
+        rounds=1,
     )
+    loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
+    loop.close()
 
 
 # each request use a random zipf number: read >> write, cache capacity limit to REQUESTS//10
@@ -218,10 +222,10 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
     Node.payload_fn = payload["fn"]
     Node.uuid = _uuid
     Node.sleep = True
+    storage = storage_provider["storage"](table, REQUESTS // 10)
+    loop.run_until_complete(storage_init(storage))
 
     def setup():
-        storage = storage_provider["storage"](table, REQUESTS // 10)
-        loop.run_until_complete(storage_init(storage))
         queue = asyncio.Queue()
         z = Zipf(1.0001, 10, REQUESTS)
         for _ in range(REQUESTS):
@@ -231,8 +235,11 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
     benchmark.pedantic(
         lambda queue: loop.run_until_complete(bench_run_concurrency(queue, workers)),
         setup=setup,
-        rounds=10,
+        rounds=1,
     )
+    loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
+    loop.close()
 
 
 # each request contains 1 get_all with 20 nodes
@@ -244,10 +251,10 @@ def test_read_only_batch_async(benchmark, storage_provider, payload):
     Node = storage_provider["node_cls"]
     Node.payload_fn = payload["fn"]
     Node.uuid = _uuid
+    storage = storage_provider["storage"](table, REQUESTS)
+    loop.run_until_complete(storage_init(storage))
 
     def setup():
-        storage = storage_provider["storage"](table, REQUESTS)
-        loop.run_until_complete(storage_init(storage))
         queue = []
         for i in range(REQUESTS):
             queue.append(simple_get(Node, i))
@@ -261,8 +268,11 @@ def test_read_only_batch_async(benchmark, storage_provider, payload):
     benchmark.pedantic(
         lambda queue: loop.run_until_complete(bench_run(queue)),
         setup=setup,
-        rounds=10,
+        rounds=1,
     )
+    loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
+    loop.close()
 
 
 # each request use 20 unique random zipf number: read >> write, cache capacity limit to REQUESTS//10
@@ -277,6 +287,8 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
     Node.payload_fn = payload["fn"]
     Node.uuid = _uuid
     Node.sleep = True
+    storage = storage_provider["storage"](table, REQUESTS // 10)
+    loop.run_until_complete(storage_init(storage))
 
     def setup():
 
@@ -289,8 +301,6 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
                     break
             return list(l)
 
-        storage = storage_provider["storage"](table, REQUESTS // 10)
-        loop.run_until_complete(storage_init(storage))
         queue = asyncio.Queue()
         z = Zipf(1.0001, 10, REQUESTS)
         for _ in range(REQUESTS):
@@ -300,5 +310,8 @@ def test_zipf_async_batch_concurrency(benchmark, storage_provider, payload, work
     benchmark.pedantic(
         lambda queue: loop.run_until_complete(bench_run_concurrency(queue, workers)),
         setup=setup,
-        rounds=10,
+        rounds=1,
     )
+    loop.run_until_complete(storage.close())
+    asyncio.events.set_event_loop(None)
+    loop.close()
