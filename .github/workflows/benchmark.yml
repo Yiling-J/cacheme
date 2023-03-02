@@ -11,33 +11,40 @@ jobs:
   benchmark-1:
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_write_async"
+      case: "test_read_only_async"
     secrets: inherit
 
   benchmark-2:
     needs: benchmark-1
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_write_with_local_async"
+      case: "test_write_only_async"
     secrets: inherit
 
   benchmark-3:
     needs: benchmark-2
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_only_async"
+      case: "test_zipf_async"
     secrets: inherit
 
   benchmark-4:
     needs: benchmark-3
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_only_with_local_async"
+      case: "test_zipf_async_concurrency"
     secrets: inherit
 
   benchmark-5:
     needs: benchmark-4
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_write_batch_async"
+      case: "test_read_only_batch_async"
+    secrets: inherit
+
+  benchmark-6:
+    needs: benchmark-5
+    uses: ./.github/workflows/benchmark_template.yml
+    with:
+      case: "test_zipf_async_batch_concurrency"
     secrets: inherit
