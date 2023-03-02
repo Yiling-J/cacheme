@@ -3,7 +3,6 @@ import json
 import uuid
 from dataclasses import dataclass
 from typing import Callable, ClassVar, Dict, List
-from cacheme.data import list_storages
 
 import pytest
 
@@ -13,6 +12,7 @@ from cacheme import Cache, Node, Storage, get, get_all, register_storage
 from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
 from random import sample
+from time import time
 
 REQUESTS = 10000
 
@@ -166,9 +166,9 @@ def test_write_only_async(benchmark, storage_provider, payload):
 
     def setup():
         queue = []
-        _uuid = uuid.uuid4().int
+        rand = int(time())
         for i in range(REQUESTS):
-            queue.append(simple_get(Node, int(_uuid + i)))
+            queue.append(simple_get(Node, rand + i))
         return (queue,), {}
 
     benchmark.pedantic(
