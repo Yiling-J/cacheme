@@ -39,12 +39,5 @@ jobs:
     needs: benchmark-4
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_only_batch_async"
-    secrets: inherit
-
-  benchmark-6:
-    needs: benchmark-5
-    uses: ./.github/workflows/benchmark_template.yml
-    with:
       case: "test_zipf_async_batch_concurrency"
     secrets: inherit

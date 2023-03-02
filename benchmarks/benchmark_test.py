@@ -242,39 +242,6 @@ def test_zipf_async_concurrency(benchmark, storage_provider, payload, workers):
     loop.close()
 
 
-# each request contains 1 get_all with 20 nodes
-def test_read_only_batch_async(benchmark, storage_provider, payload):
-    loop = asyncio.events.new_event_loop()
-    asyncio.events.set_event_loop(loop)
-    _uuid = uuid.uuid4().int
-    table = f"test_{_uuid}"
-    Node = storage_provider["node_cls"]
-    Node.payload_fn = payload["fn"]
-    Node.uuid = _uuid
-    storage = storage_provider["storage"](table, REQUESTS)
-    loop.run_until_complete(storage_init(storage))
-
-    def setup():
-        queue = []
-        for i in range(REQUESTS):
-            queue.append(simple_get(Node, i))
-        # warm cache first because this is read only test
-        loop.run_until_complete(bench_run(queue))
-        queue.clear()
-        for i in range(REQUESTS):
-            queue.append(simple_get_all(Node, sample(range(REQUESTS), 20)))
-        return (queue,), {}
-
-    benchmark.pedantic(
-        lambda queue: loop.run_until_complete(bench_run(queue)),
-        setup=setup,
-        rounds=1,
-    )
-    loop.run_until_complete(storage.close())
-    asyncio.events.set_event_loop(None)
-    loop.close()
-
-
 # each request use 20 unique random zipf number: read >> write, cache capacity limit to REQUESTS//10
 # the load function will sleep 100 ms
 # requests are processed simultaneously using worker
