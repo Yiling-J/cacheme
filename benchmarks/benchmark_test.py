@@ -58,7 +58,7 @@ def workers(request):
     return int(request.param)
 
 
-@pytest.fixture(params=["local-lru"])
+@pytest.fixture(params=["local-tlfu", "sqlite", "redis", "mongo", "postgres", "mysql"])
 def storage_provider(request):
     @dataclass
     class FooNode(Node):
