@@ -32,5 +32,5 @@ jobs:
     needs: benchmark-3
     uses: ./.github/workflows/benchmark_template.yml
     with:
-      case: "test_read_only_batch_concurrency"
+      case: "test_read_only_batch"
     secrets: inherit

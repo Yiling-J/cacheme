@@ -14,7 +14,7 @@ from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
 from time import time
 
-REQUESTS = 1000
+REQUESTS = 10000
 
 
 async def storage_init(storage):
@@ -34,28 +34,9 @@ async def simple_get_all(Node: Callable, l: List[int]):
     assert [r["uid"] for r in result] == l
 
 
-async def worker(queue):
-    while True:
-        try:
-            task = queue.get_nowait()
-        except:
-            return
-        await task
-        queue.task_done()
-
-
 async def bench_run(queue):
     for f in queue:
         await f
-
-
-async def bench_run_concurrency(queue, workers):
-    await asyncio.gather(*[worker(queue) for _ in range(workers)])
-
-
-@pytest.fixture(params=[REQUESTS // 10, REQUESTS // 2, REQUESTS])
-def workers(request):
-    return int(request.param)
 
 
 @pytest.fixture(
@@ -129,14 +110,13 @@ def test_read_only(benchmark, storage_provider, payload):
     Node.uuid = _uuid
     storage = storage_provider["storage"](table, REQUESTS)
     loop.run_until_complete(storage_init(storage))
+    queue = []
+    for i in range(REQUESTS):
+        queue.append(simple_get(Node, i))
+    loop.run_until_complete(bench_run(queue))
 
     def setup():
         queue = []
-        for i in range(REQUESTS):
-            queue.append(simple_get(Node, i))
-        # warm cache first because this is read only test
-        loop.run_until_complete(bench_run(queue))
-        queue.clear()
         for i in range(REQUESTS):
             queue.append(simple_get(Node, i))
         return (queue,), {}
@@ -211,7 +191,7 @@ def test_zipf(benchmark, storage_provider, payload):
 
 # each request use 20 unique random numbers: read >> write, cache capacity limit to REQUESTS//10
 # REQUESTS // 10 requests
-def test_read_only_batch_concurrency(benchmark, storage_provider, payload, workers):
+def test_read_only_batch(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
     _uuid = uuid.uuid4().int
@@ -222,6 +202,10 @@ def test_read_only_batch_concurrency(benchmark, storage_provider, payload, worke
     Node.sleep = True
     storage = storage_provider["storage"](table, REQUESTS // 10)
     loop.run_until_complete(storage_init(storage))
+    queue = []
+    for i in range(REQUESTS // 10):
+        queue.append(simple_get(Node, i))
+    loop.run_until_complete(bench_run(queue))
 
     def setup():
 
