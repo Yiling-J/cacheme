@@ -189,8 +189,8 @@ def test_zipf(benchmark, storage_provider, payload):
     loop.close()
 
 
-# each request use 20 unique random numbers: read >> write, cache capacity limit to REQUESTS//10
-# REQUESTS // 10 requests
+# each request use 20 unique random numbers already in cache
+# REQUESTS // 10 requests to make benchmark run fast
 def test_read_only_batch(benchmark, storage_provider, payload):
     loop = asyncio.events.new_event_loop()
     asyncio.events.set_event_loop(loop)
