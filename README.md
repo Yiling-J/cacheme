@@ -1,18 +1,17 @@
 # Cacheme
 
-Asyncio cache framework with multiple cache storages. [中文文档](README_ZH.md)
+Asyncio cache framework with multiple cache storages.
 
 - **Better cache management:** Cache configuration with node, you can apply different strategies on different nodes.
 - **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
 - **Multiple serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
-- **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
 - **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once.
 - **Cache stats API:** Stats of each node and colected automatically.
+- **Performance:** See Benchemark section.
 
 Related projects:
 - High performance in-memory cache: https://github.com/Yiling-J/theine
-- Benchmark(auto updated): https://github.com/Yiling-J/cacheme-benchmark
 
 ## Table of Contents
 
@@ -32,7 +31,6 @@ Related projects:
     + [Sqlite Storage](#sqlite-storage)
     + [PostgreSQL Storage](#postgresql-storage)
     + [MySQL Storage](#mysql-storage)
-- [Benchmarks](#benchmarks)
 
 ## Requirements
 Python 3.7+
@@ -249,7 +247,7 @@ BloomFilter is cleared automatically when requests count == size.
 ## Cache Storage
 
 #### Local Storage
-Local storage uses dictionary to store data. A policy is used to evict keys when cache is full.
+Local storage uses Theine to store data. A policy is used to evict keys when cache is full.
 ```python
 # lru policy
 Storage(url="local://lru", size=10000)
@@ -323,12 +321,3 @@ Parameters:
 - `url`: mysql connection url.
 - `table`: cache table name.
 - `pool_size`: connection pool size, default 50.
-
-## Benchmarks
-- Local Storage Hit Ratios(hit_count/request_count)
-  ![hit ratios](benchmarks/hit_ratio.png)
-  [source code](benchmarks/tlfu_hit.py)
-
-- Throughput Benchmark of different storages
-
-  See [benchmark]( https://github.com/Yiling-J/cacheme-benchmark)
