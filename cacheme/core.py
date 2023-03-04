@@ -1,5 +1,6 @@
 from asyncio import Event, Future
 from collections import OrderedDict
+from functools import update_wrapper
 from time import time_ns
 from typing import (
     Any,
@@ -256,13 +257,13 @@ class Cached(Protocol[P, R]):
     def to_node(self, fn: Callable[P, Node]):
         ...
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
+    def __call__(self, *args, **kwargs) -> R:
         ...
 
 
 def Wrapper(
-    fn: Callable[P, Awaitable[R]],
-) -> Cached[P, Awaitable[R]]:
+    fn: Callable[P, R],
+) -> Cached[P, R]:
     _func = fn
     _node_func = None
 
@@ -270,13 +271,13 @@ def Wrapper(
         nonlocal _node_func
         _node_func = fn
 
-    async def fetch(*args: P.args, **kwargs: P.kwargs) -> Awaitable[R]:
+    async def fetch(*args: P.args, **kwargs: P.kwargs) -> R:
         node = _node_func(*args, **kwargs)  # type: ignore
         node = cast(Node, node)
 
         # inline load function
         async def load() -> Any:
-            return await _func(*args, **kwargs)
+            return await _func(*args, **kwargs)  # type: ignore
 
         node.load = load  # type: ignore
         return await get(node)
@@ -289,8 +290,9 @@ class Memoize:
     def __init__(self, node: Type[Node]):
         self.node = node
 
-    def __call__(self, fn: Callable[P, Awaitable[R]]) -> Cached[P, Awaitable[R]]:
-        return Wrapper(fn)
+    def __call__(self, fn: Callable[P, R]) -> Cached[P, R]:
+        wrapper = Wrapper(fn)
+        return update_wrapper(wrapper, fn)
 
 
 def nodes() -> List[Type[Node]]:

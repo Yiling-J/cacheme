@@ -125,6 +125,28 @@ tests = ["attrs[tests-no-zope]", "zope.interface"]
 tests-no-zope = ["cloudpickle", "cloudpickle", "hypothesis", "hypothesis", "mypy (>=0.971,<0.990)", "mypy (>=0.971,<0.990)", "pympler", "pympler", "pytest (>=4.3.0)", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-mypy-plugins", "pytest-xdist[psutil]", "pytest-xdist[psutil]"]
 
 [[package]]
+name = "cashews"
+version = "5.3.1"
+description = "cache tools with async power"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "cashews-5.3.1-py3-none-any.whl", hash = "sha256:65523d24f940865d19360e4c08394a79b8b528798fc27e4f2ac331ab60810596"},
+    {file = "cashews-5.3.1.tar.gz", hash = "sha256:cdd4dcd0cc43c5669102cbe98e32ec7c276e40b87cea299a04d5cd00712b27d3"},
+]
+
+[package.dependencies]
+typing-extensions = {version = "*", markers = "python_version == \"3.7\""}
+
+[package.extras]
+dill = ["dill"]
+diskcache = ["diskcache (>=5.0.0)"]
+redis = ["redis (>=4.3.1)"]
+speedup = ["bitarray (<3.0.0)", "hiredis", "xxhash (<4.0.0)"]
+tests = ["hypothesis", "pytest", "pytest-asyncio"]
+
+[[package]]
 name = "cffi"
 version = "1.15.1"
 description = "Foreign Function Interface for Python calling C code."
@@ -943,4 +965,4 @@ redis = ["redis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "d378bb61ff270faa5c27fe21744b9e822385943a188d72d062573e91596e8cd8"
+content-hash = "329dc8b4f3a21316072ca9f6bd0c4e6d0245497d1857505c7677f7a417d8f67c"
