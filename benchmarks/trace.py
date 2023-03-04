@@ -330,12 +330,18 @@ async def run():
         r.flushall()
 
         print(f"==== zipf benchmark: concurrency {w} ====")
-        await bench_cacheme_batch_zipf(w)
         await bench_cacheme_zipf(zipf_key_gen, w)
         await bench_aiocache_zipf(zipf_key_gen, w)
         await bench_aiocache_stampede_zipf(zipf_key_gen, w)
         await bench_cashews_zipf(zipf_key_gen, w)
         await bench_cashews_lock_zipf(zipf_key_gen, w)
+
+    for w in [1000, 2000, 5000, 10000, 50000, 100000]:
+        r = redis.Redis(host="localhost", port=6379)
+        r.flushall()
+
+        print(f"==== zipf batch benchmark: concurrency {w} ====")
+        await bench_cacheme_batch_zipf(w)
 
 
 asyncio.run(run())
