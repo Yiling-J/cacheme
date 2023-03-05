@@ -1,24 +1,28 @@
 from __future__ import annotations
 
-import datetime
-from typing import ClassVar, List, NamedTuple, Optional, Sequence, Tuple, Type, cast
+import asyncio
+from datetime import timedelta
+from time import time_ns
+from typing import (ClassVar, Dict, Generic, List, Optional, Sequence, Tuple,
+                    Type, TypeVar, cast)
 
 from typing_extensions import Any
 
 from cacheme.data import get_storage_by_name
-from cacheme.interfaces import Cachable, DoorKeeper, Metrics, Serializer, Storage
+from cacheme.interfaces import DoorKeeper, Metrics, Serializer, Storage
 
-_nodes: List[Type[Cachable]] = []
+_nodes: List[Type[Node]] = []
 _prefix: str = "cacheme"
 
 sentinel = object()
+C_co = TypeVar("C_co", covariant=True)
 
 
 def get_nodes():
     return _nodes
 
 
-def _add_node(node: Type[Cachable]):
+def _add_node(node: Type[Node]):
     _nodes.append(node)
 
 
@@ -27,22 +31,34 @@ def set_prefix(prefix: str):
     _prefix = prefix
 
 
-class Cache(NamedTuple):
-    storage: str
-    ttl: Optional[datetime.timedelta]
+class Cache:
+    __slots__ = ["_storage", "_storage_name", "ttl", "_is_local"]
 
-    def get_storage(self) -> Storage:
-        return get_storage_by_name(self.storage)
+    def __init__(self, storage: str, ttl: Optional[timedelta]):
+        self._storage: Optional[Storage] = None
+        self._storage_name = ""
+        self._storage_name = storage
+        self.ttl = ttl
+        self._is_local = None
 
-    def get_ttl(self) -> Optional[datetime.timedelta]:
-        return self.ttl
+    @property
+    def is_local(self):
+        if self._is_local is None:
+            self._is_local = self.storage.is_local()
+        return self._is_local
+
+    @property
+    def storage(self) -> Storage:
+        if self._storage is None:
+            self._storage = get_storage_by_name(self._storage_name)
+        return cast(Storage, self._storage)
 
 
 class MetaNode(type):
     def __new__(cls, name, bases, dct):
         new = super().__new__(cls, name, bases, dct)
         if len(new.Meta.caches) > 0:
-            _nodes.append(cast(Type[Cachable], cls))
+            _nodes.append(cast(Type[Node], cls))
             new.Meta.metrics = Metrics()
         return new
 
@@ -52,20 +68,22 @@ class MetaNode(type):
         caches: List = []
 
 
-class Node(metaclass=MetaNode):
+class Node(Generic[C_co], metaclass=MetaNode):
+    _full_key = None
+
     def key(self) -> str:
         raise NotImplementedError()
 
     def full_key(self) -> str:
-        return f"{_prefix}:{self.key()}:{self.Meta.version}"
+        if self._full_key is None:
+            self._full_key = f"{_prefix}:{self.key()}:{self.Meta.version}"
+        return self._full_key
 
-    async def load(self) -> Any:
+    async def load(self) -> C_co:
         raise NotImplementedError()
 
     @classmethod
-    async def load_all(
-        cls, nodes: Sequence[Cachable]
-    ) -> Sequence[Tuple[Cachable, Any]]:
+    async def load_all(cls, nodes: Sequence[Node]) -> Sequence[Tuple[Node, Any]]:
         data = []
         for node in nodes:
             v = await node.load()
@@ -105,3 +123,44 @@ class DynamicNode(Node):
 
     def key(self) -> str:
         return self.key_str
+
+
+# https://github.com/python/cpython/issues/90780
+# use event to protect from thundering herd
+class CachedAwaitable:
+    def __init__(self, awaitable, metrics: Metrics):
+        self.awaitable = awaitable
+        self.event: Optional[asyncio.Event] = None
+        self.result = sentinel
+        self.metrics = metrics
+
+    def __await__(self):
+        if self.result is not sentinel:
+            self.metrics._hit_count += 1
+            return self.result
+
+        if self.event is None:
+            self.metrics._miss_count += 1
+            self.event = asyncio.Event()
+            now = time_ns()
+            try:
+                result = yield from self.awaitable.__await__()
+            except Exception as e:
+                self.metrics._load_failure_count += 1
+                self.metrics._total_load_time += time_ns() - now
+                raise (e)
+            self.metrics._load_success_count += 1
+            self.metrics._total_load_time += time_ns() - now
+            self.result = result
+            self.event.set()
+            self.event = None
+            return result
+        else:
+            self.metrics._hit_count += 1
+            yield from self.event.wait().__await__()
+        return self.result
+
+
+class Fetcher:
+    def __init__(self):
+        self.data: Dict[str, Any] = {}

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
-from cacheme.interfaces import Cachable, CachedData
+from cacheme.interfaces import CachedData
 from cacheme.serializer import Serializer
 from cacheme.storages.sqldb import SQLStorage
 

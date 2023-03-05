@@ -4,10 +4,9 @@ from urllib.parse import urlparse
 
 from theine import Cache
 
-from cacheme.interfaces import Cachable
+from cacheme.models import Node, sentinel
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
-from cacheme.models import sentinel
 
 
 class LocalStorage(BaseStorage):
@@ -18,26 +17,43 @@ class LocalStorage(BaseStorage):
     async def connect(self):
         return
 
-    async def get(self, node: Cachable, serializer: Optional[Serializer]) -> Any:
+    async def get(self, node: Node, serializer: Optional[Serializer]) -> Any:
+        return self.cache.get(node.full_key(), sentinel)
+
+    def get_sync(self, node: Node, serializer: Optional[Serializer]) -> Any:
         return self.cache.get(node.full_key(), sentinel)
 
     async def set(
         self,
-        node: Cachable,
+        node: Node,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):
         self.cache.set(node.full_key(), value, ttl)
 
-    async def remove(self, node: Cachable):
+    async def remove(self, node: Node):
         self.cache.delete(node.full_key())
 
     async def get_all(
         self,
-        nodes: Sequence[Cachable],
+        nodes: Sequence[Node],
         serializer: Optional[Serializer],
-    ) -> Sequence[Tuple[Cachable, Any]]:
+    ) -> Sequence[Tuple[Node, Any]]:
+        if len(nodes) == 0:
+            return []
+        results = []
+        for node in nodes:
+            v = self.cache.get(node.full_key(), sentinel)
+            if v != sentinel:
+                results.append((node, v))
+        return results
+
+    def get_all_sync(
+        self,
+        nodes: Sequence[Node],
+        serializer: Optional[Serializer],
+    ) -> Sequence[Tuple[Node, Any]]:
         if len(nodes) == 0:
             return []
         results = []
@@ -49,7 +65,7 @@ class LocalStorage(BaseStorage):
 
     async def set_all(
         self,
-        data: Sequence[Tuple[Cachable, Any]],
+        data: Sequence[Tuple[Node, Any]],
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):

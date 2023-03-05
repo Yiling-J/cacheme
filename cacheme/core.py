@@ -1,41 +1,21 @@
-from datetime import timedelta
-import types
-from asyncio import Event
+from asyncio import Event, Future
 from collections import OrderedDict
+from functools import update_wrapper
 from time import time_ns
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import (Any, Awaitable, Callable, Dict, Iterable, List, Optional,
+                    Sequence, Tuple, Type, TypeVar, cast, overload)
 
-from typing_extensions import ParamSpec, Self
+from typing_extensions import ParamSpec, Protocol
 
-from cacheme.interfaces import (
-    Cachable,
-    Memoizable,
-    Metrics,
-    Serializer,
-    DoorKeeper,
-    Storage,
-)
-from cacheme.models import Cache, get_nodes, DynamicNode, Node, _add_node, sentinel
+from cacheme.interfaces import DoorKeeper, Metrics, Serializer
+from cacheme.models import (Cache, CachedAwaitable, DynamicNode, Fetcher, Node,
+                            _add_node, get_nodes, sentinel)
 
 C = TypeVar("C")
-CB = TypeVar("CB", bound=Cachable)
+CB = TypeVar("CB", bound=Node)
 C_co = TypeVar("C_co", covariant=True)
 P = ParamSpec("P")
-R = TypeVar("R")
+R = TypeVar("R", covariant=True)
 
 
 class Locker:
@@ -47,11 +27,13 @@ class Locker:
         self.value = None
 
 
-_lockers: Dict[str, Locker] = {}
+# temp storage for futures which are loading from source now,
+# will removed automatically when loading done
+_tmp_cache: Dict[str, CachedAwaitable] = {}
 
 
 @overload
-async def get(node: Cachable[C_co]) -> C_co:
+async def get(node: Node[C_co]) -> C_co:
     ...
 
 
@@ -60,214 +42,247 @@ async def get(node: CB, load_fn: Callable[[CB], Awaitable[R]]) -> R:
     ...
 
 
-async def get(node: Cachable, load_fn=None):
-    metrics = node.get_metrics()
+async def get(node: Node, load_fn=None):
+    metrics = node.Meta.metrics
     result = sentinel
-    caches = node.get_caches()
-    local_storages: List[Tuple[Storage, Optional[timedelta]]] = []
-    storages: List[Tuple[Storage, Optional[timedelta]]] = []
-    serializer = node.get_seriaizer()
-    miss: List[Tuple[Storage, Optional[timedelta]]] = []
+    caches = node.Meta.caches
+    local_caches: List[Cache] = []
+    remote_caches: List[Cache] = []
+    miss: List[Cache] = []
 
     for cache in caches:
-        storage = cache.get_storage()
-        if storage.scheme() == "local":
-            local_storages.append((storage, cache.get_ttl()))
+        if cache.is_local:
+            local_caches.append(cache)
         else:
-            storages.append((storage, cache.get_ttl()))
+            remote_caches.append(cache)
 
-    for storage_info in local_storages:
-        result = await storage_info[0].get(node, None)
-        if result != sentinel:
+    # try get cached data from local storages first
+    for cache in local_caches:
+        result = cache.storage.get_sync(node, None)
+        if result is not sentinel:
             metrics._hit_count += 1
+            # return fast if hit on first local cache
+            if not miss:
+                return result
             break
-        miss.append(storage_info)
-    if result == sentinel:
-        locker = _lockers.get(node.full_key(), None)
-        if locker is not None:
-            await locker.lock.wait()
-            result = locker.value
-            metrics._hit_count += 1
-        else:
-            locker = Locker()
-            _lockers[node.full_key()] = locker
-            for storage_info in storages:
-                result = await storage_info[0].get(node, serializer)
-                if result != sentinel:
-                    break
-                miss.append(storage_info)
-            if result == sentinel:
-                metrics._miss_count += 1
-                now = time_ns()
-                try:
-                    if load_fn is not None:
-                        loaded = await load_fn(node)
-                    else:
-                        loaded = await node.load()
-                except Exception as e:
-                    metrics._load_failure_count += 1
-                    metrics._total_load_time += time_ns() - now
-                    raise (e)
-                metrics._load_success_count += 1
-                metrics._total_load_time += time_ns() - now
-                result = loaded
-                doorkeeper = node.get_doorkeeper()
-                if doorkeeper is not None:
-                    exist = doorkeeper.contains(node.full_key())
-                    if not exist:
-                        doorkeeper.put(node.full_key())
-                        return result
-            else:
-                metrics._hit_count += 1
-            locker.value = result
-            locker.lock.set()
-            _lockers.pop(node.full_key(), None)
-    if len(miss) > 0:
-        for storage_info in miss:
-            await storage_info[0].set(node, result, storage_info[1], serializer)
+        miss.append(cache)
+
+    # can't find cached result in any local storage, try load from remote storage
+    # remote storages are slow and asynchronous, use tmp cached awaitables to avoid thundering herd
+    if result is sentinel:
+        key = node.full_key()
+        awaitable = _tmp_cache.get(key, None)
+        if awaitable is None:
+            awaitable = CachedAwaitable(
+                _load_from_caches(node, remote_caches, miss, load_fn), metrics
+            )
+            _tmp_cache[node.full_key()] = awaitable
+        # wait
+        result = await awaitable
+
+    # fill missing caches
+    for cache in miss:
+        await cache.storage.set(node, result, cache.ttl, node.Meta.serializer)
+    # remove from tmp cache after fill
+    _tmp_cache.pop(node.full_key(), None)
+
     return result
 
 
-class Wrapper(Generic[P, R]):
-    def __init__(self, fn: Callable[P, Awaitable[R]], node: Type[Memoizable]):
-        self.func = fn
+# try load data from remote storages, load from source if not found
+async def _load_from_caches(
+    node: Node, caches: List[Cache], miss: List[Cache], load_fn=None
+):
+    serializer = node.get_seriaizer()
+    result = sentinel
+    for cache in caches:
+        result = await cache.storage.get(node, serializer)
+        if result is not sentinel:
+            break
+        miss.append(cache)
+    # load from source
+    if result is sentinel:
+        result = await node.load() if load_fn is None else await load_fn(node)
 
-    async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        node = self.key_func(*args, **kwargs)
-        node = cast(Cachable, node)
-
-        # inline load function
-        async def load() -> Any:
-            return await self.func(*args, **kwargs)
-
-        node.load = load  # type: ignore
-        return await get(node)
-
-    def to_node(self, fn: Callable[P, Memoizable]) -> Self:  # type: ignore
-        self.key_func = fn
-        return self
-
-    @overload
-    def __get__(self, instance, owner) -> Callable[..., R]:
-        ...
-
-    @overload
-    def __get__(self, instance, owner) -> Self:  # type: ignore
-        ...
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return cast(Callable[..., R], types.MethodType(self, instance))
+    return result
 
 
-class Memoize:
-    def __init__(self, node: Type[Memoizable]):
-        self.node = node
-
-    def __call__(self, fn: Callable[P, Awaitable[R]]) -> Wrapper[P, R]:
-        return Wrapper(fn, self.node)
-
-
-class NodeSet:
-    def __init__(self, nodes: Sequence[Cachable]):
-        self.hashmap: Dict[str, Cachable] = {}
-        for node in nodes:
-            self.hashmap[node.full_key()] = node
-
-    def remove(self, node: Cachable):
-        self.hashmap.pop(node.full_key(), None)
-
-    def list(self) -> Sequence[Cachable]:
-        return tuple(self.hashmap.values())
-
-    def __len__(self):
-        return len(self.hashmap)
-
-
-async def get_all(nodes: Sequence[Cachable[C]]) -> Sequence[C]:
+async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
     if len(nodes) == 0:
         return tuple()
     node_cls = nodes[0].__class__
-    waiting = []
-    missing = []
-    s: OrderedDict[str, Optional[C]] = OrderedDict()
+    metrics = nodes[0].get_metrics()
+    pending: Dict[str, Node] = {}
+    missing: Dict[Cache, Iterable[Node]] = {}
+    caches = nodes[0].get_caches()
+    results: OrderedDict[str, Any] = OrderedDict()
+    # initialize reuslts dict and pending list
     for node in nodes:
         if node.__class__ != node_cls:
             raise Exception(
                 f"node class mismatch: expect [{node_cls}], get [{node.__class__}]"
             )
-        s[node.full_key()] = None
-        locker = _lockers.get(node.full_key(), None)
-        if locker is not None:
-            waiting.append((node, locker))
-        else:
-            locker = Locker()
-            _lockers[node.full_key()] = locker
-            missing.append(node)
-    result = None
-    metrics = nodes[0].get_metrics()
-    pending_nodes = NodeSet(missing)
-    serializer = nodes[0].get_seriaizer()
-    caches = nodes[0].get_caches()
-    missing_nodes = {}
+        pending[node.full_key()] = node
+        results[node.full_key()] = sentinel
+
+    # split local/remote cache
+    local_caches: List[Cache] = []
+    remote_caches: List[Cache] = []
     for cache in caches:
-        cached = await cache.get_storage().get_all(pending_nodes.list(), serializer)
+        if cache.is_local:
+            local_caches.append(cache)
+        else:
+            remote_caches.append(cache)
+
+    # load from local caches first
+    for cache in local_caches:
+        result = cache.storage.get_all_sync(tuple(pending.values()), None)
+        for k, v in result:
+            pending.pop(k.full_key(), None)
+            results[k.full_key()] = v
+        missing[cache] = tuple(pending.values())
+
+    # load from remote cache
+    fetch: Dict[str, Node] = {}  # missing nodes, need to load from source
+    if len(pending) > 0:
+        wait: List[
+            Tuple[str, CachedAwaitable]
+        ] = []  # nodes already loading by others, only need to wait here
+        for node in pending.values():
+            awaitable = _tmp_cache.get(node.full_key(), None)
+            if awaitable is None:
+                fetch[node.full_key()] = node
+            else:
+                wait.append((node.full_key(), awaitable))
+
+        # update metrics
+        metrics._miss_count += len(fetch)
+        metrics._hit_count += len(nodes) - len(fetch)
+
+        if len(fetch) > 0:
+            fetcher = Fetcher()
+            aws: List[Tuple[str, CachedAwaitable]] = []
+            for key, node in fetch.items():
+                awaitable = CachedAwaitable(Future(), metrics)
+                # set event directly
+                awaitable.event = Event()
+                _tmp_cache[key] = awaitable
+                aws.append((key, awaitable))
+            fetcher.data = await _get_multi(
+                nodes[0], remote_caches, fetch, missing, metrics
+            )
+            # load done, set all events and results
+            for aw in aws:
+                cast(Event, aw[1].event).set()
+                aw[1].result = fetcher.data[aw[0]]
+            for ks, vs in fetcher.data.items():
+                results[ks] = vs
+        for w in wait:
+            results[w[0]] = await w[1]
+
+    # fill missing caches
+    for cache, missing_nodes in missing.items():
+        data = [(node, results[node.full_key()]) for node in missing_nodes]
+        if len(data) > 0:
+            await cache.storage.set_all(data, cache.ttl, node_cls.Meta.serializer)
+
+    # remove tmp_cache
+    for key in fetch:
+        _tmp_cache.pop(key)
+
+    # finally
+    return cast(Sequence[C], tuple(results.values()))
+
+
+async def _get_multi(
+    node: Node,
+    caches: List[Cache],
+    nodes: Dict[str, Node],
+    missing: Dict[Cache, Iterable],
+    metrics: Metrics,
+) -> Dict[str, Any]:
+    serializer = node.get_seriaizer()
+    results: Dict[str, Any] = {}
+    for cache in caches:
+        cached = await cache.storage.get_all(list(nodes.values()), serializer)
         for k, v in cached:
-            pending_nodes.remove(k)
-            locker = _lockers.pop(k.full_key(), None)
-            if locker is not None:
-                locker.value = v
-                locker.lock.set()
-            s[k.full_key()] = cast(C, v)
-        missing_nodes[cache] = pending_nodes.list()
-        metrics._hit_count += len(cached)
-    metrics._miss_count += len(pending_nodes)
-    if len(pending_nodes) > 0:
+            nodes.pop(k.full_key(), None)
+            results[k.full_key()] = v
+        missing[cache] = tuple(nodes.values())
+
+    # load from source
+    if len(nodes) > 0:
         now = time_ns()
         try:
-            ns = cast(Sequence[Cachable], pending_nodes.list())
-            loaded = await node_cls.load_all(ns)
+            loaded = await node.load_all(tuple(nodes.values()))
+            for k, v in loaded:
+                results[k.full_key()] = v
         except Exception as e:
-            metrics._load_failure_count += len(pending_nodes)
+            metrics._load_failure_count += len(nodes)
             metrics._total_load_time += time_ns() - now
             raise (e)
-        metrics._load_success_count += len(pending_nodes)
+        metrics._load_success_count += len(nodes)
         metrics._total_load_time += time_ns() - now
-        for k, v in loaded:
-            locker = _lockers.pop(k.full_key(), None)
-            if locker is not None:
-                locker.value = v
-                locker.lock.set()
-            s[k.full_key()] = cast(C, v)
-        for cache in caches:
-            data = [(node, s[node.full_key()]) for node in missing_nodes[cache]]
-            if len(data) > 0:
-                await cache.get_storage().set_all(data, cache.get_ttl(), serializer)
-    for n in waiting:
-        node, locker = n
-        await locker.lock.wait()
-        s[node.full_key()] = cast(C, locker.value)
-    metrics._hit_count += len(waiting)
-    result = cast(Sequence[C], tuple(s.values()))
-    return result
+    return results
 
 
-def nodes() -> List[Type[Cachable]]:
+class Cached(Protocol[P, R]):
+    def to_node(self, fn: Callable[P, Node]):
+        ...
+
+    def __call__(self, *args, **kwargs) -> R:
+        ...
+
+
+def Wrapper(
+    fn: Callable[P, R],
+) -> Cached[P, R]:
+    _func = fn
+    _node_func = None
+
+    def to_node(fn: Callable[P, Node]):
+        nonlocal _node_func
+        _node_func = fn
+
+    async def fetch(*args: P.args, **kwargs: P.kwargs) -> R:
+        node = _node_func(*args, **kwargs)  # type: ignore
+        node = cast(Node, node)
+
+        # inline load function
+        async def load() -> Any:
+            return await _func(*args, **kwargs)  # type: ignore
+
+        node.load = load  # type: ignore
+        return await get(node)
+
+    fetch.to_node = to_node  # type: ignore
+    return fetch  # type: ignore
+
+
+class Memoize:
+    def __init__(self, node: Type[Node]):
+        self.node = node
+
+    def __call__(self, fn: Callable[P, R]) -> Cached[P, R]:
+        wrapper = Wrapper(fn)
+        return update_wrapper(wrapper, fn)
+
+
+def nodes() -> List[Type[Node]]:
     return get_nodes()
 
 
-def stats(node: Type[Cachable]) -> Metrics:
+def stats(node: Type[Node]) -> Metrics:
     return node.get_metrics()
 
 
-async def invalidate(node: Cachable):
+async def invalidate(node: Node):
     caches = node.get_caches()
     for cache in caches:
-        await cache.get_storage().remove(node)
+        await cache.storage.remove(node)
 
 
-async def refresh(node: Cachable[C_co]) -> C_co:
+async def refresh(node: Node[C_co]) -> C_co:
     await invalidate(node)
     return await get(node)
 

@@ -5,7 +5,7 @@ import redis.asyncio as redis
 import redis.asyncio.cluster as redis_cluster
 from redis.asyncio.connection import BlockingConnectionPool
 
-from cacheme.interfaces import Cachable, CachedData
+from cacheme.interfaces import CachedData
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
 

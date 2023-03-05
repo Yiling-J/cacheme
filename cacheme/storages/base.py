@@ -3,9 +3,9 @@ from typing import Dict, List, Optional, Sequence, Tuple, cast
 
 from typing_extensions import Any
 
-from cacheme.interfaces import Cachable, CachedData
+from cacheme.interfaces import CachedData
+from cacheme.models import Node, sentinel
 from cacheme.serializer import Serializer
-from cacheme.models import sentinel
 
 
 class BaseStorage:
@@ -30,6 +30,16 @@ class BaseStorage:
     async def set_by_keys(self, data: Dict[str, Any], ttl: Optional[timedelta]):
         raise NotImplementedError()
 
+    def get_sync(self, node: Node, serializer: Optional[Serializer]) -> Any:
+        raise NotImplementedError()
+
+    def get_all_sync(
+        self,
+        nodes: Sequence[Node],
+        serializer: Optional[Serializer],
+    ) -> Sequence[Tuple[Node, Any]]:
+        raise NotImplementedError()
+
     def serialize(self, raw: Any, serializer: Optional[Serializer]) -> CachedData:
         data = raw["value"]
         if serializer is not None:
@@ -39,7 +49,7 @@ class BaseStorage:
             expire=raw["expire"],
         )
 
-    async def get(self, node: Cachable, serializer: Optional[Serializer]) -> Any:
+    async def get(self, node: Node, serializer: Optional[Serializer]) -> Any:
         result = await self.get_by_key(node.full_key())
         if result is None:
             return sentinel
@@ -58,7 +68,7 @@ class BaseStorage:
 
     async def set(
         self,
-        node: Cachable,
+        node: Node,
         value: Any,
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
@@ -66,14 +76,14 @@ class BaseStorage:
         v = self.deserialize(value, serializer)
         await self.set_by_key(node.full_key(), v, ttl)
 
-    async def remove(self, node: Cachable):
+    async def remove(self, node: Node):
         await self.remove_by_key(node.full_key())
 
     async def get_all(
         self,
-        nodes: Sequence[Cachable],
+        nodes: Sequence[Node],
         serializer: Optional[Serializer],
-    ) -> Sequence[Tuple[Cachable, Any]]:
+    ) -> Sequence[Tuple[Node, Any]]:
         if len(nodes) == 0:
             return []
         results = []
@@ -98,7 +108,7 @@ class BaseStorage:
 
     async def set_all(
         self,
-        data: Sequence[Tuple[Cachable, Any]],
+        data: Sequence[Tuple[Node, Any]],
         ttl: Optional[timedelta],
         serializer: Optional[Serializer],
     ):

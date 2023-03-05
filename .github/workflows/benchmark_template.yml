@@ -85,6 +85,7 @@ jobs:
         run: "poetry run pytest benchmarks/benchmark_test.py::${{ inputs.case }} --benchmark-only --benchmark-json output.json"
       - name: "Publish Benchmark Result"
         uses: benchmark-action/github-action-benchmark@v1
+        if: ${{ github.ref == 'refs/heads/master' }}
         with:
           name: 'Cacheme Benchmark: ${{ inputs.case }}'
           tool: 'pytest'

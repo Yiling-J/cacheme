@@ -1,18 +1,17 @@
 # Cacheme
 
-Asyncio cache framework with multiple cache storages. [中文文档](README_ZH.md)
+Asyncio cache framework with multiple cache storages.
 
-- **Better cache management:** Cache configuration with node, you can apply different strategies on different nodes.
+- **Organize cache better:** Cache configuration with node, you can apply different strategies on different nodes.
 - **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
 - **Multiple serializers:** Pickle/Json/Msgpack serializers.
 - **Type annotated:** All cacheme API are type annotated with generics.
-- **High hit ratio in-memory cache:** TinyLFU written in Rust with little memory overhead.
-- **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once.
+- **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once. See Benchemark section.
 - **Cache stats API:** Stats of each node and colected automatically.
+- **Performance:** See Benchemark section.
 
 Related projects:
 - High performance in-memory cache: https://github.com/Yiling-J/theine
-- Benchmark(auto updated): https://github.com/Yiling-J/cacheme-benchmark
 
 ## Table of Contents
 
@@ -32,7 +31,11 @@ Related projects:
     + [Sqlite Storage](#sqlite-storage)
     + [PostgreSQL Storage](#postgresql-storage)
     + [MySQL Storage](#mysql-storage)
+- [How Thundering Herd Protection Works](#how-thundering-herd-protection-works)
 - [Benchmarks](#benchmarks)
+    + [continuous benchmark](#continuous-benchemark)
+    + [200k concurrent requests](#200k-concurrent-requests)
+    + [20k concurrent batch requests](#20k-concurrent-batch-requests)
 
 ## Requirements
 Python 3.7+
@@ -52,7 +55,7 @@ pip install cacheme[asyncpg]
 ```
 
 ## Add Node
-Node is the core part of cache. Each node has its own key function, load function and storage options. Stats of each node are collected independently. You can place all node definations into one package/module, so everyone knows exactly what is cached now and how they are cached. All cacheme API are based on node.
+Node is the core part of cache. Each node has its own key function, load function and storage options. Stats of each node are collected independently. You can place all node definations into one package/module, so everyone knows exactly what is cached and how they are cached. All cacheme API are based on node.
 
 Each node contains:
 - Key attritubes and `key` method,  which are used to generate cache key. Here the `UserInfoNode` is a dataclass, so `__init__` method is generated automatically.
@@ -249,12 +252,13 @@ BloomFilter is cleared automatically when requests count == size.
 ## Cache Storage
 
 #### Local Storage
-Local storage uses dictionary to store data. A policy is used to evict keys when cache is full.
+Local storage use the state-of-the-art library **Theine** to store data. If your use case in simple, also consider using [Theine](https://github.com/Yiling-J/theine) directly, which will have the best performance.
+
 ```python
 # lru policy
 Storage(url="local://lru", size=10000)
 
-# tinylfu policy
+# w-tinylfu policy
 Storage(url="local://tlfu", size=10000)
 
 ```
@@ -262,7 +266,7 @@ Parameters:
 
 - `url`: `local://{policy}`. 2 policies are currently supported:
   - `lru`
-  - `tlfu`: TinyLfu policy, see https://arxiv.org/pdf/1512.00727.pdf
+  - `tlfu`: W-TinyLfu policy
 
 - `size`: size of the storage. Policy will be used to evict key when cache is full.
 
@@ -324,11 +328,97 @@ Parameters:
 - `table`: cache table name.
 - `pool_size`: connection pool size, default 50.
 
+## How Thundering Herd Protection Works
+
+If you are familar with Go [singleflight](https://pkg.go.dev/golang.org/x/sync/singleflight), you may have an idea how Cacheme works. Cacheme group concurrent requests to same resource(node) into a singleflight with asyncio Event, which will **load from remote cache OR data source only once**. That's why in next Benchmarks section, you will find Cacheme even reduce total redis GET command count under high concurrency.
+
+
 ## Benchmarks
-- Local Storage Hit Ratios(hit_count/request_count)
-  ![hit ratios](benchmarks/hit_ratio.png)
-  [source code](benchmarks/tlfu_hit.py)
 
-- Throughput Benchmark of different storages
+### continuous benchmark
+https://github.com/Yiling-J/cacheme-benchmark
 
-  See [benchmark]( https://github.com/Yiling-J/cacheme-benchmark)
+### 200k concurrent requests
+
+aiocache: https://github.com/aio-libs/aiocache
+
+cashews: https://github.com/Krukov/cashews
+
+source code:
+
+How this benchmark run:
+
+1. Initialize Cacheme/Aiocache/Cashews with Redis backend, use Redis blocking pool and set pool size to 100.
+2. Decorate Aiocache/Cashews/Cacheme with a function which accept a number and sleep 0.1s. This function also record how many times it is called.
+3. Register Redis response callback, so we can know how many times GET command are called.
+4. Create 200k coroutines use a zipf generator and put them in async queue(around 50k-60k unique numbers).
+5. Run coroutines in queue with N concurrent workers.
+6. Collect results.
+
+Result:
+- Time: How long it takes to finish bench.
+- Redis GET: How many times Redis GET command are called, use this to evaluate pressure to remote cache server.
+- Load Hits: How many times the load function(which sleep 0.1s) are called, use this to evaluate pressure to load source(database or something else).
+
+#### 1k concurrency
+
+|            | Time  | Redis GET  | Load Hits |
+|------------|-------|------------|-----------|
+| Cacheme    | 30 s  | 166454     | 55579     |
+| Aiocache   | 46 s  | 200000     | 56367     |
+| Aiocache-2 | 63 s  | 256492     | 55417     |
+| Cashews    | 51 s  | 200000     | 56920     |
+| cashews-2  | 134 s | 200000     | 55450     |
+
+
+#### 10k concurrency
+
+|            | Time  | Redis GET | Load Hits |
+|------------|-------|-----------|-----------|
+| Cacheme    | 32 s  | 123704    | 56736     |
+| Aiocache   | 67 s  | 200000    | 62568     |
+| Aiocache-2 | 113 s | 263195    | 55507     |
+| Cashews    | 68 s  | 200000    | 66036     |
+| cashews-2  | 175 s | 200000    | 55709     |
+
+
+#### 100k concurrency
+
+|            | Time  | Redis GET | Load Hits |
+|------------|-------|-----------|-----------|
+| Cacheme    | 30 s  | 60990     | 56782     |
+| Aiocache   | 80 s  | 200000    | 125085    |
+| Aiocache-2 | 178 s | 326417    | 65598     |
+| Cashews    | 88 s  | 200000    | 87894     |
+| cashews-2  | 236 s | 200000    | 55647     |
+
+### 20k concurrent batch requests
+
+source code:
+
+How this benchmark run:
+
+1. Initialize Cacheme with Redis backend, use Redis blocking pool and set pool size to 100.
+2. Decorate Cacheme with a function which accept a number and sleep 0.1s. This function also record how many times it is called.
+3. Register Redis response callback, so we can know how many times MGET command are called.
+4. Create 20k `get_all` coroutines use a zipf generator and put them in async queue(around 50k-60k unique numbers). Each `get_all` request will get 20 unique numbers in batch. So totally 400k numbers.
+5. Run coroutines in queue with N concurrent workers.
+6. Collect results.
+
+Result:
+- Time: How long it takes to finish bench.
+- Redis MGET: How many times Redis MGET command are called, use this to evaluate pressure to remote cache server.
+- Load Hits: How many times the load function(which sleep 0.1s) are called, use this to evaluate pressure to load source(database or something else).
+
+#### 1k concurrency
+
+|            | Time | Redis MGET | Load Hits |
+|------------|------|------------|-----------|
+| Cacheme    | 12 s | 9996       | 55902     |
+
+
+#### 10k concurrency
+
+|            | Time  | Redis MGET | Load Hits |
+|------------|-------|------------|-----------|
+| Cacheme    | 11 s  | 9908       | 42894     |
