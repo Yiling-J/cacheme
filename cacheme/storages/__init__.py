@@ -2,8 +2,8 @@ import importlib
 from datetime import timedelta
 from typing import Any, Optional, Sequence, Tuple
 from urllib.parse import urlparse
-from cacheme.models import Node
 
+from cacheme.models import Node
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
 

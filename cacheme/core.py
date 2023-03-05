@@ -2,41 +2,14 @@ from asyncio import Event, Future
 from collections import OrderedDict
 from functools import update_wrapper
 from time import time_ns
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-    overload,
-    Protocol,
-)
+from typing import (Any, Awaitable, Callable, Dict, Iterable, List, Optional,
+                    Sequence, Tuple, Type, TypeVar, cast, overload)
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, Protocol
 
-from cacheme.interfaces import (
-    Metrics,
-    Serializer,
-    DoorKeeper,
-)
-from cacheme.models import (
-    Cache,
-    CachedAwaitable,
-    Fetcher,
-    get_nodes,
-    DynamicNode,
-    Node,
-    _add_node,
-    sentinel,
-)
-
+from cacheme.interfaces import DoorKeeper, Metrics, Serializer
+from cacheme.models import (Cache, CachedAwaitable, DynamicNode, Fetcher, Node,
+                            _add_node, get_nodes, sentinel)
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Node)

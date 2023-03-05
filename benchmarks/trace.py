@@ -1,13 +1,15 @@
 # type: ignore
 import asyncio
 import time
-from typing import Iterable, List, cast, Callable
-import aiocache
-
-from dataclasses import dataclass
 from asyncio import sleep
+from dataclasses import dataclass
+from typing import Callable, Iterable, List, cast
+
+import aiocache
 import redis
+from cashews import cache as wcache
 from redis.asyncio import Redis
+from redis.asyncio.connection import BlockingConnectionPool
 
 from benchmarks.zipf import Zipf
 from cacheme.core import get, get_all
@@ -15,8 +17,6 @@ from cacheme.data import list_storages, register_storage
 from cacheme.models import Cache, Node
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
-from redis.asyncio.connection import BlockingConnectionPool
-from cashews import cache as wcache
 
 wb = wcache.setup("redis://", max_connections=100, wait_for_connection_timeout=300)
 

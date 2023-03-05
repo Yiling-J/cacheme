@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 
 from theine import Cache
 
+from cacheme.models import Node, sentinel
 from cacheme.serializer import Serializer
 from cacheme.storages.base import BaseStorage
-from cacheme.models import Node, sentinel
 
 
 class LocalStorage(BaseStorage):

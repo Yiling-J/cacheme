@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, NamedTuple, Optional, Sequence, Tuple, TypeVar
+from typing import (TYPE_CHECKING, NamedTuple, Optional, Sequence, Tuple,
+                    TypeVar)
 
 from typing_extensions import Any, Protocol
 

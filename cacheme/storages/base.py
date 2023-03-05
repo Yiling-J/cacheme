@@ -4,8 +4,8 @@ from typing import Dict, List, Optional, Sequence, Tuple, cast
 from typing_extensions import Any
 
 from cacheme.interfaces import CachedData
-from cacheme.serializer import Serializer
 from cacheme.models import Node, sentinel
+from cacheme.serializer import Serializer
 
 
 class BaseStorage:

@@ -1,18 +1,17 @@
 import asyncio
 import json
-from random import sample
 import uuid
 from dataclasses import dataclass
+from random import sample
+from time import time
 from typing import Callable, ClassVar, Dict, List
 
 import pytest
-
 
 from benchmarks.zipf import Zipf
 from cacheme import Cache, Node, Storage, get, get_all, register_storage
 from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
-from time import time
 
 REQUESTS = 10000
 

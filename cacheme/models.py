@@ -1,20 +1,10 @@
 from __future__ import annotations
-import asyncio
 
-from time import time_ns
+import asyncio
 from datetime import timedelta
-from typing import (
-    ClassVar,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from time import time_ns
+from typing import (ClassVar, Dict, Generic, List, Optional, Sequence, Tuple,
+                    Type, TypeVar, cast)
 
 from typing_extensions import Any
 

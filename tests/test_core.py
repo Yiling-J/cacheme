@@ -2,24 +2,16 @@ import os
 from asyncio import gather, sleep
 from dataclasses import dataclass
 from datetime import timedelta
+from unittest.mock import Mock
 
 import pytest
 
-from cacheme.core import (
-    Memoize,
-    get,
-    get_all,
-    invalidate,
-    nodes,
-    refresh,
-    stats,
-    build_node,
-)
+from cacheme.core import (Memoize, build_node, get, get_all, invalidate, nodes,
+                          refresh, stats)
 from cacheme.data import register_storage
-from cacheme.models import Cache, Node, set_prefix, DynamicNode, sentinel
+from cacheme.models import Cache, DynamicNode, Node, sentinel, set_prefix
 from cacheme.serializer import MsgPackSerializer
 from cacheme.storages import Storage
-from unittest.mock import Mock
 
 
 def node_cls(mock: Mock):
