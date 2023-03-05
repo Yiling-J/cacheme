@@ -31,6 +31,11 @@ Related projects:
     + [Sqlite Storage](#sqlite-storage)
     + [PostgreSQL Storage](#postgresql-storage)
     + [MySQL Storage](#mysql-storage)
+- [How Thundering Herd Protection Works](#how-thundering-herd-protection-works)
+- [Benchmarks](#benchmarks)
+    + [continuous benchmark](#continuous-benchemark)
+    + [200k concurrent requests](#200k-concurrent-requests)
+    + [20k concurrent batch requests](#20k-concurrent-batch-requests)
 
 ## Requirements
 Python 3.7+
@@ -322,6 +327,11 @@ Parameters:
 - `url`: mysql connection url.
 - `table`: cache table name.
 - `pool_size`: connection pool size, default 50.
+
+## How Thundering Herd Protection Works
+
+If you are familar with Go [singleflight](https://pkg.go.dev/golang.org/x/sync/singleflight), you may have an idea how Cacheme works. Cacheme group concurrent requests to same resource(node) into a singleflight with asyncio Event, which will **load from remote cache OR data source only once**. That's why in next Benchmarks section, you will find Cacheme even reduce total redis GET command count under high concurrency.
+
 
 ## Benchmarks
 
