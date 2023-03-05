@@ -5,10 +5,9 @@ Asyncio cache framework with multiple cache storages.
 - **Organize cache better:** Cache configuration with node, you can apply different strategies on different nodes.
 - **Multiple cache storages:** in-memory/redis/mongodb/postgres..., also support chain storages.
 - **Multiple serializers:** Pickle/Json/Msgpack serializers.
-- **Type annotated:** All cacheme API are type annotated with generics.
-- **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once. See Benchemark section.
+- **Thundering herd protection:** Simultaneously requests to same key are blocked by asyncio Event and only load from source once.
 - **Cache stats API:** Stats of each node and colected automatically.
-- **Performance:** See Benchemark section.
+- **Performance:** See Benchemarks section.
 
 Related projects:
 - High performance in-memory cache: https://github.com/Yiling-J/theine
