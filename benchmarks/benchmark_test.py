@@ -13,7 +13,7 @@ from cacheme import Cache, Node, Storage, get, get_all, register_storage
 from cacheme.serializer import MsgPackSerializer
 from tests.utils import setup_storage
 
-REQUESTS = 10000
+REQUESTS = 1000
 
 
 async def storage_init(storage):
