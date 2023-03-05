@@ -325,7 +325,7 @@ async def bench_cashews_lock_zipf(gen: Callable[..., Iterable], workers: int):
 
 async def run():
 
-    for w in [1000, 2000, 5000, 10000, 50000, 100000]:
+    for w in [1000, 10000, 100000]:
         r = redis.Redis(host="localhost", port=6379)
         r.flushall()
 
@@ -336,7 +336,7 @@ async def run():
         await bench_cashews_zipf(zipf_key_gen, w)
         await bench_cashews_lock_zipf(zipf_key_gen, w)
 
-    for w in [1000, 2000, 5000, 10000, 50000, 100000]:
+    for w in [1000, 10000, 100000]:
         r = redis.Redis(host="localhost", port=6379)
         r.flushall()
 
