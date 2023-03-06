@@ -135,42 +135,6 @@ class DynamicNode(Node):
         return self.key_str
 
 
-# https://github.com/python/cpython/issues/90780
-# use event to protect from thundering herd
-class CachedAwaitable:
-    def __init__(self, awaitable, metrics: Metrics):
-        self.awaitable = awaitable
-        self.event: Optional[asyncio.Event] = None
-        self.result = sentinel
-        self.metrics = metrics
-
-    def __await__(self):
-        if self.result is not sentinel:
-            self.metrics._hit_count += 1
-            return self.result
-
-        if self.event is None:
-            self.metrics._miss_count += 1
-            self.event = asyncio.Event()
-            now = time_ns()
-            try:
-                result = yield from self.awaitable.__await__()
-            except Exception as e:
-                self.metrics._load_failure_count += 1
-                self.metrics._total_load_time += time_ns() - now
-                raise (e)
-            self.metrics._load_success_count += 1
-            self.metrics._total_load_time += time_ns() - now
-            self.result = result
-            self.event.set()
-            self.event = None
-            return result
-        else:
-            self.metrics._hit_count += 1
-            yield from self.event.wait().__await__()
-        return self.result
-
-
 class Fetcher:
     def __init__(self):
         self.data: Dict[str, Any] = {}
