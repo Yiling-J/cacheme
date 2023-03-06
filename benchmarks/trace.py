@@ -188,6 +188,36 @@ async def bench_cacheme_zipf(gen: Callable[..., Iterable], workers: int):
     await client.close()
 
 
+async def bench_cacheme_zipf_with_local(gen: Callable[..., Iterable], workers: int):
+    # reset node cache
+    FooNode.Meta.caches = [
+        Cache(storage="local", ttl=None),
+        Cache(storage="redis", ttl=None),
+    ]
+    redis_counter = 0
+    await register_storage("redis", Storage(url="redis://localhost:6379"))
+    await register_storage("local", Storage(url="local://tlfu", size=3000))
+    client = cast(Redis, list_storages()["redis"]._storage.client)
+    FooNode.load_count = 0
+
+    def callback(response):
+        nonlocal redis_counter
+        redis_counter += 1
+        return response
+
+    client.set_response_callback("GET", callback)
+
+    queue = asyncio.Queue()
+    for uid in gen():
+        queue.put_nowait(simple_get(FooNode, uid))
+    now = time.time()
+    await run_concurrency(queue, workers)
+    print(
+        f"cacheme with local redis count {redis_counter}, load count {FooNode.load_count}, spent {time.time() - now}s"
+    )
+    await client.close()
+
+
 async def bench_cacheme_batch_zipf(workers: int):
     if workers > 10000:
         return
@@ -358,6 +388,8 @@ async def run():
 
         print(f"==== zipf benchmark: concurrency {w} ====")
         await bench_cacheme_zipf(zipf_key_gen, w)
+        r.flushall()  # flush because local use same key
+        await bench_cacheme_zipf_with_local(zipf_key_gen, w)
         await bench_aiocache_zipf(zipf_key_gen, w)
         await bench_aiocache_stampede_zipf(zipf_key_gen, w)
         await bench_cashews_zipf(zipf_key_gen, w)

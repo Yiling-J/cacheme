@@ -354,6 +354,14 @@ How this benchmark run:
 5. Run coroutines in queue with N concurrent workers.
 6. Collect results.
 
+Identifier:
+- Cacheme: Cacheme redis storage
+- Aiocahce: Aiocahce cached decorator
+- Cashews: Cashews cache decorate
+- Cacheme-2: Cacheme use cache chain [local, redis]
+- Aiocache-2: Aiocache cached_stampede decorator
+- Cashews-2: Cashews decorator with lock=True
+
 Result:
 - Time: How long it takes to finish bench.
 - Redis GET: How many times Redis GET command are called, use this to evaluate pressure to remote cache server.
@@ -364,10 +372,11 @@ Result:
 |            | Time  | Redis GET  | Load Hits |
 |------------|-------|------------|-----------|
 | Cacheme    | 30 s  | 166454     | 55579     |
+| Cacheme-2  | 18 s  | 90681      | 55632     |
 | Aiocache   | 46 s  | 200000     | 56367     |
 | Aiocache-2 | 63 s  | 256492     | 55417     |
 | Cashews    | 51 s  | 200000     | 56920     |
-| cashews-2  | 134 s | 200000     | 55450     |
+| Cashews-2  | 134 s | 200000     | 55450     |
 
 
 #### 10k concurrency
@@ -375,10 +384,11 @@ Result:
 |            | Time  | Redis GET | Load Hits |
 |------------|-------|-----------|-----------|
 | Cacheme    | 32 s  | 123704    | 56736     |
+| Cacheme-2  | 20 s  | 83750     | 56635     |
 | Aiocache   | 67 s  | 200000    | 62568     |
 | Aiocache-2 | 113 s | 263195    | 55507     |
 | Cashews    | 68 s  | 200000    | 66036     |
-| cashews-2  | 175 s | 200000    | 55709     |
+| Cashews-2  | 175 s | 200000    | 55709     |
 
 
 #### 100k concurrency
@@ -386,10 +396,11 @@ Result:
 |            | Time  | Redis GET | Load Hits |
 |------------|-------|-----------|-----------|
 | Cacheme    | 30 s  | 60990     | 56782     |
+| Cacheme-2  | 27 s  | 55762     | 55588     |
 | Aiocache   | 80 s  | 200000    | 125085    |
 | Aiocache-2 | 178 s | 326417    | 65598     |
 | Cashews    | 88 s  | 200000    | 87894     |
-| cashews-2  | 236 s | 200000    | 55647     |
+| Cashews-2  | 236 s | 200000    | 55647     |
 
 ### 20k concurrent batch requests
 
