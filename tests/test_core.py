@@ -1,13 +1,21 @@
-import os
-from asyncio import gather, sleep
+from asyncio import gather
 from dataclasses import dataclass
 from datetime import timedelta
 from unittest.mock import Mock
 
 import pytest
 
-from cacheme.core import (Memoize, build_node, get, get_all, invalidate, nodes,
-                          refresh, stats)
+from cacheme.core import (
+    Memoize,
+    build_node,
+    get,
+    get_all,
+    invalidate,
+    nodes,
+    refresh,
+    stats,
+    _awaits_len,
+)
 from cacheme.data import register_storage
 from cacheme.models import Cache, DynamicNode, Node, sentinel, set_prefix
 from cacheme.serializer import MsgPackSerializer
@@ -45,9 +53,9 @@ async def fn(a: int, b: str, m: Mock) -> str:
 async def test_memoize():
     await register_storage("local", Storage(url="local://tlfu", size=50))
     mock = Mock()
-    Node = node_cls(mock)
+    FooNode = node_cls(mock)
     test_fn = Memoize(Node)(fn)
-    test_fn.to_node(lambda a, b, m: Node(user_id=str(a), foo_id=b, level=10))
+    test_fn.to_node(lambda a, b, m: FooNode(user_id=str(a), foo_id=b, level=10))
     assert mock.call_count == 0
     result = await test_fn(1, "2", mock)
     assert result == "1/2/apple"
@@ -57,14 +65,14 @@ async def test_memoize():
     assert mock.call_count == 1
 
     class Bar:
-        @Memoize(Node)
+        @Memoize(FooNode)
         async def fn(self, a: int, b: str, c: int, m: Mock) -> str:
             m()
             return f"{a}/{b}/{c}/orange"
 
         @fn.to_node
         def _(self, a: int, b: str, c: int, m: Mock) -> Node:
-            return Node(user_id=str(a), foo_id=b, level=20)
+            return FooNode(user_id=str(a), foo_id=b, level=20)
 
     mock.reset_mock()
     b = Bar()
@@ -97,18 +105,18 @@ async def test_get():
 async def test_get_override():
     await register_storage("local", Storage(url="local://tlfu", size=50))
     mock = Mock()
-    Node = node_cls(mock)
+    FooNode = node_cls(mock)
     mock2 = Mock()
 
     async def override(node: Node) -> str:
         mock2()
         return f"{node.user_id}-{node.foo_id}-{node.level}-o"  # type: ignore
 
-    result = await get(Node(user_id="a", foo_id="1", level=10), override)
+    result = await get(FooNode(user_id="a", foo_id="1", level=10), override)
     assert mock.call_count == 0
     assert mock2.call_count == 1
     assert result == "a-1-10-o"
-    result = await get(Node(user_id="a", foo_id="1", level=10), override)
+    result = await get(FooNode(user_id="a", foo_id="1", level=10), override)
     assert mock.call_count == 0
     assert mock2.call_count == 1
     assert result == "a-1-10-o"
@@ -142,7 +150,7 @@ async def test_get_all():
 
 
 @pytest.mark.asyncio
-async def test_memoize_cocurrency():
+async def test_memoize_concurrency():
     await register_storage("local", Storage(url="local://tlfu", size=50))
     mock = Mock()
     Node = node_cls(mock)
@@ -153,20 +161,40 @@ async def test_memoize_cocurrency():
     for r in results:
         assert r == "1/2/apple"
     assert mock.call_count == 1
+    assert _awaits_len() == 0
 
 
 @pytest.mark.asyncio
-async def test_get_cocurrency():
+async def test_get_concurrency():
     await register_storage("local", Storage(url="local://tlfu", size=50))
     mock = Mock()
     Node = node_cls(mock)
     results = await gather(
-        *[get(Node(user_id="b", foo_id="a", level=10)) for _ in range(50)]
+        *[get(Node(user_id="b", foo_id="a", level=10)) for _ in range(200)]
     )
-    assert len(results) == 50
+    assert len(results) == 200
     for r in results:
         assert r == "b-a-10"
     assert mock.call_count == 1
+    assert _awaits_len() == 0
+
+
+@pytest.mark.asyncio
+async def test_get_all_concurrency():
+    await register_storage("local", Storage(url="local://tlfu", size=50))
+    mock = Mock()
+    Node = node_cls(mock)
+    nodes = [
+        Node(user_id="1", foo_id="2", level=10),
+        Node(user_id="2", foo_id="2", level=10),
+        Node(user_id="3", foo_id="2", level=10),
+    ]
+    results = await gather(*[get_all(nodes) for _ in range(200)])
+    assert len(results) == 200
+    for r in results:
+        assert r == ("1-2-10", "2-2-10", "3-2-10")
+    assert mock.call_count == 3
+    assert _awaits_len() == 0
 
 
 @dataclass

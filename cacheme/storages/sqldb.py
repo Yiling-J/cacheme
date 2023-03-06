@@ -1,5 +1,4 @@
 import re
-from typing import List, cast
 
 from cacheme.storages.base import BaseStorage
 
@@ -14,7 +13,7 @@ class SQLStorage(BaseStorage):
         super().__init__(address=address, table=table)
 
     async def _connect(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     async def connect(self):
         await self._connect()

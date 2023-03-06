@@ -85,7 +85,7 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: "poetry install --no-interaction --no-root"
       - name: "Run Lint"
-        run: "poetry run mypy --ignore-missing-imports ."
+        run: "make lint"
       - name: "Run Tests"
         env:
           CI: "TRUE"

@@ -1,7 +1,7 @@
 # type: ignore
 import asyncio
 import time
-from asyncio import sleep
+from asyncio import create_task, sleep
 from dataclasses import dataclass
 from typing import Callable, Iterable, List, cast
 
@@ -12,7 +12,7 @@ from redis.asyncio import Redis
 from redis.asyncio.connection import BlockingConnectionPool
 
 from benchmarks.zipf import Zipf
-from cacheme.core import get, get_all
+from cacheme.core import get, get_all, _awaits_len
 from cacheme.data import list_storages, register_storage
 from cacheme.models import Cache, Node
 from cacheme.serializer import MsgPackSerializer
@@ -323,6 +323,33 @@ async def bench_cashews_lock_zipf(gen: Callable[..., Iterable], workers: int):
     )
 
 
+async def worker_wait(queue):
+    while True:
+        task = await queue.get()
+        await task
+        queue.task_done()
+
+
+async def run_concurrency_wait(queue, workers):
+    await asyncio.gather(*[worker_wait(queue) for _ in range(workers)])
+
+
+async def infinit_run(cap: int):
+    FooNode.Meta.caches = [Cache(storage="local", ttl=None)]
+    await register_storage("local", Storage(url="local://tlfu", size=cap))
+    z = Zipf(1.001, 10, 100000000)
+    counter = 0
+    queue = asyncio.Queue(maxsize=2000)
+    task = create_task(run_concurrency_wait(queue, 2000))
+    while True:
+        uid = z.get()
+        await queue.put(simple_get(FooNode, uid))
+        counter += 1
+        if counter % 100000 == 0:
+            await sleep(0.5)
+            print(f"finish {counter // 100000}, tmp len: {_awaits_len()}")
+
+
 async def run():
 
     for w in [1000, 10000, 100000]:
@@ -345,3 +372,4 @@ async def run():
 
 
 asyncio.run(run())
+# asyncio.run(infinit_run(50000))

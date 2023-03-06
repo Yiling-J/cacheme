@@ -2,14 +2,35 @@ from asyncio import Event, Future
 from collections import OrderedDict
 from functools import update_wrapper
 from time import time_ns
-from typing import (Any, Awaitable, Callable, Dict, Iterable, List, Optional,
-                    Sequence, Tuple, Type, TypeVar, cast, overload)
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import ParamSpec, Protocol
 
 from cacheme.interfaces import DoorKeeper, Metrics, Serializer
-from cacheme.models import (Cache, CachedAwaitable, DynamicNode, Fetcher, Node,
-                            _add_node, get_nodes, sentinel)
+from cacheme.models import (
+    Cache,
+    CachedAwaitable,
+    DynamicNode,
+    Fetcher,
+    Node,
+    _add_node,
+    get_nodes,
+    sentinel,
+)
 
 C = TypeVar("C")
 CB = TypeVar("CB", bound=Node)
@@ -29,7 +50,11 @@ class Locker:
 
 # temp storage for futures which are loading from source now,
 # will removed automatically when loading done
-_tmp_cache: Dict[str, CachedAwaitable] = {}
+_awaits: Dict[str, CachedAwaitable] = {}
+
+
+def _awaits_len():
+    return len(_awaits)
 
 
 @overload
@@ -43,6 +68,12 @@ async def get(node: CB, load_fn: Callable[[CB], Awaitable[R]]) -> R:
 
 
 async def get(node: Node, load_fn=None):
+    """
+    Get data from node. Will call load function if cahce miss.
+
+    :param node: node instance to get data.
+    :param load_fn: override load function, which will be called instead of node load function if set.
+    """
     metrics = node.Meta.metrics
     result = sentinel
     caches = node.Meta.caches
@@ -71,12 +102,12 @@ async def get(node: Node, load_fn=None):
     # remote storages are slow and asynchronous, use tmp cached awaitables to avoid thundering herd
     if result is sentinel:
         key = node.full_key()
-        awaitable = _tmp_cache.get(key, None)
+        awaitable = _awaits.get(key, None)
         if awaitable is None:
             awaitable = CachedAwaitable(
                 _load_from_caches(node, remote_caches, miss, load_fn), metrics
             )
-            _tmp_cache[node.full_key()] = awaitable
+            _awaits[node.full_key()] = awaitable
         # wait
         result = await awaitable
 
@@ -84,7 +115,7 @@ async def get(node: Node, load_fn=None):
     for cache in miss:
         await cache.storage.set(node, result, cache.ttl, node.Meta.serializer)
     # remove from tmp cache after fill
-    _tmp_cache.pop(node.full_key(), None)
+    _awaits.pop(node.full_key(), None)
 
     return result
 
@@ -108,6 +139,11 @@ async def _load_from_caches(
 
 
 async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
+    """
+    Get data from multiple nodes. Will call load function if cahce miss.
+
+    :param nodes: sequence of nodes, must be same type.
+    """
     if len(nodes) == 0:
         return tuple()
     node_cls = nodes[0].__class__
@@ -149,7 +185,7 @@ async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
             Tuple[str, CachedAwaitable]
         ] = []  # nodes already loading by others, only need to wait here
         for node in pending.values():
-            awaitable = _tmp_cache.get(node.full_key(), None)
+            awaitable = _awaits.get(node.full_key(), None)
             if awaitable is None:
                 fetch[node.full_key()] = node
             else:
@@ -166,7 +202,7 @@ async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
                 awaitable = CachedAwaitable(Future(), metrics)
                 # set event directly
                 awaitable.event = Event()
-                _tmp_cache[key] = awaitable
+                _awaits[key] = awaitable
                 aws.append((key, awaitable))
             fetcher.data = await _get_multi(
                 nodes[0], remote_caches, fetch, missing, metrics
@@ -188,7 +224,7 @@ async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
 
     # remove tmp_cache
     for key in fetch:
-        _tmp_cache.pop(key)
+        _awaits.pop(key)
 
     # finally
     return cast(Sequence[C], tuple(results.values()))
@@ -287,7 +323,7 @@ async def refresh(node: Node[C_co]) -> C_co:
     return await get(node)
 
 
-_dynamic_nodes: Dict[str, Type[Node]] = {}
+_dynamic_nodes: Dict[str, Type[DynamicNode]] = {}
 
 
 def build_node(
@@ -296,7 +332,7 @@ def build_node(
     caches: List[Cache],
     serializer: Optional[Serializer] = None,
     doorkeeper: Optional[DoorKeeper] = None,
-) -> Type[Node]:
+) -> Type[DynamicNode]:
     if name in _dynamic_nodes:
         return _dynamic_nodes[name]
     new: Type[DynamicNode] = type(name, (DynamicNode,), {})

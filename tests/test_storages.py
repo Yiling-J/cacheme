@@ -3,6 +3,7 @@ import random
 from asyncio import sleep
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import List
 
 import pytest
 
@@ -104,7 +105,7 @@ async def test_storages(storage):
     assert result == sentinel
 
     # get/set all
-    nodes = []
+    nodes: List[Node] = []
     result = await s.get_all(nodes, PickleSerializer())
     assert result == []
     data = []

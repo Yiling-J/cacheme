@@ -3,8 +3,18 @@ from __future__ import annotations
 import asyncio
 from datetime import timedelta
 from time import time_ns
-from typing import (ClassVar, Dict, Generic, List, Optional, Sequence, Tuple,
-                    Type, TypeVar, cast)
+from typing import (
+    ClassVar,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+)
 
 from typing_extensions import Any
 
@@ -15,7 +25,7 @@ _nodes: List[Type[Node]] = []
 _prefix: str = "cacheme"
 
 sentinel = object()
-C_co = TypeVar("C_co", covariant=True)
+C = TypeVar("C")
 
 
 def get_nodes():
@@ -36,10 +46,9 @@ class Cache:
 
     def __init__(self, storage: str, ttl: Optional[timedelta]):
         self._storage: Optional[Storage] = None
-        self._storage_name = ""
-        self._storage_name = storage
-        self.ttl = ttl
-        self._is_local = None
+        self._storage_name: str = storage
+        self.ttl: Optional[timedelta] = ttl
+        self._is_local: Optional[bool] = None
 
     @property
     def is_local(self):
@@ -68,7 +77,7 @@ class MetaNode(type):
         caches: List = []
 
 
-class Node(Generic[C_co], metaclass=MetaNode):
+class Node(Generic[C], metaclass=MetaNode):
     _full_key = None
 
     def key(self) -> str:
@@ -79,7 +88,7 @@ class Node(Generic[C_co], metaclass=MetaNode):
             self._full_key = f"{_prefix}:{self.key()}:{self.Meta.version}"
         return self._full_key
 
-    async def load(self) -> C_co:
+    async def load(self) -> C:
         raise NotImplementedError()
 
     @classmethod

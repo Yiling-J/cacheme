@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from asyncpg.connection import asyncpg
+from asyncpg.pool import Pool
 
 from cacheme.storages.sqldb import SQLStorage
 
@@ -17,7 +18,7 @@ class PostgresStorage(SQLStorage):
         self.pool = await asyncpg.create_pool(dsn=self.address, max_size=self.pool_size)
 
     async def close(self):
-        await self.pool.close()
+        await cast(Pool, self.pool).close()
 
     async def execute_ddl(self, ddl):
         if self.pool is None:
