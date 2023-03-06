@@ -134,11 +134,11 @@ async def test_get_all():
     ]
     results = await get_all(nodes)
     assert mock.call_count == 3
-    assert results == ("c-2-1", "a-1-1", "b-3-1")
+    assert results == ["c-2-1", "a-1-1", "b-3-1"]
 
     results = await get_all(nodes)
     assert mock.call_count == 3
-    assert results == ("c-2-1", "a-1-1", "b-3-1")
+    assert results == ["c-2-1", "a-1-1", "b-3-1"]
     nodes = [
         Node(user_id="c", foo_id="2", level=1),
         Node(user_id="a", foo_id="1", level=1),
@@ -146,7 +146,7 @@ async def test_get_all():
     ]
     results = await get_all(nodes)
     assert mock.call_count == 4
-    assert results == ("c-2-1", "a-1-1", "b-4-1")
+    assert results == ["c-2-1", "a-1-1", "b-4-1"]
 
 
 @pytest.mark.asyncio
@@ -192,7 +192,7 @@ async def test_get_all_concurrency():
     results = await gather(*[get_all(nodes) for _ in range(200)])
     assert len(results) == 200
     for r in results:
-        assert r == ("1-2-10", "2-2-10", "3-2-10")
+        assert r == ["1-2-10", "2-2-10", "3-2-10"]
     assert mock.call_count == 3
     assert _awaits_len() == 0
 

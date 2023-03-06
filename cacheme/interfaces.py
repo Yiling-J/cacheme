@@ -160,7 +160,7 @@ class Node(Protocol[R]):
     def get_version(self) -> str:
         ...
 
-    def get_caches(self) -> List[Cache]:
+    def get_caches(self) -> List["Cache"]:
         ...
 
     def get_seriaizer(self) -> Optional[Serializer]:
@@ -175,7 +175,7 @@ class Node(Protocol[R]):
 
     class Meta(Protocol):
         version: ClassVar[str] = ""
-        caches: List[Cache] = []
+        caches: List["Cache"] = []
         serializer: ClassVar[Optional[Serializer]] = None
         doorkeeper: ClassVar[Optional[DoorKeeper]] = None
         metrics: ClassVar[Metrics]
