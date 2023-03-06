@@ -343,7 +343,7 @@ aiocache: https://github.com/aio-libs/aiocache
 
 cashews: https://github.com/Krukov/cashews
 
-source code: https://github.com/Yiling-J/cacheme/blob/master/benchmarks/benchmark_test.py
+source code: https://github.com/Yiling-J/cacheme/blob/master/benchmarks/trace.py
 
 How this benchmark run:
 
@@ -393,7 +393,7 @@ Result:
 
 ### 20k concurrent batch requests
 
-source code: https://github.com/Yiling-J/cacheme/blob/master/benchmarks/benchmark_test.py
+source code: https://github.com/Yiling-J/cacheme/blob/master/benchmarks/trace.py
 
 How this benchmark run:
 
