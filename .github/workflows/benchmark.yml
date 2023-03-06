@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-      - refactor/reduce_overhead
 
 jobs:
   benchmark-1:
