@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.3.0]
+### Changed
+- Refactor get and get_all method
+
 ## [0.2.3]
 ### Changed
 - Add theine in-memory cache(replace cacheme-utils)

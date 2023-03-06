@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cacheme"
-version = "0.2.3"
+version = "0.3.0"
 description = "async caching framework"
 authors = ["Yiling-J <njjyl723@gmail.com>"]
 readme = "README.md"
