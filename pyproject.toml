@@ -15,7 +15,6 @@ motor = { version = "^3.1.1", optional = true }
 aiomysql = { version = "^0.1.1", optional = true }
 asyncpg = { version = "^0.27.0", optional = true }
 theine = "^0.3.0"
-cashews = "^5.3.1"
 
 [tool.poetry.group.dev.dependencies]
 msgpack = "^1.0.4"
@@ -31,7 +30,7 @@ aiomysql = "^0.1.1"
 asyncpg = "^0.27.0"
 mypy = "^0.991"
 aiocache = "^0.12.0"
-cashews = "^5.3.0"
+cashews = "^5.3.1"
 
 [tool.poetry.extras]
 redis = ["redis"]
