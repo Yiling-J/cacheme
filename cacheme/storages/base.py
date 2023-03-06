@@ -3,8 +3,8 @@ from typing import Dict, List, Optional, Sequence, Tuple, cast
 
 from typing_extensions import Any
 
-from cacheme.interfaces import CachedData
-from cacheme.models import Node, sentinel
+from cacheme.interfaces import CachedData, Node
+from cacheme.models import sentinel
 from cacheme.serializer import Serializer
 
 

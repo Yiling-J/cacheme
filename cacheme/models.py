@@ -20,6 +20,7 @@ from typing_extensions import Any
 
 from cacheme.data import get_storage_by_name
 from cacheme.interfaces import DoorKeeper, Metrics, Serializer, Storage
+from cacheme.interfaces import Node as NodeP
 
 _nodes: List[Type[Node]] = []
 _prefix: str = "cacheme"
@@ -92,7 +93,7 @@ class Node(Generic[C], metaclass=MetaNode):
         raise NotImplementedError()
 
     @classmethod
-    async def load_all(cls, nodes: Sequence[Node]) -> Sequence[Tuple[Node, Any]]:
+    async def load_all(cls, nodes: Sequence[NodeP]) -> Sequence[Tuple[NodeP, Any]]:
         data = []
         for node in nodes:
             v = await node.load()

@@ -20,23 +20,21 @@ from typing import (
 
 from typing_extensions import ParamSpec, Protocol
 
-from cacheme.interfaces import DoorKeeper, Metrics, Serializer
+from cacheme.interfaces import DoorKeeper, Metrics, Serializer, Node
 from cacheme.models import (
     Cache,
     CachedAwaitable,
     DynamicNode,
     Fetcher,
-    Node,
     _add_node,
     get_nodes,
     sentinel,
 )
 
-C = TypeVar("C")
-CB = TypeVar("CB", bound=Node)
-C_co = TypeVar("C_co", covariant=True)
+
 P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
+N = TypeVar("N", bound=Node)
 
 
 class Locker:
@@ -58,12 +56,12 @@ def _awaits_len():
 
 
 @overload
-async def get(node: Node[C_co]) -> C_co:
+async def get(node: Node[R]) -> R:
     ...
 
 
 @overload
-async def get(node: CB, load_fn: Callable[[CB], Awaitable[R]]) -> R:
+async def get(node: N, load_fn: Callable[[N], Awaitable[R]]) -> R:
     ...
 
 
@@ -138,14 +136,14 @@ async def _load_from_caches(
     return result
 
 
-async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
+async def get_all(nodes: Sequence[Node[R]]) -> List[R]:
     """
     Get data from multiple nodes. Will call load function if cahce miss.
 
     :param nodes: sequence of nodes, must be same type.
     """
     if len(nodes) == 0:
-        return tuple()
+        return []
     node_cls = nodes[0].__class__
     metrics = nodes[0].get_metrics()
     pending: Dict[str, Node] = {}
@@ -227,7 +225,7 @@ async def get_all(nodes: Sequence[Node[C]]) -> Sequence[C]:
         _awaits.pop(key)
 
     # finally
-    return cast(Sequence[C], tuple(results.values()))
+    return list(results.values())
 
 
 async def _get_multi(
@@ -318,7 +316,7 @@ async def invalidate(node: Node):
         await cache.storage.remove(node)
 
 
-async def refresh(node: Node[C_co]) -> C_co:
+async def refresh(node: Node[R]) -> R:
     await invalidate(node)
     return await get(node)
 

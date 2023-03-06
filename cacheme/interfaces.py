@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
-from typing import (TYPE_CHECKING, NamedTuple, Optional, Sequence, Tuple,
-                    TypeVar)
+from typing import TYPE_CHECKING, NamedTuple, Optional, Sequence, Tuple, TypeVar, List
 
-from typing_extensions import Any, Protocol
+from typing_extensions import Any, Protocol, ClassVar
 
 if TYPE_CHECKING:
-    from cacheme.models import Node
+    from cacheme.models import Cache
 
-C = TypeVar("C")
-C_co = TypeVar("C_co", covariant=True)
+R = TypeVar("R", covariant=True)
 
 # - When a cache lookup encounters an existing cache entry hit_count is incremented
 # - After successfully loading an entry miss_count and load_success_count are
@@ -66,9 +64,7 @@ class Storage(Protocol):
     async def connect(self):
         ...
 
-    async def get(
-        self, node: "Node", serializer: Optional["Serializer"]
-    ) -> Optional[CachedData]:
+    async def get(self, node: "Node", serializer: Optional["Serializer"]) -> Any:
         ...
 
     # local storage only
@@ -143,3 +139,43 @@ class Policy(Protocol):
 
     def access(self, key: str):
         ...
+
+
+class Node(Protocol[R]):
+    _full_key: Optional[str]
+
+    def key(self) -> str:
+        ...
+
+    def full_key(self) -> str:
+        ...
+
+    async def load(self) -> R:
+        ...
+
+    @classmethod
+    async def load_all(cls, nodes: Sequence["Node"]) -> Sequence[Tuple["Node", Any]]:
+        ...
+
+    def get_version(self) -> str:
+        ...
+
+    def get_caches(self) -> List[Cache]:
+        ...
+
+    def get_seriaizer(self) -> Optional[Serializer]:
+        ...
+
+    def get_doorkeeper(self) -> Optional[DoorKeeper]:
+        ...
+
+    @classmethod
+    def get_metrics(cls) -> Metrics:
+        ...
+
+    class Meta(Protocol):
+        version: ClassVar[str] = ""
+        caches: List[Cache] = []
+        serializer: ClassVar[Optional[Serializer]] = None
+        doorkeeper: ClassVar[Optional[DoorKeeper]] = None
+        metrics: ClassVar[Metrics]
