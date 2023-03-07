@@ -23,7 +23,6 @@ from typing_extensions import ParamSpec, Protocol
 from cacheme.interfaces import DoorKeeper, Metrics, Serializer, Node
 from cacheme.models import (
     Cache,
-    CachedAwaitable,
     DynamicNode,
     Fetcher,
     _add_node,
@@ -46,9 +45,7 @@ class Locker:
         self.value = None
 
 
-# temp storage for futures which are loading from source now,
-# will removed automatically when loading done
-_awaits: Dict[str, CachedAwaitable] = {}
+_awaits: Dict[str, Future] = {}
 
 
 def _awaits_len():
@@ -100,14 +97,25 @@ async def get(node: Node, load_fn=None):
     # remote storages are slow and asynchronous, use tmp cached awaitables to avoid thundering herd
     if result is sentinel:
         key = node.full_key()
-        awaitable = _awaits.get(key, None)
-        if awaitable is None:
-            awaitable = CachedAwaitable(
-                _load_from_caches(node, remote_caches, miss, load_fn), metrics
-            )
-            _awaits[node.full_key()] = awaitable
-        # wait
-        result = await awaitable
+        future = _awaits.get(key, None)
+        if future is None:
+            metrics._miss_count += 1
+            future = Future()
+            _awaits[node.full_key()] = future
+            now = time_ns()
+            try:
+                result = await _load_from_caches(node, remote_caches, miss, load_fn)
+            except Exception as e:
+                metrics._load_failure_count += 1
+                metrics._total_load_time += time_ns() - now
+                _awaits.pop(node.full_key(), None)
+                raise (e)
+            metrics._load_success_count += 1
+            metrics._total_load_time += time_ns() - now
+            future.set_result(result)
+        else:
+            metrics._hit_count += 1
+            result = await future
 
     # fill missing caches
     for cache in miss:
@@ -180,14 +188,14 @@ async def get_all(nodes: Sequence[Node[R]]) -> List[R]:
     fetch: Dict[str, Node] = {}  # missing nodes, need to load from source
     if len(pending) > 0:
         wait: List[
-            Tuple[str, CachedAwaitable]
+            Tuple[str, Future]
         ] = []  # nodes already loading by others, only need to wait here
         for node in pending.values():
-            awaitable = _awaits.get(node.full_key(), None)
-            if awaitable is None:
+            future = _awaits.get(node.full_key(), None)
+            if future is None:
                 fetch[node.full_key()] = node
             else:
-                wait.append((node.full_key(), awaitable))
+                wait.append((node.full_key(), future))
 
         # update metrics
         metrics._miss_count += len(fetch)
@@ -195,20 +203,17 @@ async def get_all(nodes: Sequence[Node[R]]) -> List[R]:
 
         if len(fetch) > 0:
             fetcher = Fetcher()
-            aws: List[Tuple[str, CachedAwaitable]] = []
+            aws: List[Tuple[str, Future]] = []
             for key, node in fetch.items():
-                awaitable = CachedAwaitable(Future(), metrics)
-                # set event directly
-                awaitable.event = Event()
-                _awaits[key] = awaitable
-                aws.append((key, awaitable))
+                future = Future()
+                _awaits[key] = future
+                aws.append((key, future))
             fetcher.data = await _get_multi(
                 nodes[0], remote_caches, fetch, missing, metrics
             )
             # load done, set all events and results
             for aw in aws:
-                cast(Event, aw[1].event).set()
-                aw[1].result = fetcher.data[aw[0]]
+                aw[1].set_result(fetcher.data[aw[0]])
             for ks, vs in fetcher.data.items():
                 results[ks] = vs
         for w in wait:
